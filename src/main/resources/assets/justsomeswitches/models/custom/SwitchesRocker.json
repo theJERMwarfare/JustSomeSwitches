@@ -1,0 +1,121 @@
+{
+	"credit": "Made with Blockbench",
+	"ambientocclusion": false,
+	"textures": {
+		"particle": "Minecraft Textures:block/cobblestone",
+		"base": "Minecraft Textures:block/cobblestone",
+		"toggle": "Minecraft Textures:block/oak_planks",
+		"powered": "Minecraft Textures:block/redstone_block",
+		"unpowered": "Minecraft Textures:block/gray_concrete_powder"
+	},
+	"elements": [
+		{
+			"name": "switch_base",
+			"from": [5, 0, 3],
+			"to": [11, 2, 13],
+			"rotation": {"angle": 0, "axis": "y", "origin": [5, 0, 3]},
+			"faces": {
+				"north": {"uv": [5, 13, 11, 15], "texture": "#base"},
+				"east": {"uv": [11, 3, 13, 13], "rotation": 90, "texture": "#base"},
+				"south": {"uv": [5, 1, 11, 3], "texture": "#base"},
+				"west": {"uv": [3, 3, 5, 13], "rotation": 270, "texture": "#base"},
+				"up": {"uv": [5, 3, 11, 13], "texture": "#base"},
+				"down": {"uv": [5, 3, 11, 13], "texture": "#base"}
+			}
+		},
+		{
+			"name": "switch_toggle_bottom",
+			"from": [6.001, 0.101, 5.001],
+			"to": [9.999, 2.099, 8.999],
+			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.8, 8]},
+			"faces": {
+				"east": {"uv": [8, 0, 10, 4], "rotation": 90, "texture": "#toggle"},
+				"west": {"uv": [13, 0, 15, 4], "rotation": 270, "texture": "#toggle"},
+				"up": {"uv": [10, 0, 13, 4], "texture": "#toggle"}
+			}
+		},
+		{
+			"name": "switch_toggle_top",
+			"from": [6, 0.07716, 8.1148],
+			"to": [10, 2.07716, 11.1148],
+			"rotation": {"angle": -22.5, "axis": "x", "origin": [8, 1.8, 8]},
+			"faces": {
+				"east": {"uv": [0, 0, 2, 3], "rotation": 270, "texture": "#toggle"},
+				"west": {"uv": [6, 0, 8, 3], "rotation": 90, "texture": "#toggle"},
+				"up": {"uv": [2, 0, 6, 3], "texture": "#toggle"}
+			}
+		},
+		{
+			"name": "switch_indicator_upper",
+			"from": [6, -1.07089, 5.11356],
+			"to": [10, 0.92911, 6.11356],
+			"light_emission": 8,
+			"rotation": {"angle": 22.5, "axis": "x", "origin": [8, 1.8, 8]},
+			"faces": {
+				"north": {"uv": [3, 2, 7, 4], "rotation": 180, "texture": "#powered"},
+				"east": {"uv": [4, 2, 6, 3], "rotation": 90, "texture": "#toggle"},
+				"west": {"uv": [6, 2, 8, 3], "rotation": 270, "texture": "#toggle"}
+			}
+		},
+		{
+			"name": "switch_indicator_lower",
+			"from": [6.001, -1.13492, 9.98477],
+			"to": [9.999, 0.86308, 10.98277],
+			"light_emission": 8,
+			"rotation": {"angle": -45, "axis": "x", "origin": [8, 1.8, 8]},
+			"faces": {
+				"east": {"uv": [10, 2, 12, 3], "rotation": 270, "texture": "#toggle"},
+				"south": {"uv": [2, 5, 6, 7], "texture": "#unpowered"},
+				"west": {"uv": [8, 2, 10, 3], "rotation": 90, "texture": "#toggle"}
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation": [-111, 0, -180],
+			"translation": [0, 3.25, 4],
+			"scale": [0.6, 0.6, 0.6]
+		},
+		"thirdperson_lefthand": {
+			"rotation": [-111, 0, -180],
+			"translation": [0, 3.25, 4],
+			"scale": [0.6, 0.6, 0.6]
+		},
+		"firstperson_righthand": {
+			"rotation": [60, 180, -16],
+			"translation": [0.5, 2, 0.75],
+			"scale": [0.6, 0.6, 0.6]
+		},
+		"firstperson_lefthand": {
+			"rotation": [60, 180, -16],
+			"translation": [0.5, 2, 0.75],
+			"scale": [0.6, 0.6, 0.6]
+		},
+		"ground": {
+			"translation": [0, 5, 0],
+			"scale": [0.7, 0.7, 0.7]
+		},
+		"gui": {
+			"rotation": [100, 180, -45],
+			"translation": [-3.25, -1.5, 0],
+			"scale": [0.9, 0.9, 0.9]
+		},
+		"head": {
+			"translation": [0, 11.75, 0],
+			"scale": [0.65, 0.65, 0.65]
+		},
+		"fixed": {
+			"rotation": [-90, 0, 0],
+			"translation": [0, 0, -7]
+		}
+	},
+	"groups": [
+		0,
+		{
+			"name": "switch_toggle",
+			"origin": [8, 1, 8],
+			"color": 0,
+			"children": [1, 2, 3, 4]
+		}
+	]
+}

@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[2,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="justsomeswitches"
+version="1.0.0 - neoforge - 1.21.1"
+displayName="Just Some Switches"
+authors="theJERMwarfare"
+description='''A simple mod that adds a few new switch-style blocks that work just like the vanilla lever and add a few more facny features'''
+
+[[dependencies.justsomeswitches]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.174,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.justsomeswitches]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="BOTH"

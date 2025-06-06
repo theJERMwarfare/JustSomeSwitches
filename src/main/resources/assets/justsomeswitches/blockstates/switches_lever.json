@@ -1,0 +1,18 @@
+{
+  "variants": {
+    "face=floor,facing=north": { "model": "justsomeswitches:block/switches_lever" },
+    "face=floor,facing=east":  { "model": "justsomeswitches:block/switches_lever", "y": 90 },
+    "face=floor,facing=south": { "model": "justsomeswitches:block/switches_lever", "y": 180 },
+    "face=floor,facing=west":  { "model": "justsomeswitches:block/switches_lever", "y": 270 },
+
+    "face=wall,facing=north": { "model": "justsomeswitches:block/switches_lever", "x": 90 },
+    "face=wall,facing=east":  { "model": "justsomeswitches:block/switches_lever", "x": 90, "y": 90 },
+    "face=wall,facing=south": { "model": "justsomeswitches:block/switches_lever", "x": 90, "y": 180 },
+    "face=wall,facing=west":  { "model": "justsomeswitches:block/switches_lever", "x": 90, "y": 270 },
+
+    "face=ceiling,facing=north": { "model": "justsomeswitches:block/switches_lever", "x": 180, "y": 180 },
+    "face=ceiling,facing=east":  { "model": "justsomeswitches:block/switches_lever", "x": 180, "y": 270 },
+    "face=ceiling,facing=south": { "model": "justsomeswitches:block/switches_lever", "x": 180 },
+    "face=ceiling,facing=west":  { "model": "justsomeswitches:block/switches_lever", "x": 180, "y": 90 }
+  }
+}
