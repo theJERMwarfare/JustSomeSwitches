@@ -7,7 +7,7 @@ import net.neoforged.bus.api.IEventBus;
 
 @Mod(JustSomeSwitchesMod.MODID)
 public class JustSomeSwitchesMod {
-    public static final String MODID = "just_some_switches";
+    public static final String MODID = "justsomeswitches";
 
     public JustSomeSwitchesMod(IEventBus modEventBus) {
         JustSomeSwitchesModBlocks.BLOCKS.register(modEventBus);
