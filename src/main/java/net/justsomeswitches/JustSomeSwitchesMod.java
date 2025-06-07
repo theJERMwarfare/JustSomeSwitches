@@ -2,17 +2,15 @@ package net.justsomeswitches;
 
 import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
 import net.justsomeswitches.init.JustSomeSwitchesModTabs;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-//import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
 
 @Mod(JustSomeSwitchesMod.MODID)
 public class JustSomeSwitchesMod {
-    public static final String MODID = "justsomeswitches";
+    public static final String MODID = "just_some_switches";
 
     public JustSomeSwitchesMod(IEventBus modEventBus) {
-
-        JustSomeSwitchesModBlocks.register(modEventBus);
-        JustSomeSwitchesModTabs.register(modEventBus);
+        JustSomeSwitchesModBlocks.BLOCKS.register(modEventBus);
+        JustSomeSwitchesModTabs.CREATIVE_MODE_TABS.register(modEventBus);
     }
 }

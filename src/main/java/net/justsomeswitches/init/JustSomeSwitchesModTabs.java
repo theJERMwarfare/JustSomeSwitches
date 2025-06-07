@@ -2,31 +2,27 @@ package net.justsomeswitches.init;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
-//@Mod.EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class JustSomeSwitchesModTabs {
 
-    public static final DeferredRegister<CreativeModeTab> TABS =
+    // Create a deferred register for creative mode tabs, linked to your mod ID
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, JustSomeSwitchesMod.MODID);
 
+    // Register a new creative tab and define its contents and icon
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> JUST_SOME_SWITCHES_TAB =
-            TABS.register("just_some_switches_tab", () ->
+            CREATIVE_MODE_TABS.register("just_some_switches_tab", () ->
                     CreativeModeTab.builder()
-                            .title(net.minecraft.network.chat.Component.literal("Just Some Switches"))
-                            .icon(() -> new ItemStack(JustSomeSwitchesModBlocks.SWITCHES_LEVER.get()))
-                            .displayItems((params, output) -> {
+                            .title(Component.translatable("itemGroup.just_some_switches_tab"))
+                            .icon(() -> new ItemStack(Blocks.LEVER)) // TEMP icon, replace if needed
+                            .displayItems((parameters, output) -> {
                                 output.accept(JustSomeSwitchesModBlocks.SWITCHES_LEVER.get().asItem());
                             })
-                            .build()
-            );
-
-    public static void register(IEventBus bus) {
-        TABS.register(bus);
-    }
+                            .build());
 }
