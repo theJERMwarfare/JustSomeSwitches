@@ -1,3 +1,6 @@
 {
-  "parent": "justsomeswitches:block/switches_lever"
+  "model": {
+    "type": "minecraft:model",
+    "model": "just_some_switches:item/switches_lever"
+  }
 }
