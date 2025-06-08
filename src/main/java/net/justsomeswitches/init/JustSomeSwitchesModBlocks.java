@@ -8,7 +8,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-public class JustSomeSwitchesModBlocks {
+public final class JustSomeSwitchesModBlocks {
 
     // Create a deferred register for blocks using your mod ID
     public static final DeferredRegister.Blocks BLOCKS =
