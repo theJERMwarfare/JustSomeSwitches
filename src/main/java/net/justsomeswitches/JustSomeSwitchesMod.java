@@ -9,6 +9,6 @@ public class JustSomeSwitchesMod {
     public static final String MODID = "justsomeswitches";
 
     public JustSomeSwitchesMod(IEventBus modEventBus) {
-        JustSomeSwitchesModBlocks.BLOCKS.register(modEventBus);
+        JustSomeSwitchesModBlocks.register(modEventBus);
     }
 }
