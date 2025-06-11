@@ -1,0 +1,12 @@
+{
+  "parent": "justsomeswitches:custom/switcheslever",
+  "textures": {
+    "all": "minecraft:block/stone",
+    "particle": "minecraft:block/stone",
+    "unpowered": "minecraft:block/gray_concrete_powder",
+    "powered": "minecraft:block/redstone_block",
+    "toggle": "minecraft:block/oak_planks",
+    "base": "minecraft:block/cobblestone"
+  },
+  "render_type": "cutout"
+}
