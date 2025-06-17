@@ -1,5 +1,18 @@
 {
-  "itemGroup.justsomeswitches": "Example Mod Tab",
-  "block.justsomeswitches.example_block": "Example Block",
-  "item.justsomeswitches.example_item": "Example Item"
+  "block.justsomeswitches.switches_lever": "Switches Lever",
+  "item.justsomeswitches.switches_lever": "Switches Lever",
+
+  "_comment1": "Future block translations:",
+  "block.justsomeswitches.switches_rocker": "Switches Rocker",
+  "block.justsomeswitches.switches_button": "Switches Button",
+  "block.justsomeswitches.switches_slide": "Switches Slide",
+
+  "_comment2": "Future item translations:",
+  "item.justsomeswitches.switches_rocker": "Switches Rocker",
+  "item.justsomeswitches.switches_button": "Switches Button",
+  "item.justsomeswitches.switches_slide": "Switches Slide",
+  "item.justsomeswitches.switches_texture_wrench": "Switches Texture Wrench",
+
+  "_comment3": "Future creative tab:",
+  "itemGroup.justsomeswitches": "Just Some Switches"
 }
