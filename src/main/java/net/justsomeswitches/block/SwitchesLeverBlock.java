@@ -7,7 +7,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -17,195 +16,152 @@ import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import javax.annotation.Nonnull;
+
 /**
- * Custom Switches Lever Block
- *
- * This block extends LeverBlock to inherit all vanilla lever functionality
- * while adding custom features like modified bounding box and particle suppression.
- *
- * Key Features:
- * - Custom bounding box (slightly larger than vanilla lever)
- * - No particles when powered (unlike vanilla lever)
- * - Same redstone behavior as vanilla lever
- * - Same placement rules as vanilla lever
+ * Custom lever block with enhanced visual design and particle-free operation.
+ * Extends the vanilla LeverBlock to inherit all standard redstone functionality while providing:
+ * - Custom 3D models with configurable textures
+ * - Precision-fitted bounding boxes for all orientations
+ * - Clean operation without particle effects
+ * - Identical redstone behavior and placement mechanics to vanilla levers
  */
 public class SwitchesLeverBlock extends LeverBlock {
 
-    // Custom bounding boxes for different orientations
-    // ALL bounding boxes are exactly 6x10x6 pixels, rotated based on placement orientation
+    // Bounding box definitions for all placement orientations
+    // All boxes maintain consistent 6×10×6 pixel dimensions with the 10-pixel length
+    // aligned to the lever's facing direction for proper collision detection
 
-    // Floor placement - facing North/South (10 pixels along Z-axis, 6 pixels along X-axis, 6 pixels along Y-axis)
-    private static final VoxelShape FLOOR_AABB_NS = Block.box(5.0, 0.0, 3.0, 11.0, 6.0, 13.0);
-    // Floor placement - facing East/West (10 pixels along X-axis, 6 pixels along Z-axis, 6 pixels along Y-axis)
-    private static final VoxelShape FLOOR_AABB_EW = Block.box(3.0, 0.0, 5.0, 13.0, 6.0, 11.0);
+    // Floor-mounted lever bounding boxes
+    private static final VoxelShape FLOOR_NORTH_SOUTH = Block.box(5.0, 0.0, 3.0, 11.0, 6.0, 13.0);
+    private static final VoxelShape FLOOR_EAST_WEST = Block.box(3.0, 0.0, 5.0, 13.0, 6.0, 11.0);
 
-    // Ceiling placement - facing North/South (10 pixels along Z-axis, 6 pixels along X-axis, 6 pixels along Y-axis)
-    private static final VoxelShape CEILING_AABB_NS = Block.box(5.0, 10.0, 3.0, 11.0, 16.0, 13.0);
-    // Ceiling placement - facing East/West (10 pixels along X-axis, 6 pixels along Z-axis, 6 pixels along Y-axis)
-    private static final VoxelShape CEILING_AABB_EW = Block.box(3.0, 10.0, 5.0, 13.0, 16.0, 11.0);
+    // Ceiling-mounted lever bounding boxes
+    private static final VoxelShape CEILING_NORTH_SOUTH = Block.box(5.0, 10.0, 3.0, 11.0, 16.0, 13.0);
+    private static final VoxelShape CEILING_EAST_WEST = Block.box(3.0, 10.0, 5.0, 13.0, 16.0, 11.0);
 
-    // Wall placements (6x10x6 pixels each)
-    private static final VoxelShape WALL_NORTH_AABB = Block.box(5.0, 3.0, 10.0, 11.0, 13.0, 16.0);
-    private static final VoxelShape WALL_SOUTH_AABB = Block.box(5.0, 3.0, 0.0, 11.0, 13.0, 6.0);
-    private static final VoxelShape WALL_WEST_AABB = Block.box(10.0, 3.0, 5.0, 16.0, 13.0, 11.0);
-    private static final VoxelShape WALL_EAST_AABB = Block.box(0.0, 3.0, 5.0, 6.0, 13.0, 11.0);
+    // Wall-mounted lever bounding boxes
+    private static final VoxelShape WALL_NORTH = Block.box(5.0, 3.0, 10.0, 11.0, 13.0, 16.0);
+    private static final VoxelShape WALL_SOUTH = Block.box(5.0, 3.0, 0.0, 11.0, 13.0, 6.0);
+    private static final VoxelShape WALL_WEST = Block.box(10.0, 3.0, 5.0, 16.0, 13.0, 11.0);
+    private static final VoxelShape WALL_EAST = Block.box(0.0, 3.0, 5.0, 6.0, 13.0, 11.0);
 
     /**
-     * Constructor - sets up the block with the provided properties
-     *
-     * @param properties Block properties (hardness, material, etc.)
+     * Constructs a new switches lever block with the specified properties.
+     * Delegates blockstate initialization to the parent LeverBlock to ensure
+     * proper setup of POWERED, ATTACH_FACE, and HORIZONTAL_FACING properties.
+     * @param properties Block properties defining material behavior, hardness, etc.
      */
     public SwitchesLeverBlock(Properties properties) {
         super(properties);
-
-        // Initialize default blockstate (unpowered, facing north, on floor)
-        this.registerDefaultState(this.stateDefinition.any()
-                .setValue(BlockStateProperties.POWERED, false)
-                .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
-        );
     }
 
     /**
-     * Custom bounding box/shape for the block
-     * Returns different shapes based on the block's attachment face and direction
-     *
-     * @param state The current blockstate
-     * @param level The level/world
-     * @param pos The block position
-     * @param context Collision context
-     * @return The VoxelShape for this block's bounding box
+     * Determines the collision and selection shape for this block based on its current state.
+     * Returns orientation-specific bounding boxes that properly fit the 3D model geometry.
+     * The shape adapts to the lever's attachment face and horizontal facing direction.
+     * @param state Current blockstate containing orientation and power information
+     * @param level World reference (unused but required by interface)
+     * @param pos Block position (unused but required by interface)
+     * @param context Collision context for shape calculation
+     * @return VoxelShape defining the block's physical boundaries
      */
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    @Nonnull
+    public VoxelShape getShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);
         Direction direction = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
 
         return switch (attachFace) {
             case FLOOR -> switch (direction) {
-                case NORTH, SOUTH -> FLOOR_AABB_NS;
-                case EAST, WEST -> FLOOR_AABB_EW;
-                default -> FLOOR_AABB_NS; // Fallback
+                case NORTH, SOUTH -> FLOOR_NORTH_SOUTH;
+                case EAST, WEST -> FLOOR_EAST_WEST;
+                default -> FLOOR_NORTH_SOUTH;
             };
             case CEILING -> switch (direction) {
-                case NORTH, SOUTH -> CEILING_AABB_NS;
-                case EAST, WEST -> CEILING_AABB_EW;
-                default -> CEILING_AABB_NS; // Fallback
+                case NORTH, SOUTH -> CEILING_NORTH_SOUTH;
+                case EAST, WEST -> CEILING_EAST_WEST;
+                default -> CEILING_NORTH_SOUTH;
             };
             case WALL -> switch (direction) {
-                case NORTH -> WALL_NORTH_AABB;
-                case SOUTH -> WALL_SOUTH_AABB;
-                case WEST -> WALL_WEST_AABB;
-                case EAST -> WALL_EAST_AABB;
-                default -> FLOOR_AABB_NS; // Fallback, shouldn't happen
+                case NORTH -> WALL_NORTH;
+                case SOUTH -> WALL_SOUTH;
+                case WEST -> WALL_WEST;
+                case EAST -> WALL_EAST;
+                default -> WALL_NORTH;
             };
         };
     }
 
     /**
-     * Handle player interaction (right-click) with the block
-     * Overridden to suppress vanilla particles while keeping all other functionality
-     *
+     * Handles player interaction with the lever.
+     * Toggles the lever's powered state while maintaining all vanilla functionality
+     * including sound effects, redstone updates, and neighbor notifications.
+     * Deliberately excludes particle effects for cleaner visual operation.
      * @param state Current blockstate
-     * @param level The level/world
+     * @param level World instance
      * @param pos Block position
-     * @param player The player interacting
-     * @param hand The hand used for interaction
-     * @param hit The hit result from the interaction
-     * @return InteractionResult indicating success/failure
+     * @param player Player performing the interaction
+     * @param hand Hand used for interaction
+     * @param hit Ray trace result from player targeting
+     * @return Interaction result indicating success and consumption
      */
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    @Nonnull
+    public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player,
+                                 @Nonnull InteractionHand hand, @Nonnull BlockHitResult hit) {
 
-        // Only process on server side to avoid desync
+        // Process interaction only on server side to prevent client-server desynchronization
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
 
-        // Get current powered state
-        boolean isPowered = state.getValue(BlockStateProperties.POWERED);
-
         // Toggle the powered state
-        BlockState newState = state.setValue(BlockStateProperties.POWERED, !isPowered);
-        level.setBlock(pos, newState, 3); // Flag 3 = notify neighbors and clients
+        boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
+        BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
 
-        // Play the lever click sound (same as vanilla)
+        // Update the world with the new state and notify clients
+        level.setBlock(pos, newState, 3);
+
+        // Play standard lever click sound with pitch variation based on state
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
-                0.3F, isPowered ? 0.5F : 0.6F);
+                0.3F, currentlyPowered ? 0.5F : 0.6F);
 
-        // Update neighboring blocks for redstone signal changes
+        // Notify adjacent blocks of redstone changes
         level.updateNeighborsAt(pos, this);
 
-        // Update neighbors at the attached face for direct power (this is crucial!)
-        Direction attachedFace = getAttachedDirection(state);
-        level.updateNeighborsAt(pos.relative(attachedFace), this);
+        // Notify the directly attached block of power changes for strong redstone signal
+        Direction attachedDirection = getAttachedDirection(state);
+        level.updateNeighborsAt(pos.relative(attachedDirection), this);
 
         return InteractionResult.CONSUME;
     }
 
     /**
-     * Override to ensure we never spawn particles
-     * The vanilla lever spawns smoke particles when toggled - we don't want this
+     * Suppresses particle generation during block updates.
+     * Overrides the parent implementation to prevent any visual particle effects
+     * while the lever is in operation, providing cleaner visual feedback.
+     * @param state Current blockstate
+     * @param level World instance
+     * @param pos Block position
+     * @param randomSource Random number generator for particle variations
      */
     @Override
-    public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
-        // Intentionally empty - suppresses vanilla lever particles
-        // Could add custom particle effects here in the future if desired
+    public void animateTick(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource randomSource) {
+        // Intentionally empty to suppress all particle effects
     }
 
     /**
-     * Determines if this block can provide redstone power
-     * @return true - this block can provide redstone power like a vanilla lever
+     * Calculates the direction this lever is attached to its supporting block.
+     * Used for redstone neighbor updates to ensure proper signal propagation
+     * to the block the lever is mounted on.
+     * @param state Current blockstate containing attachment information
+     * @return Direction pointing toward the supporting block
      */
-    @Override
-    public boolean isSignalSource(BlockState state) {
-        return true;
-    }
-
-    /**
-     * Gets the direct redstone signal strength this block provides
-     * Used for direct/strong power - provides strong power to the attached block
-     *
-     * @param state The blockstate
-     * @param level The level/world
-     * @param pos The block position
-     * @param direction The direction being queried for power
-     * @return Signal strength (0-15)
-     */
-    @Override
-    public int getDirectSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        // Provide strong power (15) to the attached face when powered
-        return state.getValue(BlockStateProperties.POWERED) && getAttachedDirection(state) == direction ? 15 : 0;
-    }
-
-    /**
-     * Gets the indirect redstone signal strength this block provides
-     * Used for indirect/weak power - provides weak power to all non-attached directions
-     *
-     * @param state The blockstate
-     * @param level The level/world
-     * @param pos The block position
-     * @param direction The direction being queried for power
-     * @return Signal strength (0-15)
-     */
-    @Override
-    public int getSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        // Provide weak power (15) to all directions EXCEPT the attached face when powered
-        return state.getValue(BlockStateProperties.POWERED) && getAttachedDirection(state) != direction ? 15 : 0;
-    }
-
-    /**
-     * Get the direction that this lever is attached to (the face it's attached to)
-     * Helper method for redstone logic
-     *
-     * @param state The blockstate
-     * @return The direction this lever is attached to
-     */
-    private Direction getAttachedDirection(BlockState state) {
+    @Nonnull
+    private Direction getAttachedDirection(@Nonnull BlockState state) {
         AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);
         return switch (attachFace) {
             case FLOOR -> Direction.DOWN;
