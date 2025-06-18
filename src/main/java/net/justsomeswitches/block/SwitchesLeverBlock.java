@@ -35,13 +35,23 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class SwitchesLeverBlock extends LeverBlock {
 
     // Custom bounding boxes for different orientations
-    // These are slightly larger than vanilla lever to accommodate custom models
-    private static final VoxelShape FLOOR_AABB = Block.box(4.0, 0.0, 4.0, 12.0, 8.0, 12.0);
-    private static final VoxelShape CEILING_AABB = Block.box(4.0, 8.0, 4.0, 12.0, 16.0, 12.0);
-    private static final VoxelShape WALL_NORTH_AABB = Block.box(4.0, 4.0, 8.0, 12.0, 12.0, 16.0);
-    private static final VoxelShape WALL_SOUTH_AABB = Block.box(4.0, 4.0, 0.0, 12.0, 12.0, 8.0);
-    private static final VoxelShape WALL_WEST_AABB = Block.box(8.0, 4.0, 4.0, 16.0, 12.0, 12.0);
-    private static final VoxelShape WALL_EAST_AABB = Block.box(0.0, 4.0, 4.0, 8.0, 12.0, 12.0);
+    // ALL bounding boxes are exactly 6x10x6 pixels, rotated based on placement orientation
+
+    // Floor placement - facing North/South (10 pixels along Z-axis, 6 pixels along X-axis, 6 pixels along Y-axis)
+    private static final VoxelShape FLOOR_AABB_NS = Block.box(5.0, 0.0, 3.0, 11.0, 6.0, 13.0);
+    // Floor placement - facing East/West (10 pixels along X-axis, 6 pixels along Z-axis, 6 pixels along Y-axis)
+    private static final VoxelShape FLOOR_AABB_EW = Block.box(3.0, 0.0, 5.0, 13.0, 6.0, 11.0);
+
+    // Ceiling placement - facing North/South (10 pixels along Z-axis, 6 pixels along X-axis, 6 pixels along Y-axis)
+    private static final VoxelShape CEILING_AABB_NS = Block.box(5.0, 10.0, 3.0, 11.0, 16.0, 13.0);
+    // Ceiling placement - facing East/West (10 pixels along X-axis, 6 pixels along Z-axis, 6 pixels along Y-axis)
+    private static final VoxelShape CEILING_AABB_EW = Block.box(3.0, 10.0, 5.0, 13.0, 16.0, 11.0);
+
+    // Wall placements (6x10x6 pixels each)
+    private static final VoxelShape WALL_NORTH_AABB = Block.box(5.0, 3.0, 10.0, 11.0, 13.0, 16.0);
+    private static final VoxelShape WALL_SOUTH_AABB = Block.box(5.0, 3.0, 0.0, 11.0, 13.0, 6.0);
+    private static final VoxelShape WALL_WEST_AABB = Block.box(10.0, 3.0, 5.0, 16.0, 13.0, 11.0);
+    private static final VoxelShape WALL_EAST_AABB = Block.box(0.0, 3.0, 5.0, 6.0, 13.0, 11.0);
 
     /**
      * Constructor - sets up the block with the provided properties
@@ -75,14 +85,22 @@ public class SwitchesLeverBlock extends LeverBlock {
         Direction direction = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
 
         return switch (attachFace) {
-            case FLOOR -> FLOOR_AABB;
-            case CEILING -> CEILING_AABB;
+            case FLOOR -> switch (direction) {
+                case NORTH, SOUTH -> FLOOR_AABB_NS;
+                case EAST, WEST -> FLOOR_AABB_EW;
+                default -> FLOOR_AABB_NS; // Fallback
+            };
+            case CEILING -> switch (direction) {
+                case NORTH, SOUTH -> CEILING_AABB_NS;
+                case EAST, WEST -> CEILING_AABB_EW;
+                default -> CEILING_AABB_NS; // Fallback
+            };
             case WALL -> switch (direction) {
                 case NORTH -> WALL_NORTH_AABB;
                 case SOUTH -> WALL_SOUTH_AABB;
                 case WEST -> WALL_WEST_AABB;
                 case EAST -> WALL_EAST_AABB;
-                default -> FLOOR_AABB; // Fallback, shouldn't happen
+                default -> FLOOR_AABB_NS; // Fallback, shouldn't happen
             };
         };
     }

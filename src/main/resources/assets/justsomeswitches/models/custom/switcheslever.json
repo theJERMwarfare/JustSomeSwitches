@@ -1,13 +1,6 @@
 {
 	"credit": "Made with Blockbench",
 	"ambientocclusion": false,
-	"textures": {
-		"particle": "Minecraft Textures:block/cobblestone",
-		"base": "Minecraft Textures:block/cobblestone",
-		"toggle": "Minecraft Textures:block/oak_planks",
-		"powered": "Minecraft Textures:block/redstone_block",
-		"unpowered": "Minecraft Textures:block/gray_concrete_powder"
-	},
 	"elements": [
 		{
 			"name": "switch_base",
