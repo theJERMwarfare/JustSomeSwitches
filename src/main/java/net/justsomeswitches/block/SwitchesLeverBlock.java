@@ -140,8 +140,8 @@ public class SwitchesLeverBlock extends LeverBlock {
         // Update neighboring blocks for redstone signal changes
         level.updateNeighborsAt(pos, this);
 
-        // Update neighbors at the attached face for direct power
-        Direction attachedFace = getAttachedDirection(state).getOpposite();
+        // Update neighbors at the attached face for direct power (this is crucial!)
+        Direction attachedFace = getAttachedDirection(state);
         level.updateNeighborsAt(pos.relative(attachedFace), this);
 
         return InteractionResult.CONSUME;
@@ -155,6 +155,47 @@ public class SwitchesLeverBlock extends LeverBlock {
     public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
         // Intentionally empty - suppresses vanilla lever particles
         // Could add custom particle effects here in the future if desired
+    }
+
+    /**
+     * Determines if this block can provide redstone power
+     * @return true - this block can provide redstone power like a vanilla lever
+     */
+    @Override
+    public boolean isSignalSource(BlockState state) {
+        return true;
+    }
+
+    /**
+     * Gets the direct redstone signal strength this block provides
+     * Used for direct/strong power - provides strong power to the attached block
+     *
+     * @param state The blockstate
+     * @param level The level/world
+     * @param pos The block position
+     * @param direction The direction being queried for power
+     * @return Signal strength (0-15)
+     */
+    @Override
+    public int getDirectSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
+        // Provide strong power (15) to the attached face when powered
+        return state.getValue(BlockStateProperties.POWERED) && getAttachedDirection(state) == direction ? 15 : 0;
+    }
+
+    /**
+     * Gets the indirect redstone signal strength this block provides
+     * Used for indirect/weak power - provides weak power to all non-attached directions
+     *
+     * @param state The blockstate
+     * @param level The level/world
+     * @param pos The block position
+     * @param direction The direction being queried for power
+     * @return Signal strength (0-15)
+     */
+    @Override
+    public int getSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
+        // Provide weak power (15) to all directions EXCEPT the attached face when powered
+        return state.getValue(BlockStateProperties.POWERED) && getAttachedDirection(state) != direction ? 15 : 0;
     }
 
     /**
