@@ -1,0 +1,271 @@
+{
+	"credit": "Made with Blockbench",
+	"textures": {
+		"wrench": "block/switches_texture_wrench",
+		"particle": "block/switches_texture_wrench"
+	},
+	"elements": [
+		{
+			"name": "switches_texture_wrench_0",
+			"from": [4, 13, 0],
+			"to": [7, 15, 1],
+			"faces": {
+				"north": {"uv": [7, 1, 4, 3], "texture": "#wrench"},
+				"east": {"uv": [6, 1, 7, 3], "texture": "#wrench"},
+				"south": {"uv": [4, 1, 7, 3], "texture": "#wrench"},
+				"west": {"uv": [4, 1, 5, 3], "texture": "#wrench"},
+				"up": {"uv": [4, 1, 7, 2], "texture": "#wrench"},
+				"down": {"uv": [4, 2, 7, 3], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_1",
+			"from": [7, 6, 0],
+			"to": [8, 14, 1],
+			"faces": {
+				"north": {"uv": [8, 2, 7, 10], "texture": "#wrench"},
+				"east": {"uv": [7, 2, 8, 10], "texture": "#wrench"},
+				"south": {"uv": [7, 2, 8, 10], "texture": "#wrench"},
+				"west": {"uv": [7, 2, 8, 10], "texture": "#wrench"},
+				"up": {"uv": [7, 2, 8, 3], "texture": "#wrench"},
+				"down": {"uv": [7, 9, 8, 10], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_2",
+			"from": [5, 12, 0],
+			"to": [7, 13, 1],
+			"faces": {
+				"north": {"uv": [7, 3, 5, 4], "texture": "#wrench"},
+				"east": {"uv": [6, 3, 7, 4], "texture": "#wrench"},
+				"south": {"uv": [5, 3, 7, 4], "texture": "#wrench"},
+				"west": {"uv": [5, 3, 6, 4], "texture": "#wrench"},
+				"up": {"uv": [5, 3, 7, 4], "texture": "#wrench"},
+				"down": {"uv": [5, 3, 7, 4], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_3",
+			"from": [1, 9, 0],
+			"to": [3, 12, 1],
+			"faces": {
+				"north": {"uv": [3, 4, 1, 7], "texture": "#wrench"},
+				"east": {"uv": [2, 4, 3, 7], "texture": "#wrench"},
+				"south": {"uv": [1, 4, 3, 7], "texture": "#wrench"},
+				"west": {"uv": [1, 4, 2, 7], "texture": "#wrench"},
+				"up": {"uv": [1, 4, 3, 5], "texture": "#wrench"},
+				"down": {"uv": [1, 6, 3, 7], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_4",
+			"from": [6, 7, 0],
+			"to": [7, 12, 1],
+			"faces": {
+				"north": {"uv": [7, 4, 6, 9], "texture": "#wrench"},
+				"east": {"uv": [6, 4, 7, 9], "texture": "#wrench"},
+				"south": {"uv": [6, 4, 7, 9], "texture": "#wrench"},
+				"west": {"uv": [6, 4, 7, 9], "texture": "#wrench"},
+				"up": {"uv": [6, 4, 7, 5], "texture": "#wrench"},
+				"down": {"uv": [6, 8, 7, 9], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_5",
+			"from": [8, 5, 0],
+			"to": [9, 12, 1],
+			"faces": {
+				"north": {"uv": [9, 4, 8, 11], "texture": "#wrench"},
+				"east": {"uv": [8, 4, 9, 11], "texture": "#wrench"},
+				"south": {"uv": [8, 4, 9, 11], "texture": "#wrench"},
+				"west": {"uv": [8, 4, 9, 11], "texture": "#wrench"},
+				"up": {"uv": [8, 4, 9, 5], "texture": "#wrench"},
+				"down": {"uv": [8, 10, 9, 11], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_6",
+			"from": [3, 8, 0],
+			"to": [4, 11, 1],
+			"faces": {
+				"north": {"uv": [4, 5, 3, 8], "texture": "#wrench"},
+				"east": {"uv": [3, 5, 4, 8], "texture": "#wrench"},
+				"south": {"uv": [3, 5, 4, 8], "texture": "#wrench"},
+				"west": {"uv": [3, 5, 4, 8], "texture": "#wrench"},
+				"up": {"uv": [3, 5, 4, 6], "texture": "#wrench"},
+				"down": {"uv": [3, 7, 4, 8], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_7",
+			"from": [5, 7, 0],
+			"to": [6, 11, 1],
+			"faces": {
+				"north": {"uv": [6, 5, 5, 9], "texture": "#wrench"},
+				"east": {"uv": [5, 5, 6, 9], "texture": "#wrench"},
+				"south": {"uv": [5, 5, 6, 9], "texture": "#wrench"},
+				"west": {"uv": [5, 5, 6, 9], "texture": "#wrench"},
+				"up": {"uv": [5, 5, 6, 6], "texture": "#wrench"},
+				"down": {"uv": [5, 8, 6, 9], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_8",
+			"from": [4, 7, 0],
+			"to": [5, 10, 1],
+			"faces": {
+				"north": {"uv": [5, 6, 4, 9], "texture": "#wrench"},
+				"east": {"uv": [4, 6, 5, 9], "texture": "#wrench"},
+				"south": {"uv": [4, 6, 5, 9], "texture": "#wrench"},
+				"west": {"uv": [4, 6, 5, 9], "texture": "#wrench"},
+				"up": {"uv": [4, 6, 5, 7], "texture": "#wrench"},
+				"down": {"uv": [4, 8, 5, 9], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_9",
+			"from": [2, 8, 0],
+			"to": [3, 9, 1],
+			"faces": {
+				"north": {"uv": [3, 7, 2, 8], "texture": "#wrench"},
+				"east": {"uv": [2, 7, 3, 8], "texture": "#wrench"},
+				"south": {"uv": [2, 7, 3, 8], "texture": "#wrench"},
+				"west": {"uv": [2, 7, 3, 8], "texture": "#wrench"},
+				"up": {"uv": [2, 7, 3, 8], "texture": "#wrench"},
+				"down": {"uv": [2, 7, 3, 8], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_10",
+			"from": [9, 4, 0],
+			"to": [10, 9, 1],
+			"faces": {
+				"north": {"uv": [10, 7, 9, 12], "texture": "#wrench"},
+				"east": {"uv": [9, 7, 10, 12], "texture": "#wrench"},
+				"south": {"uv": [9, 7, 10, 12], "texture": "#wrench"},
+				"west": {"uv": [9, 7, 10, 12], "texture": "#wrench"},
+				"up": {"uv": [9, 7, 10, 8], "texture": "#wrench"},
+				"down": {"uv": [9, 11, 10, 12], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_11",
+			"from": [10, 3, 0],
+			"to": [11, 8, 1],
+			"faces": {
+				"north": {"uv": [11, 8, 10, 13], "texture": "#wrench"},
+				"east": {"uv": [10, 8, 11, 13], "texture": "#wrench"},
+				"south": {"uv": [10, 8, 11, 13], "texture": "#wrench"},
+				"west": {"uv": [10, 8, 11, 13], "texture": "#wrench"},
+				"up": {"uv": [10, 8, 11, 9], "texture": "#wrench"},
+				"down": {"uv": [10, 12, 11, 13], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_12",
+			"from": [11, 2, 0],
+			"to": [12, 7, 1],
+			"faces": {
+				"north": {"uv": [12, 9, 11, 14], "texture": "#wrench"},
+				"east": {"uv": [11, 9, 12, 14], "texture": "#wrench"},
+				"south": {"uv": [11, 9, 12, 14], "texture": "#wrench"},
+				"west": {"uv": [11, 9, 12, 14], "texture": "#wrench"},
+				"up": {"uv": [11, 9, 12, 10], "texture": "#wrench"},
+				"down": {"uv": [11, 13, 12, 14], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_13",
+			"from": [12, 1, 0],
+			"to": [13, 6, 1],
+			"faces": {
+				"north": {"uv": [13, 10, 12, 15], "texture": "#wrench"},
+				"east": {"uv": [12, 10, 13, 15], "texture": "#wrench"},
+				"south": {"uv": [12, 10, 13, 15], "texture": "#wrench"},
+				"west": {"uv": [12, 10, 13, 15], "texture": "#wrench"},
+				"up": {"uv": [12, 10, 13, 11], "texture": "#wrench"},
+				"down": {"uv": [12, 14, 13, 15], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_14",
+			"from": [13, 1, 0],
+			"to": [14, 5, 1],
+			"faces": {
+				"north": {"uv": [14, 11, 13, 15], "texture": "#wrench"},
+				"east": {"uv": [13, 11, 14, 15], "texture": "#wrench"},
+				"south": {"uv": [13, 11, 14, 15], "texture": "#wrench"},
+				"west": {"uv": [13, 11, 14, 15], "texture": "#wrench"},
+				"up": {"uv": [13, 11, 14, 12], "texture": "#wrench"},
+				"down": {"uv": [13, 14, 14, 15], "texture": "#wrench"}
+			}
+		},
+		{
+			"name": "switches_texture_wrench_15",
+			"from": [14, 1, 0],
+			"to": [15, 4, 1],
+			"faces": {
+				"north": {"uv": [15, 12, 14, 15], "texture": "#wrench"},
+				"east": {"uv": [14, 12, 15, 15], "texture": "#wrench"},
+				"south": {"uv": [14, 12, 15, 15], "texture": "#wrench"},
+				"west": {"uv": [14, 12, 15, 15], "texture": "#wrench"},
+				"up": {"uv": [14, 12, 15, 13], "texture": "#wrench"},
+				"down": {"uv": [14, 14, 15, 15], "texture": "#wrench"}
+			}
+		}
+	],
+	"display": {
+		"thirdperson_righthand": {
+			"rotation": [45, -90, -16],
+			"translation": [-3.5, 2, 1.25],
+			"scale": [0.5, 0.5, 0.5]
+		},
+		"thirdperson_lefthand": {
+			"rotation": [-45, -90, -16],
+			"translation": [-3.5, 2, 1.25],
+			"scale": [0.5, 0.5, 0.5]
+		},
+		"firstperson_righthand": {
+			"rotation": [-9, -69, -16],
+			"translation": [2, 0.5, -4],
+			"scale": [0.7, 0.7, 0.7]
+		},
+		"firstperson_lefthand": {
+			"rotation": [18, 107, -16],
+			"translation": [8.75, 2, -4],
+			"scale": [0.7, 0.7, 0.7]
+		},
+		"ground": {
+			"rotation": [-90, 0, 0],
+			"translation": [0, 3, 0],
+			"scale": [0.7, 0.7, 0.7]
+		},
+		"gui": {
+			"scale": [0.9, 0.9, 0.9]
+		},
+		"head": {
+			"rotation": [0, 0, -45],
+			"translation": [0, 11, 4.75],
+			"scale": [0.68, 0.68, 0.68]
+		},
+		"fixed": {
+			"rotation": [0, -180, 0],
+			"translation": [0, 0, -7]
+		}
+	},
+	"groups": [
+		{
+			"name": "switchestexturewrench",
+			"origin": [8, 8, 8],
+			"color": 0,
+			"children": [
+				{
+					"name": "switches_texture_wrench",
+					"origin": [8, 8, 8],
+					"color": 0,
+					"children": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+				}
+			]
+		}
+	]
+}

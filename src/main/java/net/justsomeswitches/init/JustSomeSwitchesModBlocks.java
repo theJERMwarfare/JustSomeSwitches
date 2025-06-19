@@ -16,7 +16,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
  * Registration class for all blocks and items in Just Some Switches mod
  *
  * This class handles the deferred registration of blocks and their corresponding items.
- * All switch variants will eventually be registered here.
+ * All switch variants and tools will eventually be registered here.
  */
 public class JustSomeSwitchesModBlocks {
 
@@ -60,6 +60,16 @@ public class JustSomeSwitchesModBlocks {
                     new Item.Properties()
             ));
 
+    /**
+     * Switches Texture Wrench - tool used to customize switch textures
+     * Opens texture customization GUI when shift-right-clicking on switches
+     */
+    public static final DeferredHolder<Item, Item> SWITCHES_TEXTURE_WRENCH =
+            ITEMS.register("switches_texture_wrench", () -> new Item(
+                    new Item.Properties()
+                            .stacksTo(1)    // Only allow 1 in a stack (like tools)
+            ));
+
     // ========================================
     // FUTURE REGISTRATIONS
     // ========================================
@@ -70,6 +80,5 @@ public class JustSomeSwitchesModBlocks {
      * - SWITCHES_BUTTON & SWITCHES_BUTTON_ITEM
      * - SWITCHES_SLIDE & SWITCHES_SLIDE_ITEM
      * - Inverted variants (these won't have items since they can't be crafted/placed directly)
-     * - SWITCHES_TEXTURE_WRENCH item
      */
 }
