@@ -2,6 +2,7 @@ package net.justsomeswitches;
 
 import net.justsomeswitches.gui.JustSomeSwitchesMenuTypes;
 import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
+import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.init.JustSomeSwitchesModTabs;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -13,10 +14,13 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 
 /**
- * Main mod class for Just Some Switches
+ * Main mod class for Just Some Switches - Phase 3A Enhanced
  * ---
  * This mod adds customizable switch variants that behave like vanilla levers
  * but with enhanced functionality and custom textures.
+ * ---
+ * Phase 3A additions:
+ * - Block Entity registration for NBT-based texture storage
  */
 @Mod(JustSomeSwitchesMod.MODID)
 public class JustSomeSwitchesMod {
@@ -29,6 +33,7 @@ public class JustSomeSwitchesMod {
 
     /**
      * Main mod constructor - called when NeoForge loads the mod
+     * Enhanced for Phase 3A with Block Entity support
      *
      * @param modContainer The mod container provided by NeoForge
      */
@@ -39,8 +44,13 @@ public class JustSomeSwitchesMod {
         // Register our blocks and items with the mod event bus
         JustSomeSwitchesModBlocks.BLOCKS.register(modEventBus);
         JustSomeSwitchesModBlocks.ITEMS.register(modEventBus);
+
+        // NEW: Register our block entities with the mod event bus (Phase 3A)
+        JustSomeSwitchesModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
+
         // Register our creative tabs with the mod event bus
         JustSomeSwitchesModTabs.CREATIVE_MODE_TABS.register(modEventBus);
+
         // Register our menu types with the mod event bus
         JustSomeSwitchesMenuTypes.MENU_TYPES.register(modEventBus);
 
@@ -48,6 +58,7 @@ public class JustSomeSwitchesMod {
         modEventBus.addListener(this::commonSetup);
 
         LOGGER.info("Just Some Switches mod initialized successfully!");
+        LOGGER.info("Phase 3A: Block Entity infrastructure ready");
     }
 
     /**
@@ -58,5 +69,6 @@ public class JustSomeSwitchesMod {
      */
     private void commonSetup(final FMLCommonSetupEvent event) {
         LOGGER.info("Just Some Switches common setup complete!");
+        LOGGER.info("Phase 3A: NBT foundation infrastructure initialized");
     }
 }
