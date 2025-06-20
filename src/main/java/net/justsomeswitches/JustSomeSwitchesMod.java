@@ -1,5 +1,6 @@
 package net.justsomeswitches;
 
+import net.justsomeswitches.gui.JustSomeSwitchesMenuTypes;
 import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
 import net.justsomeswitches.init.JustSomeSwitchesModTabs;
 import net.neoforged.bus.api.IEventBus;
@@ -13,6 +14,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Main mod class for Just Some Switches
+ * ---
  * This mod adds customizable switch variants that behave like vanilla levers
  * but with enhanced functionality and custom textures.
  */
@@ -27,6 +29,7 @@ public class JustSomeSwitchesMod {
 
     /**
      * Main mod constructor - called when NeoForge loads the mod
+     *
      * @param modContainer The mod container provided by NeoForge
      */
     public JustSomeSwitchesMod(@Nonnull ModContainer modContainer) {
@@ -38,6 +41,8 @@ public class JustSomeSwitchesMod {
         JustSomeSwitchesModBlocks.ITEMS.register(modEventBus);
         // Register our creative tabs with the mod event bus
         JustSomeSwitchesModTabs.CREATIVE_MODE_TABS.register(modEventBus);
+        // Register our menu types with the mod event bus
+        JustSomeSwitchesMenuTypes.MENU_TYPES.register(modEventBus);
 
         // Register event listeners
         modEventBus.addListener(this::commonSetup);
@@ -48,6 +53,7 @@ public class JustSomeSwitchesMod {
     /**
      * Common setup event - called after registration events are complete
      * Use this for any setup that needs to happen after all mods have registered their content
+     *
      * @param event The common setup event
      */
     private void commonSetup(final FMLCommonSetupEvent event) {

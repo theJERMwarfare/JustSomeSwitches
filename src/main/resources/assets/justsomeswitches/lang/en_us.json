@@ -14,5 +14,8 @@
   "item.justsomeswitches.switches_texture_wrench": "Switches Texture Wrench",
 
   "_comment3": "Creative tab:",
-  "itemGroup.justsomeswitches": "Just Some Switches"
+  "itemGroup.justsomeswitches": "Just Some Switches",
+
+  "_comment4": "GUI translations:",
+  "gui.justsomeswitches.switch_texture.title": "Customize Switch Texture"
 }

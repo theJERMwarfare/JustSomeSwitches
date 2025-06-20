@@ -2,6 +2,7 @@ package net.justsomeswitches.init;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
 import net.justsomeswitches.block.SwitchesLeverBlock;
+import net.justsomeswitches.item.SwitchTextureWrenchItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -14,7 +15,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
  * Registration class for all blocks and items in Just Some Switches mod
- *
+ * ---
  * This class handles the deferred registration of blocks and their corresponding items.
  * All switch variants and tools will eventually be registered here.
  */
@@ -64,8 +65,8 @@ public class JustSomeSwitchesModBlocks {
      * Switches Texture Wrench - tool used to customize switch textures
      * Opens texture customization GUI when shift-right-clicking on switches
      */
-    public static final DeferredHolder<Item, Item> SWITCHES_TEXTURE_WRENCH =
-            ITEMS.register("switches_texture_wrench", () -> new Item(
+    public static final DeferredHolder<Item, SwitchTextureWrenchItem> SWITCHES_TEXTURE_WRENCH =
+            ITEMS.register("switches_texture_wrench", () -> new SwitchTextureWrenchItem(
                     new Item.Properties()
                             .stacksTo(1)    // Only allow 1 in a stack (like tools)
             ));
