@@ -9,6 +9,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 /**
  * Registration class for menu types in Just Some Switches mod
+ * ---
+ * Phase 3B Enhancement: Added block position support for BlockEntity integration
  */
 public class JustSomeSwitchesMenuTypes {
 
@@ -16,12 +18,21 @@ public class JustSomeSwitchesMenuTypes {
             DeferredRegister.create(Registries.MENU, JustSomeSwitchesMod.MODID);
 
     /**
-     * Switch Texture Menu Type - simplified version
+     * Switch Texture Menu Type - Enhanced for Phase 3B with block position support
+     * ---
+     * Now supports passing block position data through extraData for BlockEntity integration
      */
     public static final DeferredHolder<MenuType<?>, MenuType<SwitchTextureMenu>> SWITCH_TEXTURE_MENU =
             MENU_TYPES.register("switch_texture_menu", () ->
-                    IMenuTypeExtension.create((containerId, playerInventory, extraData) ->
-                            new SwitchTextureMenu(containerId, playerInventory)
-                    )
+                    IMenuTypeExtension.create((containerId, playerInventory, extraData) -> {
+                        // Read block position from network data
+                        if (extraData != null) {
+                            var blockPos = extraData.readBlockPos();
+                            return new SwitchTextureMenu(containerId, playerInventory, blockPos);
+                        } else {
+                            // Fallback for any edge cases - shouldn't happen in normal gameplay
+                            return new SwitchTextureMenu(containerId, playerInventory, null);
+                        }
+                    })
             );
 }

@@ -24,27 +24,27 @@ import javax.annotation.Nullable;
  * This BlockEntity stores custom texture information in NBT data and provides
  * methods for getting/setting textures for the base and toggle components.
  * ---
- * Phase 3A Implementation: NeoForge 1.20.4 compatible NBT storage
+ * Phase 3B Fixed: Separated GUI slot storage from applied texture storage
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
     // NBT tag names for data persistence
     private static final String TAG_BASE_TEXTURE = "BaseTexture";
     private static final String TAG_TOGGLE_TEXTURE = "ToggleTexture";
-    private static final String TAG_BASE_ITEM = "BaseItem";
-    private static final String TAG_TOGGLE_ITEM = "ToggleItem";
+    private static final String TAG_GUI_BASE_ITEM = "GuiBaseItem";
+    private static final String TAG_GUI_TOGGLE_ITEM = "GuiToggleItem";
 
     // Default textures (same as model defaults)
     private static final String DEFAULT_BASE_TEXTURE = "minecraft:block/cobblestone";
     private static final String DEFAULT_TOGGLE_TEXTURE = "minecraft:block/oak_planks";
 
-    // Current texture settings stored in this block entity
+    // Current texture settings stored in this block entity (applied textures)
     private String baseTexture = DEFAULT_BASE_TEXTURE;
     private String toggleTexture = DEFAULT_TOGGLE_TEXTURE;
 
-    // Stored items for dropping when block is broken
-    private ItemStack baseItem = ItemStack.EMPTY;
-    private ItemStack toggleItem = ItemStack.EMPTY;
+    // GUI slot contents (what player has placed in the texture GUI slots)
+    private ItemStack guiBaseItem = ItemStack.EMPTY;
+    private ItemStack guiToggleItem = ItemStack.EMPTY;
 
     // Update tracking for client-server sync
     private boolean needsUpdate = false;
@@ -77,7 +77,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         if (texturePath != null) {
             this.baseTexture = texturePath;
-            this.baseItem = blockItem.copy();
             markUpdated();
             return true;
         }
@@ -99,7 +98,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         if (texturePath != null) {
             this.toggleTexture = texturePath;
-            this.toggleItem = blockItem.copy();
             markUpdated();
             return true;
         }
@@ -119,6 +117,39 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    // ========================================
+    // GUI SLOT MANAGEMENT (NEW - Fixed for Phase 3B)
+    // ========================================
+
+    /**
+     * Gets the item currently in the GUI toggle slot
+     * @return A copy of the ItemStack in the GUI toggle slot
+     */
+    @Nonnull
+    public ItemStack getGuiToggleItem() {
+        return guiToggleItem.copy();
+    }
+
+    /**
+     * Gets the item currently in the GUI base slot
+     * @return A copy of the ItemStack in the GUI base slot
+     */
+    @Nonnull
+    public ItemStack getGuiBaseItem() {
+        return guiBaseItem.copy();
+    }
+
+    /**
+     * Sets the GUI slot items (what player has placed in the texture slots)
+     * @param toggleItem The item for the toggle slot
+     * @param baseItem The item for the base slot
+     */
+    public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
+        this.guiToggleItem = toggleItem.copy();
+        this.guiBaseItem = baseItem.copy();
+        markUpdated();
     }
 
     // ========================================
@@ -144,24 +175,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Gets the stored base item (for GUI population)
-     * @return A copy of the ItemStack stored for the base texture
-     */
-    @Nonnull
-    public ItemStack getBaseItem() {
-        return baseItem.copy();
-    }
-
-    /**
-     * Gets the stored toggle item (for GUI population)
-     * @return A copy of the ItemStack stored for the toggle texture
-     */
-    @Nonnull
-    public ItemStack getToggleItem() {
-        return toggleItem.copy();
-    }
-
-    /**
      * Checks if this switch has custom textures applied
      * @return true if either texture is customized from defaults
      */
@@ -176,8 +189,22 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void resetTextures() {
         this.baseTexture = DEFAULT_BASE_TEXTURE;
         this.toggleTexture = DEFAULT_TOGGLE_TEXTURE;
-        this.baseItem = ItemStack.EMPTY;
-        this.toggleItem = ItemStack.EMPTY;
+        markUpdated();
+    }
+
+    /**
+     * Resets only the toggle texture to default
+     */
+    public void resetToggleTexture() {
+        this.toggleTexture = DEFAULT_TOGGLE_TEXTURE;
+        markUpdated();
+    }
+
+    /**
+     * Resets only the base texture to default
+     */
+    public void resetBaseTexture() {
+        this.baseTexture = DEFAULT_BASE_TEXTURE;
         markUpdated();
     }
 
@@ -186,16 +213,16 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // ========================================
 
     /**
-     * Drops stored texture items when the block is broken
+     * Drops stored GUI slot items when the block is broken
      * @param level The world level
      * @param pos The block position
      */
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
-        if (!baseItem.isEmpty()) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), baseItem);
+        if (!guiBaseItem.isEmpty()) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiBaseItem);
         }
-        if (!toggleItem.isEmpty()) {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), toggleItem);
+        if (!guiToggleItem.isEmpty()) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiToggleItem);
         }
     }
 
@@ -207,21 +234,21 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     protected void saveAdditional(@Nonnull CompoundTag tag) {
         super.saveAdditional(tag);
 
-        // Save texture paths
+        // Save texture paths (applied textures)
         tag.putString(TAG_BASE_TEXTURE, baseTexture);
         tag.putString(TAG_TOGGLE_TEXTURE, toggleTexture);
 
-        // Save stored items if they exist
-        if (!baseItem.isEmpty()) {
+        // Save GUI slot items if they exist
+        if (!guiBaseItem.isEmpty()) {
             CompoundTag baseItemTag = new CompoundTag();
-            baseItem.save(baseItemTag);
-            tag.put(TAG_BASE_ITEM, baseItemTag);
+            guiBaseItem.save(baseItemTag);
+            tag.put(TAG_GUI_BASE_ITEM, baseItemTag);
         }
 
-        if (!toggleItem.isEmpty()) {
+        if (!guiToggleItem.isEmpty()) {
             CompoundTag toggleItemTag = new CompoundTag();
-            toggleItem.save(toggleItemTag);
-            tag.put(TAG_TOGGLE_ITEM, toggleItemTag);
+            guiToggleItem.save(toggleItemTag);
+            tag.put(TAG_GUI_TOGGLE_ITEM, toggleItemTag);
         }
     }
 
@@ -240,17 +267,17 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             toggleTexture = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // Load stored items
-        if (tag.contains(TAG_BASE_ITEM)) {
-            baseItem = ItemStack.of(tag.getCompound(TAG_BASE_ITEM));
+        // Load GUI slot items
+        if (tag.contains(TAG_GUI_BASE_ITEM)) {
+            guiBaseItem = ItemStack.of(tag.getCompound(TAG_GUI_BASE_ITEM));
         } else {
-            baseItem = ItemStack.EMPTY;
+            guiBaseItem = ItemStack.EMPTY;
         }
 
-        if (tag.contains(TAG_TOGGLE_ITEM)) {
-            toggleItem = ItemStack.of(tag.getCompound(TAG_TOGGLE_ITEM));
+        if (tag.contains(TAG_GUI_TOGGLE_ITEM)) {
+            guiToggleItem = ItemStack.of(tag.getCompound(TAG_GUI_TOGGLE_ITEM));
         } else {
-            toggleItem = ItemStack.EMPTY;
+            guiToggleItem = ItemStack.EMPTY;
         }
     }
 

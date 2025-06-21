@@ -1,54 +1,63 @@
 package net.justsomeswitches.gui;
 
+import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.Nullable;
 
 /**
  * Server-side container menu for the Switch Texture customization GUI
+ * ---
+ * Phase 3B Enhancement: Fixed GUI slot persistence and texture application separation
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
-
-    // Static storage for persistence (temporary solution until Phase 3)
-    private static final ConcurrentHashMap<String, SimpleContainer> TEXTURE_STORAGE = new ConcurrentHashMap<>();
-    private static final String DEFAULT_KEY = "default_switch";
 
     private static final int TEXTURE_SLOT_COUNT = 2;
     public static final int TOGGLE_TEXTURE_SLOT = 0;
     public static final int BASE_TEXTURE_SLOT = 1;
 
-    // Updated slot positioning to match the new screen layout
-    private static final int TOGGLE_SLOT_X = 62;
-    private static final int TOGGLE_SLOT_Y = 27;    // Moved down to match screen
-    private static final int BASE_SLOT_X = 98;
-    private static final int BASE_SLOT_Y = 27;      // Moved down to match screen
+    // FIXED slot positioning for proper item alignment - moved right and down 1 pixel
+    private static final int TOGGLE_SLOT_X = 63;  // Moved right 1 pixel for proper item positioning
+    private static final int TOGGLE_SLOT_Y = 36;  // Moved down 1 pixel for proper item positioning
+    private static final int BASE_SLOT_X = 99;    // Moved right 1 pixel for proper item positioning
+    private static final int BASE_SLOT_Y = 36;    // Moved down 1 pixel for proper item positioning
 
-    // Player inventory positioning
-    private static final int PLAYER_INV_X = 8;
-    private static final int PLAYER_INV_Y = 58;     // Adjusted for new layout
-    private static final int HOTBAR_X = 8;
-    private static final int HOTBAR_Y = 116;        // Adjusted for new layout
+    // FIXED player inventory positioning for proper item alignment - moved right and down 1 pixel
+    private static final int PLAYER_INV_X = 9;    // Moved right 1 pixel for proper item positioning
+    private static final int PLAYER_INV_Y = 95;   // Moved down 1 pixel for proper item positioning
+    private static final int HOTBAR_X = 9;        // Moved right 1 pixel for proper item positioning
+    private static final int HOTBAR_Y = 153;      // Moved down 1 pixel for proper item positioning
 
+    // BlockEntity integration fields
     private final SimpleContainer textureContainer;
-    private final String storageKey;
+    private final BlockPos blockPos;
+    private final Level level;
+    private SwitchesLeverBlockEntity blockEntity;
 
     /**
-     * Constructor for the Switch Texture Menu
+     * Constructor for the Switch Texture Menu with BlockEntity integration
+     * ---
+     * @param containerId The container ID
+     * @param playerInventory The player's inventory
+     * @param blockPos The position of the switch block (can be null for fallback)
      */
-    public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory) {
+    public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
 
-        // Use default key for now - Phase 3 will use block position
-        this.storageKey = DEFAULT_KEY;
+        this.blockPos = blockPos;
+        this.level = playerInventory.player.level();
+        this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT);
 
-        // Get or create persistent container
-        this.textureContainer = TEXTURE_STORAGE.computeIfAbsent(storageKey, k -> new SimpleContainer(TEXTURE_SLOT_COUNT));
+        // Try to get the BlockEntity and load GUI slot data
+        loadGuiSlotData();
 
         // Add texture slots
         addSlot(new TextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
@@ -56,6 +65,82 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
         // Add player inventory
         addPlayerInventory(playerInventory);
+    }
+
+    /**
+     * Loads GUI slot data from the BlockEntity into the container
+     * This represents what the player has placed in the slots (persistent)
+     */
+    private void loadGuiSlotData() {
+        if (blockPos != null && level != null) {
+            var be = level.getBlockEntity(blockPos);
+            if (be instanceof SwitchesLeverBlockEntity switchEntity) {
+                this.blockEntity = switchEntity;
+
+                // Load the GUI slot contents (what player has placed in slots)
+                textureContainer.setItem(TOGGLE_TEXTURE_SLOT, switchEntity.getGuiToggleItem());
+                textureContainer.setItem(BASE_TEXTURE_SLOT, switchEntity.getGuiBaseItem());
+            }
+        }
+    }
+
+    /**
+     * Saves GUI slot data from the container to the BlockEntity
+     * This preserves what the player has placed in the slots
+     */
+    private void saveGuiSlotData() {
+        if (blockEntity != null) {
+            // Save the current GUI slot contents for persistence
+            ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
+            ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+
+            blockEntity.setGuiSlotItems(toggleItem, baseItem);
+        }
+    }
+
+    /**
+     * Applies the current textures from GUI slots to the switch
+     * Called when Apply button is clicked (Phase 3B feature)
+     */
+    public void applyTextures() {
+        if (blockEntity != null) {
+            // Get items from the GUI slots
+            ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
+            ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+
+            // Apply or reset toggle texture based on slot content
+            if (!toggleItem.isEmpty()) {
+                blockEntity.setToggleTexture(toggleItem);
+            } else {
+                // Reset toggle texture to default if slot is empty
+                blockEntity.resetToggleTexture();
+            }
+
+            // Apply or reset base texture based on slot content
+            if (!baseItem.isEmpty()) {
+                blockEntity.setBaseTexture(baseItem);
+            } else {
+                // Reset base texture to default if slot is empty
+                blockEntity.resetBaseTexture();
+            }
+        }
+    }
+
+    /**
+     * Checks if the menu has a valid BlockEntity connection
+     * @return true if connected to a BlockEntity
+     */
+    public boolean hasValidBlockEntity() {
+        return blockEntity != null;
+    }
+
+    /**
+     * Gets the block position this menu is connected to
+     * @return The block position or null if not connected
+     */
+    @Nullable
+    public BlockPos getBlockPos() {
+        return blockPos;
     }
 
     private void addPlayerInventory(@Nonnull Inventory playerInventory) {
@@ -114,25 +199,26 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(@Nonnull Player player) {
-        return true;
+        // Check if the player is still close enough to the switch block
+        if (blockPos != null && level != null) {
+            return player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) <= 64.0;
+        }
+        return true; // Fallback for edge cases
     }
 
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
-        // Items now persist in static storage - no dropping!
-        // The texture data will remain until Phase 3 implements proper NBT persistence
+
+        // Auto-apply textures when GUI closes (as requested)
+        applyTextures();
+
+        // Save GUI slot contents when closing so items persist
+        saveGuiSlotData();
     }
 
     @Nonnull
     public SimpleContainer getTextureContainer() {
         return textureContainer;
-    }
-
-    /**
-     * Clear all texture data (for testing/debugging)
-     */
-    public static void clearAllTextureData() {
-        TEXTURE_STORAGE.clear();
     }
 }
