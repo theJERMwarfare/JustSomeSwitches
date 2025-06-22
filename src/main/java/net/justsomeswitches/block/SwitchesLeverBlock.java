@@ -14,6 +14,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -30,11 +31,8 @@ import javax.annotation.Nullable;
 /**
  * Enhanced Switches Lever Block with BlockEntity support for texture customization
  * ---
- * This version adds BlockEntity functionality to support NBT-based texture storage
- * while maintaining all the original lever functionality from Phase 2.
- * ---
- * Phase 3A: Now implements EntityBlock to connect with SwitchesLeverBlockEntity
- * Fixed for NeoForge 1.20.4 compatibility
+ * Phase 3C Enhancement: Added conditional rendering override to disable vanilla rendering
+ * when custom textures are applied, allowing Block Entity Renderer to take full control.
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -53,7 +51,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // BLOCK ENTITY IMPLEMENTATION (NEW - Phase 3A)
+    // BLOCK ENTITY IMPLEMENTATION
     // ========================================
 
     @Override
@@ -86,7 +84,19 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // EXISTING FUNCTIONALITY (UNCHANGED from Phase 2)
+    // PHASE 3C: CONDITIONAL RENDERING OVERRIDE
+    // ========================================
+
+    @Override
+    @Nonnull
+    public RenderShape getRenderShape(@Nonnull BlockState state) {
+        // Phase 3C FINAL: Completely disable vanilla block rendering
+        // Block Entity Renderer will handle ALL rendering (both custom and default textures)
+        return RenderShape.INVISIBLE;
+    }
+
+    // ========================================
+    // EXISTING FUNCTIONALITY (UNCHANGED)
     // ========================================
 
     @Override
@@ -159,7 +169,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // BLOCK ENTITY CLEANUP (NEW - Phase 3A)
+    // BLOCK ENTITY CLEANUP
     // ========================================
 
     @Override

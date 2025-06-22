@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
  * This BlockEntity stores custom texture information in NBT data and provides
  * methods for getting/setting textures for the base and toggle components.
  * ---
- * Phase 3B Fixed: Separated GUI slot storage from applied texture storage
+ * Phase 3C Enhanced: Added comprehensive debugging to trace texture application flow
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -59,7 +59,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // TEXTURE MANAGEMENT METHODS
+    // TEXTURE MANAGEMENT METHODS (ENHANCED DEBUG)
     // ========================================
 
     /**
@@ -68,19 +68,32 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * @return true if texture was successfully set
      */
     public boolean setBaseTexture(@Nonnull ItemStack blockItem) {
-        if (blockItem.isEmpty() || !(blockItem.getItem() instanceof BlockItem item)) {
+        System.out.println("Phase 3C Debug: setBaseTexture called with item: " + blockItem);
+
+        if (blockItem.isEmpty()) {
+            System.out.println("Phase 3C Debug: setBaseTexture - item is empty");
+            return false;
+        }
+
+        if (!(blockItem.getItem() instanceof BlockItem item)) {
+            System.out.println("Phase 3C Debug: setBaseTexture - item is not a BlockItem: " + blockItem.getItem().getClass());
             return false;
         }
 
         Block block = item.getBlock();
         String texturePath = getTextureFromBlock(block);
 
+        System.out.println("Phase 3C Debug: setBaseTexture - extracted texture path: " + texturePath);
+
         if (texturePath != null) {
             this.baseTexture = texturePath;
+            System.out.println("Phase 3C Debug: setBaseTexture - SUCCESS! Set base texture to: " + this.baseTexture);
             markUpdated();
             return true;
+        } else {
+            System.out.println("Phase 3C Debug: setBaseTexture - FAILED to extract texture path");
+            return false;
         }
-        return false;
     }
 
     /**
@@ -89,19 +102,32 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * @return true if texture was successfully set
      */
     public boolean setToggleTexture(@Nonnull ItemStack blockItem) {
-        if (blockItem.isEmpty() || !(blockItem.getItem() instanceof BlockItem item)) {
+        System.out.println("Phase 3C Debug: setToggleTexture called with item: " + blockItem);
+
+        if (blockItem.isEmpty()) {
+            System.out.println("Phase 3C Debug: setToggleTexture - item is empty");
+            return false;
+        }
+
+        if (!(blockItem.getItem() instanceof BlockItem item)) {
+            System.out.println("Phase 3C Debug: setToggleTexture - item is not a BlockItem: " + blockItem.getItem().getClass());
             return false;
         }
 
         Block block = item.getBlock();
         String texturePath = getTextureFromBlock(block);
 
+        System.out.println("Phase 3C Debug: setToggleTexture - extracted texture path: " + texturePath);
+
         if (texturePath != null) {
             this.toggleTexture = texturePath;
+            System.out.println("Phase 3C Debug: setToggleTexture - SUCCESS! Set toggle texture to: " + this.toggleTexture);
             markUpdated();
             return true;
+        } else {
+            System.out.println("Phase 3C Debug: setToggleTexture - FAILED to extract texture path");
+            return false;
         }
-        return false;
     }
 
     /**
@@ -113,14 +139,18 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private String getTextureFromBlock(@Nonnull Block block) {
         try {
             ResourceLocation blockId = block.builtInRegistryHolder().key().location();
-            return blockId.getNamespace() + ":block/" + blockId.getPath();
+            String texturePath = blockId.getNamespace() + ":block/" + blockId.getPath();
+            System.out.println("Phase 3C Debug: getTextureFromBlock - Block: " + block + " -> Texture: " + texturePath);
+            return texturePath;
         } catch (Exception e) {
+            System.out.println("Phase 3C Debug: getTextureFromBlock - ERROR: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
 
     // ========================================
-    // GUI SLOT MANAGEMENT (NEW - Fixed for Phase 3B)
+    // GUI SLOT MANAGEMENT
     // ========================================
 
     /**
@@ -179,8 +209,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * @return true if either texture is customized from defaults
      */
     public boolean hasCustomTextures() {
-        return !baseTexture.equals(DEFAULT_BASE_TEXTURE) ||
-                !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE);
+        boolean hasCustom = !baseTexture.equals(DEFAULT_BASE_TEXTURE) || !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE);
+        System.out.println("Phase 3C Debug: hasCustomTextures() called - Base: " + baseTexture + " (default: " + DEFAULT_BASE_TEXTURE + "), Toggle: " + toggleTexture + " (default: " + DEFAULT_TOGGLE_TEXTURE + ") -> Result: " + hasCustom);
+        return hasCustom;
     }
 
     /**

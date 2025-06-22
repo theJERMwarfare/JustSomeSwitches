@@ -16,7 +16,7 @@ import javax.annotation.Nullable;
 /**
  * Server-side container menu for the Switch Texture customization GUI
  * ---
- * Phase 3B Enhancement: Fixed GUI slot persistence and texture application separation
+ * Phase 3C Enhancement: Added comprehensive debugging to trace GUI-BlockEntity interaction
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -56,6 +56,8 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         this.level = playerInventory.player.level();
         this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT);
 
+        System.out.println("Phase 3C Debug: SwitchTextureMenu constructor - BlockPos: " + blockPos);
+
         // Try to get the BlockEntity and load GUI slot data
         loadGuiSlotData();
 
@@ -74,13 +76,25 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private void loadGuiSlotData() {
         if (blockPos != null && level != null) {
             var be = level.getBlockEntity(blockPos);
+            System.out.println("Phase 3C Debug: loadGuiSlotData - BlockEntity: " + be);
+
             if (be instanceof SwitchesLeverBlockEntity switchEntity) {
                 this.blockEntity = switchEntity;
+                System.out.println("Phase 3C Debug: loadGuiSlotData - Found SwitchesLeverBlockEntity");
 
                 // Load the GUI slot contents (what player has placed in slots)
-                textureContainer.setItem(TOGGLE_TEXTURE_SLOT, switchEntity.getGuiToggleItem());
-                textureContainer.setItem(BASE_TEXTURE_SLOT, switchEntity.getGuiBaseItem());
+                ItemStack toggleItem = switchEntity.getGuiToggleItem();
+                ItemStack baseItem = switchEntity.getGuiBaseItem();
+
+                System.out.println("Phase 3C Debug: loadGuiSlotData - Loading Toggle: " + toggleItem + ", Base: " + baseItem);
+
+                textureContainer.setItem(TOGGLE_TEXTURE_SLOT, toggleItem);
+                textureContainer.setItem(BASE_TEXTURE_SLOT, baseItem);
+            } else {
+                System.out.println("Phase 3C Debug: loadGuiSlotData - BlockEntity is not SwitchesLeverBlockEntity: " + (be != null ? be.getClass() : "null"));
             }
+        } else {
+            System.out.println("Phase 3C Debug: loadGuiSlotData - blockPos or level is null");
         }
     }
 
@@ -94,7 +108,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
             ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
 
+            System.out.println("Phase 3C Debug: saveGuiSlotData - Saving Toggle: " + toggleItem + ", Base: " + baseItem);
+
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
+        } else {
+            System.out.println("Phase 3C Debug: saveGuiSlotData - blockEntity is null!");
         }
     }
 
@@ -103,26 +121,39 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * Called when Apply button is clicked (Phase 3B feature)
      */
     public void applyTextures() {
+        System.out.println("Phase 3C Debug: applyTextures called");
+
         if (blockEntity != null) {
             // Get items from the GUI slots
             ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
             ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
 
+            System.out.println("Phase 3C Debug: applyTextures - Toggle item: " + toggleItem);
+            System.out.println("Phase 3C Debug: applyTextures - Base item: " + baseItem);
+
             // Apply or reset toggle texture based on slot content
             if (!toggleItem.isEmpty()) {
-                blockEntity.setToggleTexture(toggleItem);
+                boolean success = blockEntity.setToggleTexture(toggleItem);
+                System.out.println("Phase 3C Debug: applyTextures - Toggle texture set success: " + success);
             } else {
                 // Reset toggle texture to default if slot is empty
+                System.out.println("Phase 3C Debug: applyTextures - Resetting toggle texture to default");
                 blockEntity.resetToggleTexture();
             }
 
             // Apply or reset base texture based on slot content
             if (!baseItem.isEmpty()) {
-                blockEntity.setBaseTexture(baseItem);
+                boolean success = blockEntity.setBaseTexture(baseItem);
+                System.out.println("Phase 3C Debug: applyTextures - Base texture set success: " + success);
             } else {
                 // Reset base texture to default if slot is empty
+                System.out.println("Phase 3C Debug: applyTextures - Resetting base texture to default");
                 blockEntity.resetBaseTexture();
             }
+
+            System.out.println("Phase 3C Debug: applyTextures - Final textures - Base: " + blockEntity.getBaseTexture() + ", Toggle: " + blockEntity.getToggleTexture());
+        } else {
+            System.out.println("Phase 3C Debug: applyTextures - blockEntity is null!");
         }
     }
 
@@ -209,6 +240,8 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
+
+        System.out.println("Phase 3C Debug: GUI removed - auto-applying textures and saving slot data");
 
         // Auto-apply textures when GUI closes (as requested)
         applyTextures();
