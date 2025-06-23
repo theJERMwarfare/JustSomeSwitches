@@ -31,8 +31,8 @@ import javax.annotation.Nullable;
 /**
  * Enhanced Switches Lever Block with BlockEntity support for texture customization
  * ---
- * Phase 3C Enhancement: Added conditional rendering override to disable vanilla rendering
- * when custom textures are applied, allowing Block Entity Renderer to take full control.
+ * Phase 3C: Simplified Model-Based Texture System Integration
+ * Uses vanilla rendering with custom models that support dynamic texture replacement
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -84,15 +84,16 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // PHASE 3C: CONDITIONAL RENDERING OVERRIDE
+    // PHASE 3C: VANILLA RENDERING WITH CUSTOM MODELS
     // ========================================
 
     @Override
     @Nonnull
     public RenderShape getRenderShape(@Nonnull BlockState state) {
-        // Phase 3C FINAL: Completely disable vanilla block rendering
-        // Block Entity Renderer will handle ALL rendering (both custom and default textures)
-        return RenderShape.INVISIBLE;
+        // Phase 3C: Use vanilla rendering with custom models
+        // This allows our custom models to handle texture replacement
+        // without z-fighting issues from Block Entity Renderers
+        return RenderShape.MODEL;
     }
 
     // ========================================
@@ -150,7 +151,22 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         Direction attachedDirection = getAttachedDirection(state);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);
 
+        // Phase 3C: Trigger model update for texture changes
+        triggerModelUpdate(level, pos);
+
         return InteractionResult.CONSUME;
+    }
+
+    /**
+     * Trigger model update when block state changes
+     * This ensures custom models receive updated ModelData
+     */
+    private void triggerModelUpdate(@Nonnull Level level, @Nonnull BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            // Force ModelData refresh by sending block update
+            level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_ALL);
+            System.out.println("Phase 3C Debug: Triggered model update for switch at " + pos);
+        }
     }
 
     @Override
@@ -180,8 +196,58 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             if (blockEntity instanceof SwitchesLeverBlockEntity switchEntity) {
                 // Drop any stored texture blocks when switch is broken
                 switchEntity.dropStoredTextures(level, pos);
+                System.out.println("Phase 3C Debug: Switch removed at " + pos + " - cleaning up textures");
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
+    }
+
+    // ========================================
+    // PHASE 3C: ENHANCED BLOCK UPDATES
+    // ========================================
+
+    @Override
+    public void neighborChanged(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
+                                @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
+        super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
+
+        // Ensure model updates are triggered for texture changes
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            if (blockEntity.hasCustomTextures()) {
+                level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+            }
+        }
+    }
+
+    /**
+     * Enhanced state change handling for texture updates
+     */
+    @Override
+    public void setPlacedBy(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state,
+                            @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer,
+                            @Nonnull net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+
+        // Initialize BlockEntity and trigger initial model update
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
+            System.out.println("Phase 3C Debug: Switch placed at " + pos + " - initialized with default textures");
+        }
+    }
+
+    // ========================================
+    // DEBUG HELPERS
+    // ========================================
+
+    /**
+     * Debug method to check current texture state
+     */
+    public void debugTextureState(@Nonnull Level level, @Nonnull BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("Phase 3C Debug: Switch at " + pos +
+                    " - Base: " + blockEntity.getBaseTexture() +
+                    ", Toggle: " + blockEntity.getToggleTexture() +
+                    ", HasCustom: " + blockEntity.hasCustomTextures());
+        }
     }
 }
