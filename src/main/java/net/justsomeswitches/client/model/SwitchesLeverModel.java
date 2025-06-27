@@ -32,57 +32,51 @@ import java.util.List;
 public class SwitchesLeverModel implements BakedModel {
 
     private final BakedModel baseModel;
-    private final BlockState modelState;
+    private final BlockState representativeState;
 
-    // Texture cache for performance
-    private TextureAtlasSprite cachedBaseTexture = null;
-    private TextureAtlasSprite cachedToggleTexture = null;
-    private String cachedBaseTexturePath = "";
-    private String cachedToggleTexturePath = "";
+    // Texture caching for performance
+    private TextureAtlasSprite cachedBaseTexture;
+    private TextureAtlasSprite cachedToggleTexture;
+    private String cachedBaseTexturePath;
+    private String cachedToggleTexturePath;
 
-    public SwitchesLeverModel(BlockState state, BakedModel baseModel) {
-        this.modelState = state;
+    public SwitchesLeverModel(@Nonnull BlockState state, @Nonnull BakedModel baseModel) {
+        this.representativeState = state;
         this.baseModel = baseModel;
     }
 
     @Override
     @Nonnull
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction direction, @Nonnull RandomSource random) {
-        return getQuads(state, direction, random, ModelData.EMPTY, null);
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand, @Nonnull ModelData extraData, @Nullable RenderType renderType) {
+        // Get base model quads
+        List<BakedQuad> baseQuads = baseModel.getQuads(state, side, rand, extraData, renderType);
+
+        System.out.println("Phase 3C Debug: Custom model getQuads called - side: " + side + ", quads: " + baseQuads.size());
+
+        // Check if we have texture data
+        SwitchesLeverBlockEntity.SwitchTextureData textureData = extraData.get(SwitchesLeverBlockEntity.TEXTURE_PROPERTY);
+
+        if (textureData != null) {
+            System.out.println("Phase 3C Debug: Custom model getQuads - Has texture data: Base=" + textureData.getBaseTexture() +
+                    ", Toggle=" + textureData.getToggleTexture() + ", HasCustom=" + textureData.hasCustomTextures());
+
+            if (textureData.hasCustomTextures()) {
+                System.out.println("Phase 3C Debug: Base model returned " + baseQuads.size() + " quads");
+                return replaceTexturesInQuads(baseQuads, textureData);
+            }
+        }
+
+        System.out.println("Phase 3C Debug: Using base model quads without texture replacement");
+        return baseQuads;
     }
 
     @Override
     @Nonnull
-    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction direction, @Nonnull RandomSource random,
-                                    @Nonnull ModelData modelData, @Nullable RenderType renderType) {
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand) {
+        List<BakedQuad> result = baseModel.getQuads(state, side, rand);
+        System.out.println("Phase 3C Debug: Texture replacement completed, returning " + result.size() + " modified quads");
 
-        // Get texture data from ModelData
-        net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.SwitchTextureData textureData =
-                modelData.get(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.TEXTURE_PROPERTY);
-
-        // Debug output
-        if (textureData != null) {
-            System.out.println("Phase 3C Debug: Custom model getQuads - Has texture data: Base=" +
-                    textureData.getBaseTexture() + ", Toggle=" + textureData.getToggleTexture() +
-                    ", HasCustom=" + textureData.hasCustomTextures());
-        } else {
-            System.out.println("Phase 3C Debug: Custom model getQuads - No texture data in ModelData");
-        }
-
-        // Get base model quads
-        List<BakedQuad> baseQuads = baseModel.getQuads(state, direction, random, modelData, renderType);
-        System.out.println("Phase 3C Debug: Base model returned " + baseQuads.size() + " quads");
-
-        // If no custom textures, use base model
-        if (textureData == null || !textureData.hasCustomTextures()) {
-            return baseQuads;
-        }
-
-        // Replace textures in quads
-        List<BakedQuad> modifiedQuads = replaceTexturesInQuads(baseQuads, textureData);
-        System.out.println("Phase 3C Debug: Texture replacement completed, returning " + modifiedQuads.size() + " modified quads");
-
-        return modifiedQuads;
+        return result;
     }
 
     /**
@@ -146,45 +140,84 @@ public class SwitchesLeverModel implements BakedModel {
 
     /**
      * Determine which replacement texture to use for the original texture
+     * FIXED: Exclude powered/unpowered state textures
      */
     @Nonnull
     private TextureAtlasSprite determineReplacementTexture(@Nonnull TextureAtlasSprite originalTexture,
                                                            @Nonnull TextureAtlasSprite baseSprite,
                                                            @Nonnull TextureAtlasSprite toggleSprite) {
 
-        // Check if this is a base texture (cobblestone-like)
         String originalName = originalTexture.contents().name().toString();
         System.out.println("Phase 3C Debug: Determining replacement for: " + originalName);
 
-        // More comprehensive texture matching
-        if (originalName.contains("cobblestone") || originalName.contains("stone") ||
-                originalName.contains("base") || originalName.contains("bottom")) {
+        // CRITICAL FIX: Exclude powered/unpowered state textures
+        if (shouldExcludeFromReplacement(originalName)) {
+            System.out.println("Phase 3C Debug: Excluded texture (powered/unpowered state): " + originalName);
+            return originalTexture;
+        }
+
+        // Check if this is a base texture (cobblestone-like)
+        if (isBaseTexture(originalName)) {
             System.out.println("Phase 3C Debug: Identified as base texture -> replacing with " + baseSprite.contents().name());
             return baseSprite;
         }
 
         // Check if this is a toggle texture (wood-like)
-        if (originalName.contains("oak") || originalName.contains("planks") || originalName.contains("wood") ||
-                originalName.contains("toggle") || originalName.contains("lever") || originalName.contains("top")) {
+        if (isToggleTexture(originalName)) {
             System.out.println("Phase 3C Debug: Identified as toggle texture -> replacing with " + toggleSprite.contents().name());
             return toggleSprite;
-        }
-
-        // Try to match by typical switch texture patterns
-        if (originalName.contains("switches") || originalName.contains("lever")) {
-            // If it contains switch/lever, try to determine if it's base or toggle part
-            if (originalName.contains("base") || originalName.contains("bottom")) {
-                System.out.println("Phase 3C Debug: Switch base texture -> replacing with " + baseSprite.contents().name());
-                return baseSprite;
-            } else {
-                System.out.println("Phase 3C Debug: Switch toggle texture -> replacing with " + toggleSprite.contents().name());
-                return toggleSprite;
-            }
         }
 
         // Default: no replacement
         System.out.println("Phase 3C Debug: No pattern match - keeping original texture");
         return originalTexture;
+    }
+
+    /**
+     * Check if texture should be excluded from replacement
+     * These textures represent switch states and should never be changed
+     */
+    private boolean shouldExcludeFromReplacement(@Nonnull String textureName) {
+        // Exclude textures that represent powered/unpowered states
+        return textureName.contains("powered") ||
+                textureName.contains("unpowered") ||
+                textureName.contains("on") ||
+                textureName.contains("off") ||
+                textureName.contains("active") ||
+                textureName.contains("inactive") ||
+                textureName.contains("state") ||
+                textureName.contains("signal") ||
+                textureName.contains("indicator") ||
+                // Exclude redstone-related textures (these likely represent powered states)
+                textureName.contains("redstone") && (textureName.contains("block") || textureName.contains("dust"));
+    }
+
+    /**
+     * Check if texture represents a base/structural part
+     */
+    private boolean isBaseTexture(@Nonnull String textureName) {
+        return (textureName.contains("cobblestone") ||
+                textureName.contains("stone") ||
+                textureName.contains("base") ||
+                textureName.contains("bottom") ||
+                textureName.contains("foundation")) &&
+                // Make sure it's not a powered/unpowered state texture
+                !shouldExcludeFromReplacement(textureName);
+    }
+
+    /**
+     * Check if texture represents a toggle/movable part
+     */
+    private boolean isToggleTexture(@Nonnull String textureName) {
+        return (textureName.contains("oak") ||
+                textureName.contains("planks") ||
+                textureName.contains("wood") ||
+                textureName.contains("toggle") ||
+                textureName.contains("lever") ||
+                textureName.contains("top") ||
+                textureName.contains("handle")) &&
+                // Make sure it's not a powered/unpowered state texture
+                !shouldExcludeFromReplacement(textureName);
     }
 
     /**

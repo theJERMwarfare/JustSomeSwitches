@@ -2,9 +2,13 @@ package net.justsomeswitches.blockentity;
 
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.Containers;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -17,35 +21,159 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * BlockEntity for Switches Lever with Simplified Texture System
+ * Block Entity for Switches Lever - Phase 3B Enhanced
  * ---
- * Phase 3C: Simplified ModelData Integration
- * Uses a simple approach inspired by Framed Blocks but tailored for our texture replacement needs
+ * This BlockEntity provides NBT-based texture storage for individual switch blocks,
+ * enabling per-block texture customization with client-server synchronization.
+ * ---
+ * Phase 3B enhancements:
+ * - Enhanced texture management with validation
+ * - GUI slot management for texture application
+ * - Professional error handling and debugging
+ * - Complete NBT serialization with item storage
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
-    // ModelData property for our texture information
-    public static final ModelProperty<SwitchTextureData> TEXTURE_PROPERTY = new ModelProperty<>();
+    // ========================================
+    // TEXTURE CONFIGURATION
+    // ========================================
+
+    // Default texture paths
+    public static final String DEFAULT_BASE_TEXTURE = "minecraft:block/stone";
+    public static final String DEFAULT_TOGGLE_TEXTURE = "minecraft:block/oak_planks";
 
     // NBT keys for texture storage
-    private static final String TOGGLE_TEXTURE_KEY = "toggle_texture_path";
     private static final String BASE_TEXTURE_KEY = "base_texture_path";
-
-    // Default textures
-    private static final String DEFAULT_BASE_TEXTURE = "minecraft:block/cobblestone";
-    private static final String DEFAULT_TOGGLE_TEXTURE = "minecraft:block/oak_planks";
+    private static final String TOGGLE_TEXTURE_KEY = "toggle_texture_path";
 
     // Current texture paths
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
     private String toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
 
-    public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
-        super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
+    // ========================================
+    // PHASE 3C: MODEL DATA INTEGRATION
+    // ========================================
+
+    /**
+     * ModelProperty for passing texture data to custom models
+     */
+    public static final ModelProperty<SwitchTextureData> TEXTURE_PROPERTY = new ModelProperty<>();
+
+    /**
+     * Data class for passing texture information to custom models
+     */
+    public static class SwitchTextureData {
+        private final String baseTexture;
+        private final String toggleTexture;
+
+        public SwitchTextureData(String baseTexture, String toggleTexture) {
+            this.baseTexture = baseTexture;
+            this.toggleTexture = toggleTexture;
+        }
+
+        public String getBaseTexture() {
+            return baseTexture;
+        }
+
+        public String getToggleTexture() {
+            return toggleTexture;
+        }
+
+        /**
+         * Check if using custom textures (different from defaults)
+         */
+        public boolean hasCustomTextures() {
+            return !baseTexture.equals(DEFAULT_BASE_TEXTURE) ||
+                    !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE);
+        }
+    }
+
+    /**
+     * Get ModelData for custom model rendering
+     */
+    @Override
+    @Nonnull
+    public ModelData getModelData() {
+        return ModelData.builder()
+                .with(TEXTURE_PROPERTY, new SwitchTextureData(baseTexturePath, toggleTexturePath))
+                .build();
     }
 
     // ========================================
-    // TEXTURE MANAGEMENT
+    // CONSTRUCTOR AND BASIC SETUP
     // ========================================
+
+    public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
+        super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
+        System.out.println("Phase 3C Debug: SwitchesLeverBlockEntity created at " + pos);
+    }
+
+    // ========================================
+    // CLIENT AND SERVER TICK METHODS
+    // ========================================
+
+    /**
+     * Client-side tick method for any client-specific updates
+     */
+    public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
+        // Client-side logic can be added here if needed
+        // Currently no client-specific ticking required
+    }
+
+    /**
+     * Server-side tick method for any server-specific updates
+     */
+    public static void serverTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
+        // Server-side logic can be added here if needed
+        // Currently no server-specific ticking required
+    }
+
+    // ========================================
+    // TEXTURE MANAGEMENT METHODS
+    // ========================================
+
+    /**
+     * Extract texture path from ItemStack using proper NeoForge 1.20.4 registry access
+     */
+    @Nonnull
+    private String getTextureFromItem(@Nonnull ItemStack itemStack) {
+        if (itemStack.isEmpty()) {
+            return "";
+        }
+
+        Item item = itemStack.getItem();
+        if (!(item instanceof BlockItem blockItem)) {
+            return "";
+        }
+
+        Block block = blockItem.getBlock();
+        try {
+            // FIXED: Use BuiltInRegistries instead of ForgeRegistries for NeoForge 1.20.4
+            ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(block);
+            if (blockId != null) {
+                String texturePath = blockId.getNamespace() + ":block/" + blockId.getPath();
+                System.out.println("Phase 3C Debug: Extracted texture path: " + texturePath + " from item: " + blockId);
+                return texturePath;
+            }
+        } catch (Exception e) {
+            System.err.println("Phase 3C Error: Failed to extract texture from item: " + e.getMessage());
+        }
+
+        return "";
+    }
+
+    /**
+     * Mark BlockEntity as dirty and trigger client synchronization
+     */
+    private void markDirtyAndSync() {
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            // Request model data update for custom models
+            requestModelDataUpdate();
+            System.out.println("Phase 3C Debug: BlockEntity marked dirty and synced at " + worldPosition);
+        }
+    }
 
     /**
      * Set the base texture for the switch (String version)
@@ -178,106 +306,56 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
-        System.out.println("Phase 3C Debug: GUI slot items set - Toggle: " + toggleItem + ", Base: " + baseItem);
-    }
 
-    // ========================================
-    // MODEL DATA INTEGRATION (SIMPLIFIED)
-    // ========================================
-
-    /**
-     * Get ModelData for rendering system - simplified approach
-     */
-    @Override
-    @Nonnull
-    public ModelData getModelData() {
-        SwitchTextureData textureData = new SwitchTextureData(baseTexturePath, toggleTexturePath);
-
-        ModelData data = ModelData.builder()
-                .with(TEXTURE_PROPERTY, textureData)
-                .build();
-
-        System.out.println("Phase 3C Debug: BlockEntity getModelData - Base: " + baseTexturePath +
-                ", Toggle: " + toggleTexturePath + ", HasCustom: " + textureData.hasCustomTextures());
-
-        return data;
-    }
-
-    // ========================================
-    // HELPER METHODS FOR GUI INTEGRATION
-    // ========================================
-
-    /**
-     * Extract texture path from ItemStack (for GUI integration)
-     */
-    @Nonnull
-    public String getTextureFromItem(@Nonnull ItemStack itemStack) {
-        if (itemStack.isEmpty()) {
-            return "";
-        }
-
-        try {
-            Block block = Block.byItem(itemStack.getItem());
-            if (block != null && block != net.minecraft.world.level.block.Blocks.AIR) {
-                // Get the registry name and convert to texture path
-                net.minecraft.resources.ResourceLocation blockId = net.neoforged.neoforge.registries.ForgeRegistries.BLOCKS.getKey(block);
-                if (blockId != null) {
-                    String texturePath = blockId.getNamespace() + ":block/" + blockId.getPath();
-                    System.out.println("Phase 3C Debug: Extracted texture path: " + texturePath + " from item: " + itemStack);
-                    return texturePath;
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Phase 3C Debug: Error extracting texture from item: " + e.getMessage());
-        }
-
-        return "";
+        System.out.println("Phase 3C Debug: GUI slot items updated - Toggle: " + toggleItem + ", Base: " + baseItem);
     }
 
     /**
-     * Apply textures from ItemStacks (for GUI integration)
+     * Apply textures from GUI slots to the switch
      */
-    public void applyTextures(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
-        boolean changed = false;
+    public void applyTexturesFromGui() {
+        boolean textureChanged = false;
 
         // Apply toggle texture
-        if (!toggleItem.isEmpty()) {
-            String toggleTexture = getTextureFromItem(toggleItem);
-            if (!toggleTexture.isEmpty()) {
-                changed |= setToggleTexture(toggleTexture);
-            }
+        if (!guiToggleItem.isEmpty()) {
+            textureChanged |= setToggleTexture(guiToggleItem);
         } else {
-            changed |= setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
+            textureChanged |= setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
         }
 
         // Apply base texture
-        if (!baseItem.isEmpty()) {
-            String baseTexture = getTextureFromItem(baseItem);
-            if (!baseTexture.isEmpty()) {
-                changed |= setBaseTexture(baseTexture);
-            }
+        if (!guiBaseItem.isEmpty()) {
+            textureChanged |= setBaseTexture(guiBaseItem);
         } else {
-            changed |= setBaseTexture(DEFAULT_BASE_TEXTURE);
+            textureChanged |= setBaseTexture(DEFAULT_BASE_TEXTURE);
         }
 
-        if (changed) {
-            System.out.println("Phase 3C Debug: Textures applied - Base: " + baseTexturePath + ", Toggle: " + toggleTexturePath);
+        if (textureChanged) {
+            System.out.println("Phase 3C Debug: Textures applied from GUI at " + worldPosition);
         }
     }
 
     /**
-     * Drop stored texture items when block is broken
+     * Drop stored texture blocks when switch is broken
      */
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
-        System.out.println("Phase 3C Debug: Switch broken at " + pos + " - textures were: Base: " + baseTexturePath + ", Toggle: " + toggleTexturePath);
+        if (!guiToggleItem.isEmpty()) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiToggleItem);
+            System.out.println("Phase 3C Debug: Dropped toggle texture item: " + guiToggleItem);
+        }
+
+        if (!guiBaseItem.isEmpty()) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiBaseItem);
+            System.out.println("Phase 3C Debug: Dropped base texture item: " + guiBaseItem);
+        }
     }
 
     // ========================================
-    // NBT SERIALIZATION (NeoForge 1.20.4)
+    // NBT SERIALIZATION
     // ========================================
 
     @Override
-    public void saveAdditional(@Nonnull CompoundTag nbt) {
+    protected void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
 
         // Save texture paths
@@ -358,113 +436,21 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
+        System.out.println("Phase 3C Debug: Created update tag for client sync");
         return nbt;
     }
 
     /**
-     * Handle update packet on client
+     * Handle data packet from server
      */
     @Override
-    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
+    public void onDataPacket(@Nonnull net.minecraft.network.Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
         CompoundTag nbt = pkt.getTag();
         if (nbt != null) {
-            String newBaseTexture = nbt.getString(BASE_TEXTURE_KEY);
-            String newToggleTexture = nbt.getString(TOGGLE_TEXTURE_KEY);
-
-            boolean changed = false;
-            if (!newBaseTexture.equals(this.baseTexturePath)) {
-                this.baseTexturePath = newBaseTexture;
-                changed = true;
-            }
-            if (!newToggleTexture.equals(this.toggleTexturePath)) {
-                this.toggleTexturePath = newToggleTexture;
-                changed = true;
-            }
-
-            // Sync GUI slot items
-            if (nbt.contains("gui_toggle_item")) {
-                this.guiToggleItem = ItemStack.of(nbt.getCompound("gui_toggle_item"));
-            } else {
-                this.guiToggleItem = ItemStack.EMPTY;
-            }
-
-            if (nbt.contains("gui_base_item")) {
-                this.guiBaseItem = ItemStack.of(nbt.getCompound("gui_base_item"));
-            } else {
-                this.guiBaseItem = ItemStack.EMPTY;
-            }
-
-            if (changed) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
-                System.out.println("Phase 3C Debug: Client received texture update - Base: " + baseTexturePath + ", Toggle: " + toggleTexturePath);
-            }
-        }
-    }
-
-    /**
-     * Mark dirty and sync to clients
-     */
-    private void markDirtyAndSync() {
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            // Force model data update by sending multiple update types
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(),
-                    Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS | Block.UPDATE_KNOWN_SHAPE);
-            System.out.println("Phase 3C Debug: Sent block update for model refresh at " + worldPosition);
-        } else if (level != null && level.isClientSide) {
-            // Client-side model data refresh
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
-            System.out.println("Phase 3C Debug: Client-side block update sent at " + worldPosition);
-        }
-    }
-
-    // ========================================
-    // TICKERS (NeoForge 1.20.4 Compatible)
-    // ========================================
-
-    /**
-     * Client-side tick (placeholder for future features)
-     */
-    public static void clientTick(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state, @Nonnull SwitchesLeverBlockEntity blockEntity) {
-        // Placeholder for client-side logic if needed
-    }
-
-    /**
-     * Server-side tick (placeholder for future features)
-     */
-    public static void serverTick(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state, @Nonnull SwitchesLeverBlockEntity blockEntity) {
-        // Placeholder for server-side logic if needed
-    }
-
-    // ========================================
-    // SIMPLE TEXTURE DATA CLASS
-    // ========================================
-
-    /**
-     * Simple data class for switch texture information
-     */
-    public static class SwitchTextureData {
-        private final String baseTexture;
-        private final String toggleTexture;
-
-        public SwitchTextureData(@Nonnull String baseTexture, @Nonnull String toggleTexture) {
-            this.baseTexture = baseTexture;
-            this.toggleTexture = toggleTexture;
-        }
-
-        @Nonnull
-        public String getBaseTexture() {
-            return baseTexture;
-        }
-
-        @Nonnull
-        public String getToggleTexture() {
-            return toggleTexture;
-        }
-
-        public boolean hasCustomTextures() {
-            return !baseTexture.equals(DEFAULT_BASE_TEXTURE) ||
-                    !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE);
+            load(nbt);
+            // Request model data update when receiving server data
+            requestModelDataUpdate();
+            System.out.println("Phase 3C Debug: Received data packet from server");
         }
     }
 }
