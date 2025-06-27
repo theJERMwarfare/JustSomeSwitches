@@ -1,6 +1,7 @@
 package net.justsomeswitches.gui;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
@@ -10,7 +11,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 /**
  * Registration class for menu types in Just Some Switches mod
  * ---
- * Phase 3B Enhancement: Added block position support for BlockEntity integration
+ * Phase 3C Fix: Resolved ambiguous constructor reference by explicitly casting null to BlockPos
  */
 public class JustSomeSwitchesMenuTypes {
 
@@ -30,8 +31,8 @@ public class JustSomeSwitchesMenuTypes {
                             var blockPos = extraData.readBlockPos();
                             return new SwitchTextureMenu(containerId, playerInventory, blockPos);
                         } else {
-                            // Fallback for any edge cases - shouldn't happen in normal gameplay
-                            return new SwitchTextureMenu(containerId, playerInventory, null);
+                            // Fallback for any edge cases - explicitly cast null to BlockPos to resolve ambiguity
+                            return new SwitchTextureMenu(containerId, playerInventory, (BlockPos) null);
                         }
                     })
             );

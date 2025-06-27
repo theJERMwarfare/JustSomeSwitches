@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 /**
  * Custom slot that only accepts solid block items suitable for texture customization
  *---
+ * Phase 3C Fix: Added static isValidTextureItem method for external validation
  * This slot is used in the Switch Texture GUI to ensure players can only
  * place solid, full-cube blocks that make good texture sources.
  */
@@ -38,6 +39,19 @@ public class TextureSlot extends Slot {
      */
     @Override
     public boolean mayPlace(@Nonnull ItemStack itemStack) {
+        return isValidTextureItem(itemStack);
+    }
+
+    /**
+     * Static method to check if an ItemStack is valid for texture customization
+     * Only allows solid, full-cube blocks that make good texture sources
+     * ---
+     * Phase 3C Fix: Added static method for external validation calls
+     *
+     * @param itemStack The item stack to check
+     * @return True if the item is valid for texture customization
+     */
+    public static boolean isValidTextureItem(@Nonnull ItemStack itemStack) {
         // Only allow block items
         if (!(itemStack.getItem() instanceof BlockItem blockItem)) {
             return false;
