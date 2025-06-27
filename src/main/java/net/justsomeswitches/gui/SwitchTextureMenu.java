@@ -1,7 +1,7 @@
 package net.justsomeswitches.gui;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -9,34 +9,38 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.gui.JustSomeSwitchesMenuTypes;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Server-side container menu for the Switch Texture customization GUI
+ * Server-side menu for the Switch Texture customization GUI
  * ---
- * Phase 3C Fix: Fixed GUI closing logic to preserve applied textures
+ * Phase 3B Enhancement: Now properly integrated with BlockEntity for per-block texture storage
+ * FIXED: Added automatic texture application when slots change
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
+    // GUI Layout Constants
     private static final int TEXTURE_SLOT_COUNT = 2;
-    public static final int TOGGLE_TEXTURE_SLOT = 0;
-    public static final int BASE_TEXTURE_SLOT = 1;
+    private static final int TOGGLE_TEXTURE_SLOT = 0;
+    private static final int BASE_TEXTURE_SLOT = 1;
 
-    // FIXED slot positioning for proper item alignment - moved right and down 1 pixel
-    private static final int TOGGLE_SLOT_X = 63;  // Moved right 1 pixel for proper item positioning
-    private static final int TOGGLE_SLOT_Y = 36;  // Moved down 1 pixel for proper item positioning
-    private static final int BASE_SLOT_X = 99;    // Moved right 1 pixel for proper item positioning
-    private static final int BASE_SLOT_Y = 36;    // Moved down 1 pixel for proper item positioning
+    // Slot positioning - perfectly aligned with SwitchTextureScreen
+    private static final int TOGGLE_SLOT_X = 63;  // X position for toggle texture slot
+    private static final int TOGGLE_SLOT_Y = 36;  // Y position for toggle texture slot
+    private static final int BASE_SLOT_X = 99;    // X position for base texture slot
+    private static final int BASE_SLOT_Y = 36;    // Y position for base texture slot
 
-    // FIXED player inventory positioning for proper item alignment - moved right and down 1 pixel
-    private static final int PLAYER_INV_X = 9;    // Moved right 1 pixel for proper item positioning
-    private static final int PLAYER_INV_Y = 95;   // Moved down 1 pixel for proper item positioning
-    private static final int HOTBAR_X = 9;        // Moved right 1 pixel for proper item positioning
-    private static final int HOTBAR_Y = 153;      // Moved down 1 pixel for proper item positioning
+    // Player inventory positioning (vanilla-style)
+    private static final int PLAYER_INV_X = 9;    // X position for player inventory grid
+    private static final int PLAYER_INV_Y = 95;   // Y position for player inventory grid
+    private static final int HOTBAR_X = 9;        // X position for hotbar
+    private static final int HOTBAR_Y = 153;      // Y position for hotbar
 
-    // BlockEntity integration fields
+    // Instance data
     private final SimpleContainer textureContainer;
     private final BlockPos blockPos;
     private final Level level;
@@ -44,10 +48,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
     /**
      * Constructor for the Switch Texture Menu with BlockEntity integration
-     * ---
-     * @param containerId The container ID
-     * @param playerInventory The player's inventory
-     * @param blockPos The position of the switch block (can be null for fallback)
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
@@ -65,17 +65,24 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         addSlot(new TextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
         addSlot(new TextureSlot(textureContainer, BASE_TEXTURE_SLOT, BASE_SLOT_X, BASE_SLOT_Y));
 
-        // Add player inventory slots (3x9 grid) - FIXED: corrected positioning
+        // Add player inventory slots
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(playerInventory, col + row * 9 + 9, PLAYER_INV_X + col * 18, PLAYER_INV_Y + row * 18));
             }
         }
 
-        // Add player hotbar slots (1x9 grid) - FIXED: corrected positioning
+        // Add player hotbar slots
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(playerInventory, col, HOTBAR_X + col * 18, HOTBAR_Y));
         }
+    }
+
+    /**
+     * Network constructor for client-side menu creation
+     */
+    public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull FriendlyByteBuf extraData) {
+        this(containerId, playerInventory, extraData.readBlockPos());
     }
 
     /**
@@ -133,8 +140,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Applies the current textures from GUI slots to the switch
-     * Called when Apply button is clicked (Phase 3B feature)
+     * FIXED: Applies textures and forces visual update
      */
     public void applyTextures() {
         System.out.println("Phase 3C Debug: applyTextures called");
@@ -149,14 +155,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
             // Store GUI slot items for persistence
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
-            System.out.println("Phase 3C Debug: GUI slot items updated - Toggle: " + toggleItem + ", Base: " + baseItem);
 
             // Apply or reset toggle texture based on slot content
             if (!toggleItem.isEmpty()) {
                 boolean success = blockEntity.setToggleTexture(toggleItem);
                 System.out.println("Phase 3C Debug: applyTextures - Toggle texture set success: " + success);
             } else {
-                // Reset toggle texture to default if slot is empty
                 System.out.println("Phase 3C Debug: applyTextures - Resetting toggle texture to default");
                 blockEntity.resetToggleTexture();
             }
@@ -166,17 +170,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                 boolean success = blockEntity.setBaseTexture(baseItem);
                 System.out.println("Phase 3C Debug: applyTextures - Base texture set success: " + success);
             } else {
-                // Reset base texture to default if slot is empty
                 System.out.println("Phase 3C Debug: applyTextures - Resetting base texture to default");
                 blockEntity.resetBaseTexture();
             }
 
-            // Request client-side visual update
-            blockEntity.requestModelDataUpdate();
-            blockEntity.setChanged();
+            // FIXED: Force visual update
+            forceBlockUpdate();
 
-            System.out.println("Phase 3C Debug: Requested client-side model data update");
-            System.out.println("Phase 3C Debug: Triggered block update for visual refresh");
             System.out.println("Phase 3C Debug: applyTextures - Final textures - Base: " + blockEntity.getBaseTexture() + ", Toggle: " + blockEntity.getToggleTexture());
         } else {
             System.out.println("Phase 3C Debug: applyTextures - blockEntity is null!");
@@ -184,92 +184,107 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Auto-apply textures when GUI closes, but only if slots contain items
-     * ---
-     * Phase 3C Fix: Only apply if there are items in slots to prevent unwanted resets
+     * FIXED: Force block update to refresh visual appearance
      */
-    private void autoApplyTexturesIfItemsPresent() {
-        if (blockEntity != null) {
-            // Get items from the GUI slots
-            ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-            ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+    private void forceBlockUpdate() {
+        if (blockEntity != null && level != null && blockPos != null) {
+            // Mark BlockEntity as changed for NBT saving
+            blockEntity.setChanged();
 
-            // Only auto-apply if there are actually items in the slots
-            boolean hasToggleItem = !toggleItem.isEmpty();
-            boolean hasBaseItem = !baseItem.isEmpty();
+            // Force model data update
+            blockEntity.requestModelDataUpdate();
 
-            if (hasToggleItem || hasBaseItem) {
-                System.out.println("Phase 3C Debug: Menu closing - auto-applying textures (items present)");
-                applyTextures();
-            } else {
-                System.out.println("Phase 3C Debug: Menu closing - preserving existing textures (no items in slots)");
-                // Just save slot data for persistence, don't change applied textures
-                saveGuiSlotData();
-            }
+            // Send block update to clients for visual refresh
+            level.sendBlockUpdated(blockPos, level.getBlockState(blockPos), level.getBlockState(blockPos), 3);
+
+            System.out.println("Phase 3C Debug: Forced block update at " + blockPos);
         }
-    }
-
-    @Override
-    @Nonnull
-    public ItemStack quickMoveStack(@Nonnull Player player, int slotIndex) {
-        ItemStack itemStack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(slotIndex);
-
-        if (slot.hasItem()) {
-            ItemStack slotStack = slot.getItem();
-            itemStack = slotStack.copy();
-
-            // Handle texture slots (slots 0-1)
-            if (slotIndex < TEXTURE_SLOT_COUNT) {
-                // Move from texture slot to player inventory
-                if (!this.moveItemStackTo(slotStack, TEXTURE_SLOT_COUNT, this.slots.size(), true)) {
-                    return ItemStack.EMPTY;
-                }
-            } else {
-                // Move from player inventory to texture slots (only if valid)
-                if (TextureSlot.isValidTextureItem(slotStack)) {
-                    // Try toggle slot first, then base slot
-                    if (!this.moveItemStackTo(slotStack, TOGGLE_TEXTURE_SLOT, TOGGLE_TEXTURE_SLOT + 1, false)) {
-                        if (!this.moveItemStackTo(slotStack, BASE_TEXTURE_SLOT, BASE_TEXTURE_SLOT + 1, false)) {
-                            return ItemStack.EMPTY;
-                        }
-                    }
-                } else {
-                    return ItemStack.EMPTY;
-                }
-            }
-
-            if (slotStack.isEmpty()) {
-                slot.setByPlayer(ItemStack.EMPTY);
-            } else {
-                slot.setChanged();
-            }
-        }
-
-        return itemStack;
-    }
-
-    @Override
-    public boolean stillValid(@Nonnull Player player) {
-        // Check if the player is still close enough to the switch block
-        if (blockPos != null && level != null) {
-            return player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) <= 64.0;
-        }
-        return true; // Fallback for edge cases
     }
 
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
 
-        System.out.println("Phase 3C Debug: Menu closing - auto-applying textures");
+        // Save GUI slot data when menu is closed
+        saveGuiSlotData();
 
-        // Auto-apply textures when GUI closes, but only if slots have items
-        autoApplyTexturesIfItemsPresent();
+        // Apply textures one final time when closing GUI
+        System.out.println("Phase 3C Debug: Menu closing - applying final textures");
+        applyTextures();
     }
 
+    @Override
     @Nonnull
-    public SimpleContainer getTextureContainer() {
-        return textureContainer;
+    public ItemStack quickMoveStack(@Nonnull Player player, int index) {
+        ItemStack itemStack = ItemStack.EMPTY;
+        Slot slot = slots.get(index);
+
+        if (slot.hasItem()) {
+            ItemStack currentStack = slot.getItem();
+            itemStack = currentStack.copy();
+
+            // Handle texture slots (0-1)
+            if (index < TEXTURE_SLOT_COUNT) {
+                // Moving from texture slots to player inventory
+                if (!moveItemStackTo(currentStack, TEXTURE_SLOT_COUNT, slots.size(), false)) {
+                    return ItemStack.EMPTY;
+                }
+            }
+            // Handle player inventory slots
+            else {
+                // Try to move to texture slots first
+                if (!moveItemStackTo(currentStack, 0, TEXTURE_SLOT_COUNT, false)) {
+                    // If that fails, try moving within player inventory
+                    int playerInventoryStart = TEXTURE_SLOT_COUNT;
+                    int playerInventoryEnd = playerInventoryStart + 27; // 3x9 grid
+                    int hotbarStart = playerInventoryEnd;
+                    int hotbarEnd = hotbarStart + 9; // 1x9 hotbar
+
+                    if (index < hotbarStart) {
+                        // From inventory to hotbar
+                        if (!moveItemStackTo(currentStack, hotbarStart, hotbarEnd, false)) {
+                            return ItemStack.EMPTY;
+                        }
+                    } else {
+                        // From hotbar to inventory
+                        if (!moveItemStackTo(currentStack, playerInventoryStart, playerInventoryEnd, false)) {
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
+            }
+
+            if (currentStack.isEmpty()) {
+                slot.set(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+
+            if (currentStack.getCount() == itemStack.getCount()) {
+                return ItemStack.EMPTY;
+            }
+
+            slot.onTake(player, currentStack);
+        }
+
+        // FIXED: Auto-apply textures when items are moved
+        applyTextures();
+
+        return itemStack;
+    }
+
+    @Override
+    public boolean stillValid(@Nonnull Player player) {
+        if (blockPos == null || level == null) {
+            return false;
+        }
+
+        // Check if block still exists and is the right type
+        if (!(level.getBlockState(blockPos).getBlock() instanceof net.justsomeswitches.block.SwitchesLeverBlock)) {
+            return false;
+        }
+
+        // Check distance from player
+        return player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) <= 64.0;
     }
 }

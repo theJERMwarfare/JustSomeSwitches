@@ -12,16 +12,17 @@ import javax.annotation.Nonnull;
  * Client-side screen for the Switch Texture customization GUI
  * ---
  * Phase 3B Enhancement: Perfectly aligned with vanilla Minecraft appearance
+ * FIXED: Restored original working GUI rendering with new auto-apply functionality
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 176;
 
-    // Apply button positioning - FIXED: made wider and moved down
+    // Apply button positioning
     private static final int APPLY_BUTTON_X = 63;
-    private static final int APPLY_BUTTON_Y = 58;  // Was 55, moved down 3 pixels
-    private static final int BUTTON_WIDTH = 51;    // Was 50, made 1 pixel wider
+    private static final int APPLY_BUTTON_Y = 58;
+    private static final int BUTTON_WIDTH = 51;
     private static final int BUTTON_HEIGHT = 20;
 
     // GUI button
@@ -59,24 +60,26 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         updateButtonState();
     }
 
+    @Override
+    public void containerTick() {
+        super.containerTick();
+        // Update button state each tick to reflect current slot contents
+        updateButtonState();
+    }
+
     private void onApplyButtonClicked() {
         if (menu.hasValidBlockEntity()) {
             menu.applyTextures();
             updateButtonState();
+            System.out.println("Phase 3C Debug: Apply button clicked - textures applied manually");
         }
     }
 
     private void updateButtonState() {
         if (applyButton != null) {
-            boolean hasValidBlockEntity = menu.hasValidBlockEntity();
-            applyButton.active = hasValidBlockEntity;
+            // Button is always enabled when BlockEntity is valid
+            applyButton.active = menu.hasValidBlockEntity();
         }
-    }
-
-    @Override
-    protected void containerTick() {
-        super.containerTick();
-        updateButtonState();
     }
 
     @Override
@@ -119,89 +122,78 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             }
         }
 
-        // Draw hotbar slots - CORRECTED: moved 1 pixel right and 1 pixel down
+        // Draw individual hotbar slots - CORRECTED: moved 1 pixel right and 1 pixel down
         for (int col = 0; col < 9; col++) {
-            int x = guiLeft + 8 + col * 18;      // Was 7, moved 1 pixel right
-            int y = guiTop + 152;                // Was 151, moved 1 pixel down
+            int x = guiLeft + 8 + col * 18;   // Was 7, moved 1 pixel right
+            int y = guiTop + 152;             // Was 151, moved 1 pixel down
             drawVanillaSlot(graphics, x, y);
         }
     }
 
     /**
-     * Draws vanilla-style background with proper 3-pixel rounded corners
+     * Draws vanilla-style GUI background with 3-pixel rounded corners
      */
     private void drawVanillaBackground(@Nonnull GuiGraphics graphics, int x, int y, int width, int height) {
-        // Main background (excluding 3-pixel rounded corners)
-        graphics.fill(x + 3, y, x + width - 3, y + height, 0xFFC6C6C6);      // Top/bottom strips
-        graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFFC6C6C6);  // Middle area
-        graphics.fill(x, y + 3, x + width, y + height - 3, 0xFFC6C6C6);      // Left/right strips
+        // Main background fill
+        graphics.fill(x, y, x + width, y + height, 0xFFF0F0F0);
 
-        // Vanilla-style thick borders with correct shading (excluding 3-pixel corners)
-        // Top light border
-        graphics.fill(x + 3, y, x + width - 3, y + 2, 0xFFFFFFFF);
-        // Left light border
-        graphics.fill(x, y + 3, x + 2, y + height - 3, 0xFFFFFFFF);
-        // Bottom dark border
-        graphics.fill(x + 3, y + height - 2, x + width - 3, y + height, 0xFF555555);
-        // Right dark border
-        graphics.fill(x + width - 2, y + 3, x + width, y + height - 3, 0xFF555555);
+        // 3-pixel rounded corners - make corners transparent
+        graphics.fill(x, y, x + 3, y + 3, 0xFFC6C6C6);                        // Top-left
+        graphics.fill(x + width - 3, y, x + width, y + 3, 0xFFC6C6C6);        // Top-right
+        graphics.fill(x, y + height - 3, x + 3, y + height, 0xFFC6C6C6);      // Bottom-left
+        graphics.fill(x + width - 3, y + height - 3, x + width, y + height, 0xFFC6C6C6); // Bottom-right
 
-        // Inner accent borders for depth (excluding corners)
-        graphics.fill(x + 3, y + 2, x + width - 3, y + 3, 0xFFE0E0E0);      // Inner top
-        graphics.fill(x + 2, y + 3, x + 3, y + height - 3, 0xFFE0E0E0);     // Inner left
-        graphics.fill(x + 3, y + height - 3, x + width - 3, y + height - 2, 0xFF8B8B8B);  // Inner bottom
-        graphics.fill(x + width - 3, y + 3, x + width - 2, y + height - 3, 0xFF8B8B8B);   // Inner right
+        // Border - light on top/left, dark on bottom/right
+        graphics.fill(x + 3, y, x + width - 3, y + 1, 0xFFFFFFFF);            // Top border (light)
+        graphics.fill(x, y + 3, x + 1, y + height - 3, 0xFFFFFFFF);           // Left border (light)
+        graphics.fill(x + 3, y + height - 1, x + width - 3, y + height, 0xFF555555); // Bottom border (dark)
+        graphics.fill(x + width - 1, y + 3, x + width, y + height - 3, 0xFF555555);  // Right border (dark)
 
-        // 3-pixel rounded corners with proper bevel shading
-        // Top-left corner (light shading on 1 corner pixel)
-        graphics.fill(x + 1, y + 1, x + 3, y + 3, 0xFFC6C6C6);              // Corner background
-        graphics.fill(x + 1, y + 1, x + 2, y + 2, 0xFFFFFFFF);              // Light corner bevel
-
-        // Top-right corner (no corner bevel)
-        graphics.fill(x + width - 3, y + 1, x + width - 1, y + 3, 0xFFC6C6C6);
-
-        // Bottom-left corner (no corner bevel)
-        graphics.fill(x + 1, y + height - 3, x + 3, y + height - 1, 0xFFC6C6C6);
-
-        // Bottom-right corner (dark shading on 1 corner pixel)
-        graphics.fill(x + width - 3, y + height - 3, x + width - 1, y + height - 1, 0xFFC6C6C6);  // Corner background
-        graphics.fill(x + width - 2, y + height - 2, x + width - 1, y + height - 1, 0xFF555555);  // Dark corner bevel
+        // Corner borders
+        graphics.fill(x + 1, y + 1, x + 3, y + 2, 0xFFFFFFFF);                // Top-left light
+        graphics.fill(x + 1, y + 1, x + 2, y + 3, 0xFFFFFFFF);
+        graphics.fill(x + width - 3, y + 1, x + width - 1, y + 2, 0xFFFFFFFF); // Top-right light
+        graphics.fill(x + width - 2, y + 1, x + width - 1, y + 3, 0xFF555555);
+        graphics.fill(x + 1, y + height - 2, x + 3, y + height - 1, 0xFFFFFFFF); // Bottom-left light
+        graphics.fill(x + 1, y + height - 3, x + 2, y + height - 1, 0xFFFFFFFF);
+        graphics.fill(x + width - 3, y + height - 2, x + width - 1, y + height - 1, 0xFF555555); // Bottom-right dark
+        graphics.fill(x + width - 2, y + height - 3, x + width - 1, y + height - 1, 0xFF555555);
     }
 
     /**
-     * Draws inventory panel (rounded top corners, square bottom corners)
+     * Draws inventory panel with square bottom corners and rounded top corners
      */
     private void drawInventoryPanel(@Nonnull GuiGraphics graphics, int x, int y, int width, int height) {
         // Panel background
-        graphics.fill(x, y, x + width, y + height, 0xFF8B8B8B);
+        graphics.fill(x, y, x + width, y + height, 0xFFC6C6C6);
 
-        // Panel borders (1 pixel thick - FIXED)
-        graphics.fill(x, y, x + width, y + 1, 0xFF373737);           // Top dark (1 pixel)
-        graphics.fill(x, y, x + 1, y + height, 0xFF373737);          // Left dark (1 pixel)
-        graphics.fill(x, y + height - 1, x + width, y + height, 0xFFFFFFFF);  // Bottom light
-        graphics.fill(x + width - 1, y, x + width, y + height, 0xFFFFFFFF);   // Right light
+        // Rounded top corners only - make corners transparent
+        graphics.fill(x, y, x + 1, y + 1, 0xFFF0F0F0);              // Top-left transparent
+        graphics.fill(x + width - 1, y, x + width, y + 1, 0xFFF0F0F0); // Top-right transparent
 
-        // Round top corners only (bottom corners stay square)
-        graphics.fill(x, y, x + 1, y + 1, 0xFFC6C6C6);              // Top-left transparent
-        graphics.fill(x + width - 1, y, x + width, y + 1, 0xFFC6C6C6); // Top-right transparent
+        // Borders - dark on top/left, light on bottom/right
+        graphics.fill(x + 1, y, x + width - 1, y + 1, 0xFF555555);   // Top border (dark)
+        graphics.fill(x, y + 1, x + 1, y + height, 0xFF555555);     // Left border (dark)
+        graphics.fill(x, y + height - 1, x + width, y + height, 0xFFFFFFFF); // Bottom border (light)
+        graphics.fill(x + width - 1, y + 1, x + width, y + height, 0xFFFFFFFF); // Right border (light)
     }
 
     /**
-     * Draws hotbar panel (square top corners, rounded bottom corners)
+     * Draws hotbar panel with square top corners and rounded bottom corners
      */
     private void drawHotbarPanel(@Nonnull GuiGraphics graphics, int x, int y, int width, int height) {
         // Panel background
-        graphics.fill(x, y, x + width, y + height, 0xFF8B8B8B);
-
-        // Panel borders (1 pixel thick - FIXED)
-        graphics.fill(x, y, x + width, y + 1, 0xFF373737);           // Top dark (1 pixel)
-        graphics.fill(x, y, x + 1, y + height, 0xFF373737);          // Left dark (1 pixel)
-        graphics.fill(x, y + height - 1, x + width, y + height, 0xFFFFFFFF);  // Bottom light
-        graphics.fill(x + width - 1, y, x + width, y + height, 0xFFFFFFFF);   // Right light
+        graphics.fill(x, y, x + width, y + height, 0xFFC6C6C6);
 
         // Round bottom corners only (top corners stay square)
-        graphics.fill(x, y + height - 1, x + 1, y + height, 0xFFC6C6C6);        // Bottom-left transparent
-        graphics.fill(x + width - 1, y + height - 1, x + width, y + height, 0xFFC6C6C6); // Bottom-right transparent
+        graphics.fill(x, y + height - 1, x + 1, y + height, 0xFFF0F0F0);        // Bottom-left transparent
+        graphics.fill(x + width - 1, y + height - 1, x + width, y + height, 0xFFF0F0F0); // Bottom-right transparent
+
+        // Borders - dark on top/left, light on bottom/right
+        graphics.fill(x, y, x + width, y + 1, 0xFF555555);          // Top border (dark)
+        graphics.fill(x, y, x + 1, y + height - 1, 0xFF555555);    // Left border (dark)
+        graphics.fill(x + 1, y + height - 1, x + width - 1, y + height, 0xFFFFFFFF); // Bottom border (light)
+        graphics.fill(x + width - 1, y, x + width, y + height - 1, 0xFFFFFFFF); // Right border (light)
     }
 
     /**
