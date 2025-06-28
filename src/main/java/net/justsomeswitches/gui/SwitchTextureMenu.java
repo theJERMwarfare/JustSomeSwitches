@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
  * Server-side menu for the Switch Texture customization GUI
  * ---
  * Phase 4A: Layout Matching User Design Image
- * Updated slot positions to match the uploaded design layout exactly
+ * Corrected slot positions to match uploaded image exactly - 176px width x 176px height
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -28,17 +28,17 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private static final int TOGGLE_TEXTURE_SLOT = 0;
     private static final int BASE_TEXTURE_SLOT = 1;
 
-    // Phase 4A: Positioning to match user design image
-    private static final int TOGGLE_SLOT_X = 43;   // Left slot positioned inward
-    private static final int TOGGLE_SLOT_Y = 35;   // Aligned with preview
-    private static final int BASE_SLOT_X = 115;    // Right slot positioned inward
-    private static final int BASE_SLOT_Y = 35;     // Aligned with preview
+    // Corrected positioning to match screen coordinates exactly
+    private static final int TOGGLE_SLOT_X = 28;    // Left texture slot - matches screen
+    private static final int TOGGLE_SLOT_Y = 28;    // Matches screen
+    private static final int BASE_SLOT_X = 132;     // Right texture slot - matches screen
+    private static final int BASE_SLOT_Y = 28 ;      // Matches screen
 
-    // Player inventory positioning (original)
-    private static final int PLAYER_INV_X = 9;
-    private static final int PLAYER_INV_Y = 95;
-    private static final int HOTBAR_X = 9;
-    private static final int HOTBAR_Y = 153;
+    // Player inventory positioning (standard for 176px width)
+    private static final int PLAYER_INV_X = 8;     // Standard position
+    private static final int PLAYER_INV_Y = 98;
+    private static final int HOTBAR_X = 8;          // Standard position
+    private static final int HOTBAR_Y = 156;
 
     // Instance data
     private final SimpleContainer textureContainer;
@@ -68,7 +68,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // Try to get the BlockEntity and load GUI slot data
         loadGuiSlotData();
 
-        // Phase 4A: Add texture slots positioned to match design image
+        // Add texture slots positioned to match design image (176px width)
         addSlot(new TextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y) {
             @Override
             public void setChanged() {
@@ -84,19 +84,19 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             }
         });
 
-        // Add player inventory slots (original positioning)
+        // Add player inventory slots (standard positioning)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(playerInventory, col + row * 9 + 9, PLAYER_INV_X + col * 18, PLAYER_INV_Y + row * 18));
             }
         }
 
-        // Add player hotbar slots (original positioning)
+        // Add player hotbar slots (standard positioning)
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(playerInventory, col, HOTBAR_X + col * 18, HOTBAR_Y));
         }
 
-        System.out.println("Phase 4A Debug: Menu initialized matching design image - Toggle(" +
+        System.out.println("Phase 4A Debug: Menu initialized with pixel-perfect layout - Toggle(" +
                 TOGGLE_SLOT_X + "," + TOGGLE_SLOT_Y + "), Base(" + BASE_SLOT_X + "," + BASE_SLOT_Y + ")");
     }
 
