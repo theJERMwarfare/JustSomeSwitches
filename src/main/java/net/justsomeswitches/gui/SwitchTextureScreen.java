@@ -23,16 +23,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     // GUI background texture
     private static final ResourceLocation GUI_BACKGROUND = new ResourceLocation("justsomeswitches", "textures/gui/switch_texture_gui.png");
 
-    // Texture slot positioning - measured from uploaded image
-    private static final int LEFT_SLOT_X = 12;    // Left texture slot
-    private static final int LEFT_SLOT_Y = 28;    // CORRECTED: Higher position
-    private static final int RIGHT_SLOT_X = 145;  // Right texture slot
-    private static final int RIGHT_SLOT_Y = 28;   // CORRECTED: Higher position
-
     // Central preview positioning
     private static final int PREVIEW_CENTER_X = 88;  // Center of 176px
     private static final int PREVIEW_CENTER_Y = 36;  // CORRECTED: Same height as slots
-    private static final int PREVIEW_SIZE = 32;
 
     // Face dropdown positioning - directly under slots
     private static final int LEFT_FACE_X = 17;    // Centered under left slot
@@ -51,12 +44,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int APPLY_BUTTON_Y = 68;  // CORRECTED: Much higher position
     private static final int BUTTON_WIDTH = 48;
     private static final int BUTTON_HEIGHT = 15;
-
-    // Player inventory positioning (standard for 176px)
-    private static final int PLAYER_INV_X = 8;    // Standard position
-    private static final int PLAYER_INV_Y = 98;
-    private static final int HOTBAR_X = 8;        // Standard position
-    private static final int HOTBAR_Y = 156;
 
     // GUI button
     private Button applyButton;
@@ -156,12 +143,12 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int lineY = guiTop + 35; // Down 4px from previous position
 
         // Left connection line - moved right 3px from current, 20px long
-        int leftLineStart = guiLeft + LEFT_SLOT_X + 18 + 18; // Right 3px from current position
+        int leftLineStart = guiLeft + 48; // Right 3px from current position
         int leftLineEnd = leftLineStart + 20; // 20px long
         graphics.fill(leftLineStart, lineY, leftLineEnd, lineY + 1, 0xFF999999);
 
         // Right connection line - moved left 3px from current, 20px long
-        int rightLineEnd = guiLeft + RIGHT_SLOT_X - 17; // Left 3px from current position
+        int rightLineEnd = guiLeft + 128; // Left 3px from current position
         int rightLineStart = rightLineEnd - 20; // 20px long
         graphics.fill(rightLineStart, lineY, rightLineEnd, lineY + 1, 0xFF999999);
     }
@@ -171,16 +158,16 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
      */
     private void drawFaceDropdowns(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         // Left face dropdown
-        drawDropdownButton(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y, "Face");
+        drawDropdownButton(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y);
 
         // Right face dropdown
-        drawDropdownButton(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y, "Face");
+        drawDropdownButton(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y);
     }
 
     /**
      * Draw individual dropdown button
      */
-    private void drawDropdownButton(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String label) {
+    private void drawDropdownButton(@Nonnull GuiGraphics graphics, int x, int y) {
         // Draw dropdown background
         graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFFC6C6C6);
 
@@ -196,7 +183,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         graphics.fill(x + FACE_DROPDOWN_WIDTH - 10, y + 6, x + FACE_DROPDOWN_WIDTH - 4, y + 7, 0xFF000000);
 
         // Draw label text
-        graphics.drawString(this.font, label, x + 2, y + 2, 0x404040, false);
+        graphics.drawString(this.font, "Face", x + 2, y + 2, 0x404040, false);
     }
 
     /**

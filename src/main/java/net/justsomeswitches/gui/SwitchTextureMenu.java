@@ -10,7 +10,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
-import net.justsomeswitches.gui.JustSomeSwitchesMenuTypes;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,12 +31,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private static final int TOGGLE_SLOT_X = 28;    // Left texture slot - matches screen
     private static final int TOGGLE_SLOT_Y = 28;    // Matches screen
     private static final int BASE_SLOT_X = 132;     // Right texture slot - matches screen
-    private static final int BASE_SLOT_Y = 28 ;      // Matches screen
+    private static final int BASE_SLOT_Y = 28;      // Matches screen
 
     // Player inventory positioning (standard for 176px width)
-    private static final int PLAYER_INV_X = 8;     // Standard position
     private static final int PLAYER_INV_Y = 98;
-    private static final int HOTBAR_X = 8;          // Standard position
     private static final int HOTBAR_Y = 156;
 
     // Instance data
@@ -87,13 +84,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // Add player inventory slots (standard positioning)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, PLAYER_INV_X + col * 18, PLAYER_INV_Y + row * 18));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, PLAYER_INV_Y + row * 18));
             }
         }
 
         // Add player hotbar slots (standard positioning)
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, HOTBAR_X + col * 18, HOTBAR_Y));
+            addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
 
         System.out.println("Phase 4A Debug: Menu initialized with pixel-perfect layout - Toggle(" +
@@ -102,6 +99,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
     /**
      * Network constructor for client-side menu creation
+     * Note: This constructor is used by NeoForge's network system - warning is false positive
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull FriendlyByteBuf extraData) {
         this(containerId, playerInventory, extraData.readBlockPos());
@@ -267,12 +265,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                     // If that fails, try moving within player inventory
                     int playerInventoryStart = TEXTURE_SLOT_COUNT;
                     int playerInventoryEnd = playerInventoryStart + 27; // 3x9 grid
-                    int hotbarStart = playerInventoryEnd;
-                    int hotbarEnd = hotbarStart + 9; // 1x9 hotbar
+                    int hotbarEnd = playerInventoryEnd + 9; // 1x9 hotbar
 
-                    if (index < hotbarStart) {
+                    if (index < playerInventoryEnd) {
                         // From inventory to hotbar
-                        if (!moveItemStackTo(currentStack, hotbarStart, hotbarEnd, false)) {
+                        if (!moveItemStackTo(currentStack, playerInventoryEnd, hotbarEnd, false)) {
                             return ItemStack.EMPTY;
                         }
                     } else {
