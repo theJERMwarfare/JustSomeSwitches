@@ -1,6 +1,8 @@
 package net.justsomeswitches.blockentity;
 
+import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
+import net.justsomeswitches.util.BlockTextureAnalyzer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -21,16 +23,16 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Block Entity for Switches Lever - Phase 3B Enhanced
+ * Enhanced Block Entity for Switches Lever - Phase 4B
  * ---
- * This BlockEntity provides NBT-based texture storage for individual switch blocks,
- * enabling per-block texture customization with client-server synchronization.
+ * This BlockEntity provides comprehensive NBT-based storage for individual switch blocks,
+ * including advanced face selection and dynamic texture analysis capabilities.
  * ---
- * Phase 3B enhancements:
- * - Enhanced texture management with validation
- * - GUI slot management for texture application
- * - Professional error handling and debugging
- * - Complete NBT serialization with item storage
+ * Phase 4B enhancements:
+ * - Face selection storage for each texture slot
+ * - Dynamic block analysis integration
+ * - Enhanced texture preview capabilities
+ * - Professional error handling and validation
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -46,56 +48,82 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private static final String BASE_TEXTURE_KEY = "base_texture_path";
     private static final String TOGGLE_TEXTURE_KEY = "toggle_texture_path";
 
+    // NBT keys for face selection storage (Phase 4B)
+    private static final String BASE_FACE_KEY = "base_face_selection";
+    private static final String TOGGLE_FACE_KEY = "toggle_face_selection";
+
+    // NBT keys for inversion state (Phase 4B)
+    private static final String INVERTED_KEY = "inverted_state";
+
     // Current texture paths
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
     private String toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
 
+    // Face selections (Phase 4B)
+    private FaceSelectionData.FaceOption baseFaceSelection = FaceSelectionData.FaceOption.ALL;
+    private FaceSelectionData.FaceOption toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
+
+    // Inversion state (Phase 4B)
+    private boolean inverted = false;
+
     // ========================================
-    // PHASE 3C: MODEL DATA INTEGRATION
+    // PHASE 4B: ENHANCED MODEL DATA INTEGRATION
     // ========================================
 
     /**
-     * ModelProperty for passing texture data to custom models
+     * ModelProperty for passing enhanced texture data to custom models
      */
     public static final ModelProperty<SwitchTextureData> TEXTURE_PROPERTY = new ModelProperty<>();
 
     /**
-     * Data class for passing texture information to custom models
+     * Enhanced data class for passing comprehensive texture information to custom models
      */
     public static class SwitchTextureData {
         private final String baseTexture;
         private final String toggleTexture;
+        private final FaceSelectionData.FaceOption baseFace;
+        private final FaceSelectionData.FaceOption toggleFace;
+        private final boolean inverted;
 
-        public SwitchTextureData(String baseTexture, String toggleTexture) {
+        public SwitchTextureData(String baseTexture, String toggleTexture,
+                                 FaceSelectionData.FaceOption baseFace,
+                                 FaceSelectionData.FaceOption toggleFace,
+                                 boolean inverted) {
             this.baseTexture = baseTexture;
             this.toggleTexture = toggleTexture;
+            this.baseFace = baseFace;
+            this.toggleFace = toggleFace;
+            this.inverted = inverted;
         }
 
-        public String getBaseTexture() {
-            return baseTexture;
-        }
-
-        public String getToggleTexture() {
-            return toggleTexture;
-        }
+        public String getBaseTexture() { return baseTexture; }
+        public String getToggleTexture() { return toggleTexture; }
+        public FaceSelectionData.FaceOption getBaseFace() { return baseFace; }
+        public FaceSelectionData.FaceOption getToggleFace() { return toggleFace; }
+        public boolean isInverted() { return inverted; }
 
         /**
          * Check if using custom textures (different from defaults)
          */
         public boolean hasCustomTextures() {
             return !baseTexture.equals(DEFAULT_BASE_TEXTURE) ||
-                    !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE);
+                    !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE) ||
+                    baseFace != FaceSelectionData.FaceOption.ALL ||
+                    toggleFace != FaceSelectionData.FaceOption.ALL ||
+                    inverted;
         }
     }
 
     /**
-     * Get ModelData for custom model rendering
+     * Get enhanced ModelData for custom model rendering
      */
     @Override
     @Nonnull
     public ModelData getModelData() {
         return ModelData.builder()
-                .with(TEXTURE_PROPERTY, new SwitchTextureData(baseTexturePath, toggleTexturePath))
+                .with(TEXTURE_PROPERTY, new SwitchTextureData(
+                        baseTexturePath, toggleTexturePath,
+                        baseFaceSelection, toggleFaceSelection, inverted))
                 .build();
     }
 
@@ -105,7 +133,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
-        System.out.println("Phase 3C Debug: SwitchesLeverBlockEntity created at " + pos);
+        System.out.println("Phase 4B Debug: Enhanced SwitchesLeverBlockEntity created at " + pos);
     }
 
     // ========================================
@@ -129,7 +157,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // TEXTURE MANAGEMENT METHODS
+    // PHASE 4B: ENHANCED TEXTURE MANAGEMENT
     // ========================================
 
     /**
@@ -148,15 +176,14 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         Block block = blockItem.getBlock();
         try {
-            // FIXED: Use BuiltInRegistries instead of ForgeRegistries for NeoForge 1.20.4
             ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(block);
             if (blockId != null) {
                 String texturePath = blockId.getNamespace() + ":block/" + blockId.getPath();
-                System.out.println("Phase 3C Debug: Extracted texture path: " + texturePath + " from item: " + blockId);
+                System.out.println("Phase 4B Debug: Extracted texture path: " + texturePath + " from item: " + blockId);
                 return texturePath;
             }
         } catch (Exception e) {
-            System.err.println("Phase 3C Error: Failed to extract texture from item: " + e.getMessage());
+            System.err.println("Phase 4B Error: Failed to extract texture from item: " + e.getMessage());
         }
 
         return "";
@@ -169,9 +196,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            // Request model data update for custom models
             requestModelDataUpdate();
-            System.out.println("Phase 3C Debug: BlockEntity marked dirty and synced at " + worldPosition);
+            System.out.println("Phase 4B Debug: BlockEntity marked dirty and synced at " + worldPosition);
         }
     }
 
@@ -182,8 +208,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!texturePath.equals(this.baseTexturePath)) {
             this.baseTexturePath = texturePath;
             markDirtyAndSync();
-
-            System.out.println("Phase 3C Debug: BaseTexture updated to: " + texturePath);
+            System.out.println("Phase 4B Debug: BaseTexture updated to: " + texturePath);
             return true;
         }
         return false;
@@ -207,8 +232,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!texturePath.equals(this.toggleTexturePath)) {
             this.toggleTexturePath = texturePath;
             markDirtyAndSync();
-
-            System.out.println("Phase 3C Debug: ToggleTexture updated to: " + texturePath);
+            System.out.println("Phase 4B Debug: ToggleTexture updated to: " + texturePath);
             return true;
         }
         return false;
@@ -225,32 +249,131 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return texturePath.isEmpty() ? false : setToggleTexture(texturePath);
     }
 
+    // ========================================
+    // PHASE 4B: FACE SELECTION MANAGEMENT
+    // ========================================
+
     /**
-     * Get the current base texture path
+     * Set base face selection
      */
-    @Nonnull
-    public String getBaseTexture() {
-        return baseTexturePath;
+    public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
+        if (this.baseFaceSelection != faceOption) {
+            this.baseFaceSelection = faceOption;
+            markDirtyAndSync();
+            System.out.println("Phase 4B Debug: Base face selection updated to: " + faceOption.getDisplayName());
+            return true;
+        }
+        return false;
     }
 
     /**
-     * Get the current toggle texture path
+     * Set toggle face selection
+     */
+    public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
+        if (this.toggleFaceSelection != faceOption) {
+            this.toggleFaceSelection = faceOption;
+            markDirtyAndSync();
+            System.out.println("Phase 4B Debug: Toggle face selection updated to: " + faceOption.getDisplayName());
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Set inversion state
+     */
+    public boolean setInverted(boolean inverted) {
+        if (this.inverted != inverted) {
+            this.inverted = inverted;
+            markDirtyAndSync();
+            System.out.println("Phase 4B Debug: Inversion state updated to: " + inverted);
+            return true;
+        }
+        return false;
+    }
+
+    // ========================================
+    // PHASE 4B: BLOCK ANALYSIS INTEGRATION
+    // ========================================
+
+    /**
+     * Get block analysis for base texture slot
      */
     @Nonnull
-    public String getToggleTexture() {
-        return toggleTexturePath;
+    public BlockTextureAnalyzer.BlockTextureInfo getBaseBlockAnalysis() {
+        return BlockTextureAnalyzer.analyzeBlock(guiBaseItem);
     }
+
+    /**
+     * Get block analysis for toggle texture slot
+     */
+    @Nonnull
+    public BlockTextureAnalyzer.BlockTextureInfo getToggleBlockAnalysis() {
+        return BlockTextureAnalyzer.analyzeBlock(guiToggleItem);
+    }
+
+    /**
+     * Get dropdown state for base texture slot
+     */
+    @Nonnull
+    public FaceSelectionData.DropdownState getBaseDropdownState() {
+        BlockTextureAnalyzer.BlockTextureInfo blockInfo = getBaseBlockAnalysis();
+        return FaceSelectionData.createDropdownState(blockInfo, baseFaceSelection);
+    }
+
+    /**
+     * Get dropdown state for toggle texture slot
+     */
+    @Nonnull
+    public FaceSelectionData.DropdownState getToggleDropdownState() {
+        BlockTextureAnalyzer.BlockTextureInfo blockInfo = getToggleBlockAnalysis();
+        return FaceSelectionData.createDropdownState(blockInfo, toggleFaceSelection);
+    }
+
+    // ========================================
+    // GETTERS FOR GUI AND MODEL INTEGRATION
+    // ========================================
+
+    @Nonnull public String getBaseTexture() { return baseTexturePath; }
+    @Nonnull public String getToggleTexture() { return toggleTexturePath; }
+    @Nonnull public FaceSelectionData.FaceOption getBaseFaceSelection() { return baseFaceSelection; }
+    @Nonnull public FaceSelectionData.FaceOption getToggleFaceSelection() { return toggleFaceSelection; }
+    public boolean isInverted() { return inverted; }
 
     /**
      * Reset textures to defaults
      */
     public void resetTextures() {
-        if (!baseTexturePath.equals(DEFAULT_BASE_TEXTURE) || !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE)) {
-            this.baseTexturePath = DEFAULT_BASE_TEXTURE;
-            this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
-            markDirtyAndSync();
+        boolean changed = false;
 
-            System.out.println("Phase 3C Debug: Textures reset to defaults");
+        if (!baseTexturePath.equals(DEFAULT_BASE_TEXTURE)) {
+            this.baseTexturePath = DEFAULT_BASE_TEXTURE;
+            changed = true;
+        }
+
+        if (!toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE)) {
+            this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
+            changed = true;
+        }
+
+        if (baseFaceSelection != FaceSelectionData.FaceOption.ALL) {
+            this.baseFaceSelection = FaceSelectionData.FaceOption.ALL;
+            changed = true;
+        }
+
+        if (toggleFaceSelection != FaceSelectionData.FaceOption.ALL) {
+            this.toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
+            changed = true;
+        }
+
+        if (inverted) {
+            this.inverted = false;
+            changed = true;
+        }
+
+        if (changed) {
+            markDirtyAndSync();
+            System.out.println("Phase 4B Debug: All customizations reset to defaults");
         }
     }
 
@@ -259,6 +382,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      */
     public void resetBaseTexture() {
         setBaseTexture(DEFAULT_BASE_TEXTURE);
+        setBaseFaceSelection(FaceSelectionData.FaceOption.ALL);
     }
 
     /**
@@ -266,6 +390,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      */
     public void resetToggleTexture() {
         setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
+        setToggleFaceSelection(FaceSelectionData.FaceOption.ALL);
     }
 
     /**
@@ -273,7 +398,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      */
     public boolean hasCustomTextures() {
         return !baseTexturePath.equals(DEFAULT_BASE_TEXTURE) ||
-                !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE);
+                !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE) ||
+                baseFaceSelection != FaceSelectionData.FaceOption.ALL ||
+                toggleFaceSelection != FaceSelectionData.FaceOption.ALL ||
+                inverted;
     }
 
     // ========================================
@@ -288,17 +416,13 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * Get toggle item from GUI slot
      */
     @Nonnull
-    public ItemStack getGuiToggleItem() {
-        return guiToggleItem;
-    }
+    public ItemStack getGuiToggleItem() { return guiToggleItem; }
 
     /**
      * Get base item from GUI slot
      */
     @Nonnull
-    public ItemStack getGuiBaseItem() {
-        return guiBaseItem;
-    }
+    public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
     /**
      * Set GUI slot items (for GUI compatibility)
@@ -306,8 +430,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
-
-        System.out.println("Phase 3C Debug: GUI slot items updated - Toggle: " + toggleItem + ", Base: " + baseItem);
+        System.out.println("Phase 4B Debug: GUI slot items updated - Toggle: " + toggleItem + ", Base: " + baseItem);
     }
 
     /**
@@ -321,6 +444,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             textureChanged |= setToggleTexture(guiToggleItem);
         } else {
             textureChanged |= setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
+            setToggleFaceSelection(FaceSelectionData.FaceOption.ALL);
         }
 
         // Apply base texture
@@ -328,10 +452,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             textureChanged |= setBaseTexture(guiBaseItem);
         } else {
             textureChanged |= setBaseTexture(DEFAULT_BASE_TEXTURE);
+            setBaseFaceSelection(FaceSelectionData.FaceOption.ALL);
         }
 
         if (textureChanged) {
-            System.out.println("Phase 3C Debug: Textures applied from GUI at " + worldPosition);
+            System.out.println("Phase 4B Debug: Textures applied from GUI at " + worldPosition);
         }
     }
 
@@ -341,17 +466,17 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (!guiToggleItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiToggleItem);
-            System.out.println("Phase 3C Debug: Dropped toggle texture item: " + guiToggleItem);
+            System.out.println("Phase 4B Debug: Dropped toggle texture item: " + guiToggleItem);
         }
 
         if (!guiBaseItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiBaseItem);
-            System.out.println("Phase 3C Debug: Dropped base texture item: " + guiBaseItem);
+            System.out.println("Phase 4B Debug: Dropped base texture item: " + guiBaseItem);
         }
     }
 
     // ========================================
-    // NBT SERIALIZATION
+    // ENHANCED NBT SERIALIZATION (PHASE 4B)
     // ========================================
 
     @Override
@@ -362,6 +487,13 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
 
+        // Save face selections (Phase 4B)
+        nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
+        nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
+
+        // Save inversion state (Phase 4B)
+        nbt.putBoolean(INVERTED_KEY, inverted);
+
         // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
             nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
@@ -370,7 +502,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        System.out.println("Phase 3C Debug: Saved NBT - Base: " + baseTexturePath + ", Toggle: " + toggleTexturePath);
+        System.out.println("Phase 4B Debug: Enhanced NBT saved - Base: " + baseTexturePath +
+                ", Toggle: " + toggleTexturePath + ", BaseFace: " + baseFaceSelection.getDisplayName() +
+                ", ToggleFace: " + toggleFaceSelection.getDisplayName() + ", Inverted: " + inverted);
     }
 
     @Override
@@ -389,6 +523,18 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
+        // Load face selections (Phase 4B)
+        String baseFaceName = nbt.getString(BASE_FACE_KEY);
+        this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
+                FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
+
+        String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
+        this.toggleFaceSelection = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
+                FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
+
+        // Load inversion state (Phase 4B)
+        this.inverted = nbt.getBoolean(INVERTED_KEY);
+
         // Load GUI slot items
         if (nbt.contains("gui_toggle_item")) {
             this.guiToggleItem = ItemStack.of(nbt.getCompound("gui_toggle_item"));
@@ -402,7 +548,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.guiBaseItem = ItemStack.EMPTY;
         }
 
-        System.out.println("Phase 3C Debug: Loaded NBT - Base: " + baseTexturePath + ", Toggle: " + toggleTexturePath);
+        System.out.println("Phase 4B Debug: Enhanced NBT loaded - Base: " + baseTexturePath +
+                ", Toggle: " + toggleTexturePath + ", BaseFace: " + baseFaceSelection.getDisplayName() +
+                ", ToggleFace: " + toggleFaceSelection.getDisplayName() + ", Inverted: " + inverted);
     }
 
     // ========================================
@@ -419,14 +567,19 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Get update tag for client synchronization
+     * Get enhanced update tag for client synchronization
      */
     @Override
     @Nonnull
     public CompoundTag getUpdateTag() {
         CompoundTag nbt = super.getUpdateTag();
+
+        // Include all customization data for client sync
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
+        nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
+        nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
+        nbt.putBoolean(INVERTED_KEY, inverted);
 
         // Sync GUI slot items
         if (!guiToggleItem.isEmpty()) {
@@ -436,7 +589,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        System.out.println("Phase 3C Debug: Created update tag for client sync");
+        System.out.println("Phase 4B Debug: Enhanced update tag created for client sync");
         return nbt;
     }
 
@@ -448,9 +601,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         CompoundTag nbt = pkt.getTag();
         if (nbt != null) {
             load(nbt);
-            // Request model data update when receiving server data
             requestModelDataUpdate();
-            System.out.println("Phase 3C Debug: Received data packet from server");
+            System.out.println("Phase 4B Debug: Received enhanced data packet from server");
         }
     }
 }

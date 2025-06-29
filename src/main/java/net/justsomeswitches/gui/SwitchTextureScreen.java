@@ -3,17 +3,19 @@ package net.justsomeswitches.gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.justsomeswitches.util.BlockTextureAnalyzer;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
 /**
- * Client-side screen for the Switch Texture customization GUI
+ * Enhanced client-side screen for the Switch Texture customization GUI
  * ---
- * Phase 4A: Layout Matching User Design Image
- * Pixel-perfect positioning measured from uploaded image
+ * Phase 4B: Advanced face selection dropdowns, texture previews, and dynamic UI state management
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
@@ -35,6 +37,13 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int FACE_DROPDOWN_WIDTH = 38;
     private static final int FACE_DROPDOWN_HEIGHT = 12;
 
+    // Texture preview positioning (18x18px under dropdowns)
+    private static final int LEFT_PREVIEW_X = 17;
+    private static final int LEFT_PREVIEW_Y = 67;  // Under left dropdown
+    private static final int RIGHT_PREVIEW_X = 121;
+    private static final int RIGHT_PREVIEW_Y = 67; // Under right dropdown
+    private static final int PREVIEW_SIZE = 18;
+
     // Inverted checkbox positioning - CORRECTED: Properly centered
     private static final int INVERTED_X = 59;     // CORRECTED: Properly centered
     private static final int INVERTED_Y = 54;     // Same level as face dropdowns
@@ -45,8 +54,18 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int BUTTON_WIDTH = 48;
     private static final int BUTTON_HEIGHT = 15;
 
-    // GUI button
+    // GUI components
     private Button applyButton;
+
+    // Phase 4B: Dynamic state tracking
+    private FaceSelectionData.DropdownState leftDropdownState = FaceSelectionData.createDisabledState();
+    private FaceSelectionData.DropdownState rightDropdownState = FaceSelectionData.createDisabledState();
+    private boolean checkboxState = false;
+
+    // Phase 4B: Dropdown popup management
+    private boolean showingLeftDropdown = false;
+    private boolean showingRightDropdown = false;
+    private int dropdownSelectionIndex = -1;
 
     public SwitchTextureScreen(@Nonnull SwitchTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
@@ -76,26 +95,154 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 .build();
 
         addRenderableWidget(applyButton);
-        updateButtonState();
+        updateUIState();
     }
 
     @Override
     public void containerTick() {
         super.containerTick();
-        updateButtonState();
+        updateUIState();
+    }
+
+    /**
+     * Phase 4B: Enhanced UI state update with dynamic dropdown states
+     */
+    private void updateUIState() {
+        if (applyButton != null) {
+            applyButton.active = menu.hasValidBlockEntity();
+        }
+
+        // Update dropdown states
+        leftDropdownState = menu.getToggleDropdownState();
+        rightDropdownState = menu.getBaseDropdownState();
+        checkboxState = menu.isInverted();
+
+        System.out.println("Phase 4B Debug: UI state updated - Left enabled: " + leftDropdownState.isEnabled() +
+                ", Right enabled: " + rightDropdownState.isEnabled() + ", Inverted: " + checkboxState);
+    }
+
+    /**
+     * Phase 4B: Enhanced mouse click handling for dropdowns and checkbox
+     */
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int guiLeft = (this.width - this.imageWidth) / 2;
+        int guiTop = (this.height - this.imageHeight) / 2;
+
+        // Handle dropdown clicks
+        if (isWithinBounds(mouseX, mouseY, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y,
+                FACE_DROPDOWN_WIDTH, FACE_DROPDOWN_HEIGHT)) {
+            if (leftDropdownState.isEnabled()) {
+                toggleLeftDropdown();
+                return true;
+            }
+        }
+
+        if (isWithinBounds(mouseX, mouseY, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y,
+                FACE_DROPDOWN_WIDTH, FACE_DROPDOWN_HEIGHT)) {
+            if (rightDropdownState.isEnabled()) {
+                toggleRightDropdown();
+                return true;
+            }
+        }
+
+        // Handle checkbox click
+        if (isWithinBounds(mouseX, mouseY, guiLeft + INVERTED_X, guiTop + INVERTED_Y, 10, 10)) {
+            toggleInversionState();
+            return true;
+        }
+
+        // Handle dropdown selection clicks
+        if (showingLeftDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, true)) {
+            return true;
+        }
+
+        if (showingRightDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, false)) {
+            return true;
+        }
+
+        // Close dropdowns if clicking elsewhere
+        if (showingLeftDropdown || showingRightDropdown) {
+            showingLeftDropdown = false;
+            showingRightDropdown = false;
+            return true;
+        }
+
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    /**
+     * Check if coordinates are within specified bounds
+     */
+    private boolean isWithinBounds(double mouseX, double mouseY, int x, int y, int width, int height) {
+        return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+    }
+
+    /**
+     * Toggle left (toggle) dropdown state
+     */
+    private void toggleLeftDropdown() {
+        showingLeftDropdown = !showingLeftDropdown;
+        showingRightDropdown = false; // Close other dropdown
+        System.out.println("Phase 4B Debug: Toggled left dropdown - showing: " + showingLeftDropdown);
+    }
+
+    /**
+     * Toggle right (base) dropdown state
+     */
+    private void toggleRightDropdown() {
+        showingRightDropdown = !showingRightDropdown;
+        showingLeftDropdown = false; // Close other dropdown
+        System.out.println("Phase 4B Debug: Toggled right dropdown - showing: " + showingRightDropdown);
+    }
+
+    /**
+     * Handle dropdown selection clicks
+     */
+    private boolean handleDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop, boolean isLeft) {
+        FaceSelectionData.DropdownState dropdownState = isLeft ? leftDropdownState : rightDropdownState;
+        List<FaceSelectionData.FaceOption> options = dropdownState.getAvailableOptions();
+
+        int dropdownX = isLeft ? guiLeft + LEFT_FACE_X : guiLeft + RIGHT_FACE_X;
+        int dropdownY = (isLeft ? guiTop + LEFT_FACE_Y : guiTop + RIGHT_FACE_Y) + FACE_DROPDOWN_HEIGHT;
+
+        for (int i = 0; i < options.size(); i++) {
+            int optionY = dropdownY + (i * 12);
+            if (isWithinBounds(mouseX, mouseY, dropdownX, optionY, FACE_DROPDOWN_WIDTH, 12)) {
+                // Selection made
+                FaceSelectionData.FaceOption selectedOption = options.get(i);
+
+                if (isLeft) {
+                    menu.setToggleFaceSelection(selectedOption);
+                    showingLeftDropdown = false;
+                    System.out.println("Phase 4B Debug: Selected toggle face: " + selectedOption.getDisplayName());
+                } else {
+                    menu.setBaseFaceSelection(selectedOption);
+                    showingRightDropdown = false;
+                    System.out.println("Phase 4B Debug: Selected base face: " + selectedOption.getDisplayName());
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Toggle inversion checkbox state
+     */
+    private void toggleInversionState() {
+        checkboxState = !checkboxState;
+        menu.setInverted(checkboxState);
+        System.out.println("Phase 4B Debug: Inversion toggled to: " + checkboxState);
     }
 
     private void onApplyButtonClicked() {
         if (menu.hasValidBlockEntity()) {
             menu.applyTextures();
-            updateButtonState();
-            System.out.println("Phase 4A Debug: Apply button clicked - textures applied manually");
-        }
-    }
-
-    private void updateButtonState() {
-        if (applyButton != null) {
-            applyButton.active = menu.hasValidBlockEntity();
+            updateUIState();
+            System.out.println("Phase 4B Debug: Apply button clicked - enhanced textures applied");
         }
     }
 
@@ -113,11 +260,23 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Draw connection lines
         drawConnectionLines(graphics, guiLeft, guiTop);
 
-        // Draw face selection dropdowns
-        drawFaceDropdowns(graphics, guiLeft, guiTop);
+        // Phase 4B: Draw enhanced face selection dropdowns
+        drawEnhancedFaceDropdowns(graphics, guiLeft, guiTop);
 
-        // Draw inversion checkbox
-        drawInversionCheckbox(graphics, guiLeft, guiTop);
+        // Phase 4B: Draw texture previews
+        drawTexturePreview(graphics, guiLeft, guiTop);
+
+        // Phase 4B: Draw enhanced inversion checkbox
+        drawEnhancedInversionCheckbox(graphics, guiLeft, guiTop);
+
+        // Phase 4B: Draw dropdown popups if open
+        if (showingLeftDropdown) {
+            drawDropdownPopup(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y + FACE_DROPDOWN_HEIGHT, leftDropdownState);
+        }
+
+        if (showingRightDropdown) {
+            drawDropdownPopup(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y + FACE_DROPDOWN_HEIGHT, rightDropdownState);
+        }
     }
 
     /**
@@ -143,62 +302,183 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int lineY = guiTop + 35; // Down 4px from previous position
 
         // Left connection line - moved right 3px from current, 20px long
-        int leftLineStart = guiLeft + 48; // Right 3px from current position
+        int leftLineStart = guiLeft + 28 + 18 + 18; // Right 3px from current position
         int leftLineEnd = leftLineStart + 20; // 20px long
         graphics.fill(leftLineStart, lineY, leftLineEnd, lineY + 1, 0xFF999999);
 
         // Right connection line - moved left 3px from current, 20px long
-        int rightLineEnd = guiLeft + 128; // Left 3px from current position
+        int rightLineEnd = guiLeft + 132 + 18 - 17; // Left 3px from current position
         int rightLineStart = rightLineEnd - 20; // 20px long
         graphics.fill(rightLineStart, lineY, rightLineEnd, lineY + 1, 0xFF999999);
     }
 
     /**
-     * Draw face selection dropdowns
+     * Phase 4B: Draw enhanced face selection dropdowns with dynamic states
      */
-    private void drawFaceDropdowns(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        // Left face dropdown
-        drawDropdownButton(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y);
+    private void drawEnhancedFaceDropdowns(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+        // Left (toggle) face dropdown
+        drawEnhancedDropdownButton(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y,
+                leftDropdownState, showingLeftDropdown);
 
-        // Right face dropdown
-        drawDropdownButton(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y);
+        // Right (base) face dropdown
+        drawEnhancedDropdownButton(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y,
+                rightDropdownState, showingRightDropdown);
     }
 
     /**
-     * Draw individual dropdown button
+     * Draw enhanced dropdown button with dynamic state
      */
-    private void drawDropdownButton(@Nonnull GuiGraphics graphics, int x, int y) {
+    private void drawEnhancedDropdownButton(@Nonnull GuiGraphics graphics, int x, int y,
+                                            @Nonnull FaceSelectionData.DropdownState state, boolean isOpen) {
+        // Determine colors based on state
+        int bgColor = state.isEnabled() ? 0xFFC6C6C6 : 0xFF888888;  // Grayed out if disabled
+        int textColor = state.isEnabled() ? 0xFF404040 : 0xFF666666; // Dimmed text if disabled
+
         // Draw dropdown background
-        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFFC6C6C6);
+        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, bgColor);
 
-        // Draw dropdown border (raised appearance)
-        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + 1, 0xFFFFFFFF);
-        graphics.fill(x, y, x + 1, y + FACE_DROPDOWN_HEIGHT, 0xFFFFFFFF);
-        graphics.fill(x, y + FACE_DROPDOWN_HEIGHT - 1, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFF555555);
-        graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFF555555);
+        // Draw dropdown border (raised/lowered appearance based on state)
+        if (state.isEnabled()) {
+            int lightColor = isOpen ? 0xFF555555 : 0xFFFFFFFF;
+            int darkColor = isOpen ? 0xFFFFFFFF : 0xFF555555;
 
-        // Draw dropdown arrow
-        graphics.fill(x + FACE_DROPDOWN_WIDTH - 8, y + 4, x + FACE_DROPDOWN_WIDTH - 6, y + 5, 0xFF000000);
-        graphics.fill(x + FACE_DROPDOWN_WIDTH - 9, y + 5, x + FACE_DROPDOWN_WIDTH - 5, y + 6, 0xFF000000);
-        graphics.fill(x + FACE_DROPDOWN_WIDTH - 10, y + 6, x + FACE_DROPDOWN_WIDTH - 4, y + 7, 0xFF000000);
+            graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + 1, lightColor);
+            graphics.fill(x, y, x + 1, y + FACE_DROPDOWN_HEIGHT, lightColor);
+            graphics.fill(x, y + FACE_DROPDOWN_HEIGHT - 1, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, darkColor);
+            graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, darkColor);
+        } else {
+            // Disabled border
+            graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + 1, 0xFF666666);
+            graphics.fill(x, y, x + 1, y + FACE_DROPDOWN_HEIGHT, 0xFF666666);
+            graphics.fill(x, y + FACE_DROPDOWN_HEIGHT - 1, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFF999999);
+            graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFF999999);
+        }
 
-        // Draw label text
-        graphics.drawString(this.font, "Face", x + 2, y + 2, 0x404040, false);
+        // Draw dropdown arrow (only if enabled)
+        if (state.isEnabled()) {
+            int arrowColor = 0xFF000000;
+            graphics.fill(x + FACE_DROPDOWN_WIDTH - 8, y + 4, x + FACE_DROPDOWN_WIDTH - 6, y + 5, arrowColor);
+            graphics.fill(x + FACE_DROPDOWN_WIDTH - 9, y + 5, x + FACE_DROPDOWN_WIDTH - 5, y + 6, arrowColor);
+            graphics.fill(x + FACE_DROPDOWN_WIDTH - 10, y + 6, x + FACE_DROPDOWN_WIDTH - 4, y + 7, arrowColor);
+        }
+
+        // Draw current selection or "Face" label
+        String displayText = state.isEnabled() ?
+                state.getSelectedOption().getDisplayName() : "Face";
+        if (displayText.length() > 4) {
+            displayText = displayText.substring(0, 4); // Truncate for space
+        }
+
+        graphics.drawString(this.font, displayText, x + 2, y + 2, textColor, false);
     }
 
     /**
-     * Draw inversion checkbox - CORRECTED: Properly centered
+     * Phase 4B: Draw dropdown popup menu
      */
-    private void drawInversionCheckbox(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+    private void drawDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
+                                   @Nonnull FaceSelectionData.DropdownState state) {
+        List<FaceSelectionData.FaceOption> options = state.getAvailableOptions();
+        int popupHeight = options.size() * 12;
+
+        // Draw popup background
+        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFFC6C6C6);
+
+        // Draw popup border
+        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + 1, 0xFF000000);
+        graphics.fill(x, y, x + 1, y + popupHeight, 0xFF000000);
+        graphics.fill(x, y + popupHeight - 1, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+        graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+
+        // Draw options
+        for (int i = 0; i < options.size(); i++) {
+            FaceSelectionData.FaceOption option = options.get(i);
+            int optionY = y + (i * 12);
+
+            // Highlight selected option
+            if (option == state.getSelectedOption()) {
+                graphics.fill(x + 1, optionY, x + FACE_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
+            }
+
+            // Draw option text
+            String optionText = option.getDisplayName();
+            if (optionText.length() > 4) {
+                optionText = optionText.substring(0, 4);
+            }
+            graphics.drawString(this.font, optionText, x + 2, optionY + 2, 0xFF000000, false);
+        }
+    }
+
+    /**
+     * Phase 4B: Draw 18x18px texture previews under dropdowns
+     */
+    private void drawTexturePreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+        // Draw left (toggle) texture preview
+        if (leftDropdownState.hasPreview()) {
+            drawTexturePreviewBox(graphics, guiLeft + LEFT_PREVIEW_X, guiTop + LEFT_PREVIEW_Y,
+                    leftDropdownState.getPreviewTexture());
+        }
+
+        // Draw right (base) texture preview
+        if (rightDropdownState.hasPreview()) {
+            drawTexturePreviewBox(graphics, guiLeft + RIGHT_PREVIEW_X, guiTop + RIGHT_PREVIEW_Y,
+                    rightDropdownState.getPreviewTexture());
+        }
+    }
+
+    /**
+     * Draw individual 18x18px texture preview box
+     */
+    private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String texturePath) {
+        try {
+            // Get texture sprite
+            TextureAtlasSprite sprite = BlockTextureAnalyzer.getTextureSprite(texturePath);
+
+            if (sprite != null && !sprite.contents().name().toString().contains("missingno")) {
+                // Draw preview background
+                graphics.fill(x - 1, y - 1, x + PREVIEW_SIZE + 1, y + PREVIEW_SIZE + 1, 0xFF000000);
+                graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFFFFFF);
+
+                // Draw texture sprite scaled to 18x18
+                graphics.blit(x, y, 0, PREVIEW_SIZE, PREVIEW_SIZE, sprite);
+
+                System.out.println("Phase 4B Debug: Rendered texture preview for: " + texturePath);
+            } else {
+                // Draw error/missing texture indicator
+                graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF00FF); // Magenta for missing
+            }
+        } catch (Exception e) {
+            System.err.println("Phase 4B Error: Failed to render texture preview for " + texturePath + " - " + e.getMessage());
+            // Draw error indicator
+            graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF0000); // Red for error
+        }
+    }
+
+    /**
+     * Phase 4B: Draw enhanced inversion checkbox with proper state
+     */
+    private void drawEnhancedInversionCheckbox(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         int checkboxX = guiLeft + INVERTED_X;
         int checkboxY = guiTop + INVERTED_Y;
 
-        // Draw checkbox
+        // Draw checkbox background
         graphics.fill(checkboxX, checkboxY, checkboxX + 10, checkboxY + 10, 0xFFFFFFFF);
+
+        // Draw checkbox border
         graphics.fill(checkboxX, checkboxY, checkboxX + 10, checkboxY + 1, 0xFF555555);
         graphics.fill(checkboxX, checkboxY, checkboxX + 1, checkboxY + 10, 0xFF555555);
         graphics.fill(checkboxX, checkboxY + 9, checkboxX + 10, checkboxY + 10, 0xFFDDDDDD);
         graphics.fill(checkboxX + 9, checkboxY, checkboxX + 10, checkboxY + 10, 0xFFDDDDDD);
+
+        // Draw checkmark if checked
+        if (checkboxState) {
+            // Simple checkmark pattern
+            graphics.fill(checkboxX + 2, checkboxY + 5, checkboxX + 3, checkboxY + 6, 0xFF000000);
+            graphics.fill(checkboxX + 3, checkboxY + 6, checkboxX + 4, checkboxY + 7, 0xFF000000);
+            graphics.fill(checkboxX + 4, checkboxY + 4, checkboxX + 5, checkboxY + 5, 0xFF000000);
+            graphics.fill(checkboxX + 5, checkboxY + 3, checkboxX + 6, checkboxY + 4, 0xFF000000);
+            graphics.fill(checkboxX + 6, checkboxY + 2, checkboxX + 7, checkboxY + 3, 0xFF000000);
+            graphics.fill(checkboxX + 7, checkboxY + 1, checkboxX + 8, checkboxY + 2, 0xFF000000);
+        }
 
         // Draw "Inverted" label
         Component label = Component.literal("Inverted");
