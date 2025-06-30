@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 /**
  * Enhanced Switches Lever Block with BlockEntity support for texture customization
  * ---
- * Phase 4B: Silent operation with optimized texture system integration
+ * FIXED: Manual-only texture application with comprehensive debug output
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -47,6 +47,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
     public SwitchesLeverBlock(Properties properties) {
         super(properties);
+        System.out.println("DEBUG Block: SwitchesLeverBlock created");
     }
 
     // ========================================
@@ -56,6 +57,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Override
     @Nullable
     public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
+        System.out.println("DEBUG Block: Creating new BlockEntity at " + pos);
         return new SwitchesLeverBlockEntity(pos, state);
     }
 
@@ -135,11 +137,15 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
+        System.out.println("DEBUG Block: Switch lever used at " + pos + " by player " + player.getName().getString());
+
         // Toggle the powered state (unchanged lever behavior)
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
 
         level.setBlock(pos, newState, 3);
+
+        System.out.println("DEBUG Block: Lever state changed from " + currentlyPowered + " to " + !currentlyPowered);
 
         // Play standard lever click sound with pitch variation
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
@@ -162,9 +168,9 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
      */
     private void triggerModelUpdate(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("DEBUG Block: Triggering model update for custom textures");
             // Force ModelData refresh by sending block update
             level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_ALL);
-            // Silent operation - no debug output
         }
     }
 
@@ -184,18 +190,20 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // BLOCK ENTITY CLEANUP
+    // ENHANCED BLOCK ENTITY CLEANUP
     // ========================================
 
     @Override
     public void onRemove(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
                          @Nonnull BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
+            System.out.println("DEBUG Block: Switch lever being removed at " + pos);
+
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof SwitchesLeverBlockEntity switchEntity) {
                 // Drop any stored texture blocks when switch is broken
                 switchEntity.dropStoredTextures(level, pos);
-                // Silent operation - no debug output
+                System.out.println("DEBUG Block: Dropped stored texture blocks");
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
@@ -213,6 +221,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         // Ensure model updates are triggered for texture changes
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
+                System.out.println("DEBUG Block: Neighbor changed, updating custom texture model");
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         }
@@ -227,10 +236,13 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                             @Nonnull net.minecraft.world.item.ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
 
+        System.out.println("DEBUG Block: Switch lever placed at " + pos + " by " +
+                (placer != null ? placer.getName().getString() : "unknown"));
+
         // Initialize BlockEntity and trigger initial model update
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("DEBUG Block: Initializing BlockEntity with default textures");
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
-            // Silent operation - no debug output
         }
     }
 
@@ -239,9 +251,12 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
      */
     public void debugTextureState(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("Debug: Switch at " + pos +
+            System.out.println("DEBUG Block: Switch at " + pos +
                     " - Base: " + blockEntity.getBaseTexture() +
                     ", Toggle: " + blockEntity.getToggleTexture() +
+                    ", BaseFace: " + blockEntity.getBaseFaceSelection() +
+                    ", ToggleFace: " + blockEntity.getToggleFaceSelection() +
+                    ", Inverted: " + blockEntity.isInverted() +
                     ", HasCustom: " + blockEntity.hasCustomTextures());
         }
     }
