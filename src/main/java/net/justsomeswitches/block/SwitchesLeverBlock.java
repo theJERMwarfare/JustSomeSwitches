@@ -31,8 +31,7 @@ import javax.annotation.Nullable;
 /**
  * Enhanced Switches Lever Block with BlockEntity support for texture customization
  * ---
- * Phase 3C: Simplified Model-Based Texture System Integration
- * Uses vanilla rendering with custom models that support dynamic texture replacement
+ * Phase 4B: Silent operation with optimized texture system integration
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -84,13 +83,13 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // PHASE 3C: VANILLA RENDERING WITH CUSTOM MODELS
+    // VANILLA RENDERING WITH CUSTOM MODELS
     // ========================================
 
     @Override
     @Nonnull
     public RenderShape getRenderShape(@Nonnull BlockState state) {
-        // Phase 3C: Use vanilla rendering with custom models
+        // Use vanilla rendering with custom models
         // This allows our custom models to handle texture replacement
         // without z-fighting issues from Block Entity Renderers
         return RenderShape.MODEL;
@@ -151,7 +150,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         Direction attachedDirection = getAttachedDirection(state);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);
 
-        // Phase 3C: Trigger model update for texture changes
+        // Trigger model update for texture changes
         triggerModelUpdate(level, pos);
 
         return InteractionResult.CONSUME;
@@ -165,7 +164,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             // Force ModelData refresh by sending block update
             level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_ALL);
-            System.out.println("Phase 3C Debug: Triggered model update for switch at " + pos);
+            // Silent operation - no debug output
         }
     }
 
@@ -196,14 +195,14 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             if (blockEntity instanceof SwitchesLeverBlockEntity switchEntity) {
                 // Drop any stored texture blocks when switch is broken
                 switchEntity.dropStoredTextures(level, pos);
-                System.out.println("Phase 3C Debug: Switch removed at " + pos + " - cleaning up textures");
+                // Silent operation - no debug output
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
     // ========================================
-    // PHASE 3C: ENHANCED BLOCK UPDATES
+    // ENHANCED BLOCK UPDATES
     // ========================================
 
     @Override
@@ -231,20 +230,16 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         // Initialize BlockEntity and trigger initial model update
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
-            System.out.println("Phase 3C Debug: Switch placed at " + pos + " - initialized with default textures");
+            // Silent operation - no debug output
         }
     }
 
-    // ========================================
-    // DEBUG HELPERS
-    // ========================================
-
     /**
-     * Debug method to check current texture state
+     * Debug method to check current texture state (for development use)
      */
     public void debugTextureState(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("Phase 3C Debug: Switch at " + pos +
+            System.out.println("Debug: Switch at " + pos +
                     " - Base: " + blockEntity.getBaseTexture() +
                     ", Toggle: " + blockEntity.getToggleTexture() +
                     ", HasCustom: " + blockEntity.hasCustomTextures());

@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Enhanced client-side screen for the Switch Texture customization GUI
  * ---
- * Phase 4B: Fixed dropdown rendering order and improved UI positioning
+ * Phase 4B: Silent operation and fixed face selection persistence
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
@@ -64,15 +64,20 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     // GUI components
     private Button applyButton;
 
-    // Phase 4B: Dynamic state tracking
+    // OPTIMIZED: Cache state to prevent unnecessary updates
+    private FaceSelectionData.DropdownState lastLeftDropdownState = FaceSelectionData.createDisabledState();
+    private FaceSelectionData.DropdownState lastRightDropdownState = FaceSelectionData.createDisabledState();
+    private boolean lastCheckboxState = false;
+    private boolean lastApplyButtonState = false;
+
+    // Current dynamic state tracking
     private FaceSelectionData.DropdownState leftDropdownState = FaceSelectionData.createDisabledState();
     private FaceSelectionData.DropdownState rightDropdownState = FaceSelectionData.createDisabledState();
     private boolean checkboxState = false;
 
-    // Phase 4B: Dropdown popup management
+    // Dropdown popup management
     private boolean showingLeftDropdown = false;
     private boolean showingRightDropdown = false;
-    private int dropdownSelectionIndex = -1;
 
     public SwitchTextureScreen(@Nonnull SwitchTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
@@ -112,24 +117,59 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Phase 4B: Enhanced UI state update with dynamic dropdown states
+     * OPTIMIZED: UI state update with change detection to prevent spam
      */
     private void updateUIState() {
-        if (applyButton != null) {
-            applyButton.active = menu.hasValidBlockEntity();
+        // Get current state
+        FaceSelectionData.DropdownState newLeftState = menu.getToggleDropdownState();
+        FaceSelectionData.DropdownState newRightState = menu.getBaseDropdownState();
+        boolean newCheckboxState = menu.isInverted();
+        boolean newApplyButtonState = menu.hasValidBlockEntity();
+
+        // Only update if something actually changed
+        boolean stateChanged = false;
+
+        if (!dropdownStatesEqual(leftDropdownState, newLeftState)) {
+            leftDropdownState = newLeftState;
+            lastLeftDropdownState = newLeftState;
+            stateChanged = true;
         }
 
-        // Update dropdown states
-        leftDropdownState = menu.getToggleDropdownState();
-        rightDropdownState = menu.getBaseDropdownState();
-        checkboxState = menu.isInverted();
+        if (!dropdownStatesEqual(rightDropdownState, newRightState)) {
+            rightDropdownState = newRightState;
+            lastRightDropdownState = newRightState;
+            stateChanged = true;
+        }
 
-        System.out.println("Phase 4B Debug: UI state updated - Left enabled: " + leftDropdownState.isEnabled() +
-                ", Right enabled: " + rightDropdownState.isEnabled() + ", Inverted: " + checkboxState);
+        if (checkboxState != newCheckboxState) {
+            checkboxState = newCheckboxState;
+            lastCheckboxState = newCheckboxState;
+            stateChanged = true;
+        }
+
+        if (applyButton != null && applyButton.active != newApplyButtonState) {
+            applyButton.active = newApplyButtonState;
+            lastApplyButtonState = newApplyButtonState;
+            stateChanged = true;
+        }
+
+        // Only log if debug is needed and state actually changed
+        // (Removed debug output for silent operation)
     }
 
     /**
-     * Phase 4B: Enhanced mouse click handling for dropdowns and checkbox
+     * Helper method to compare dropdown states
+     */
+    private boolean dropdownStatesEqual(FaceSelectionData.DropdownState state1, FaceSelectionData.DropdownState state2) {
+        if (state1 == null || state2 == null) return state1 == state2;
+
+        return state1.isEnabled() == state2.isEnabled() &&
+                state1.getSelectedOption() == state2.getSelectedOption() &&
+                state1.getAvailableOptions().equals(state2.getAvailableOptions());
+    }
+
+    /**
+     * Enhanced mouse click handling for dropdowns and checkbox
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -191,7 +231,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private void toggleLeftDropdown() {
         showingLeftDropdown = !showingLeftDropdown;
         showingRightDropdown = false; // Close other dropdown
-        System.out.println("Phase 4B Debug: Toggled left dropdown - showing: " + showingLeftDropdown);
     }
 
     /**
@@ -200,7 +239,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private void toggleRightDropdown() {
         showingRightDropdown = !showingRightDropdown;
         showingLeftDropdown = false; // Close other dropdown
-        System.out.println("Phase 4B Debug: Toggled right dropdown - showing: " + showingRightDropdown);
     }
 
     /**
@@ -222,11 +260,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 if (isLeft) {
                     menu.setToggleFaceSelection(selectedOption);
                     showingLeftDropdown = false;
-                    System.out.println("Phase 4B Debug: Selected toggle face: " + selectedOption.getDisplayName());
                 } else {
                     menu.setBaseFaceSelection(selectedOption);
                     showingRightDropdown = false;
-                    System.out.println("Phase 4B Debug: Selected base face: " + selectedOption.getDisplayName());
                 }
 
                 return true;
@@ -242,14 +278,12 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private void toggleInversionState() {
         checkboxState = !checkboxState;
         menu.setInverted(checkboxState);
-        System.out.println("Phase 4B Debug: Inversion toggled to: " + checkboxState);
     }
 
     private void onApplyButtonClicked() {
         if (menu.hasValidBlockEntity()) {
             menu.applyTextures();
             updateUIState();
-            System.out.println("Phase 4B Debug: Apply button clicked - enhanced textures applied");
         }
     }
 
@@ -264,19 +298,17 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Draw central preview area placeholder text
         drawPreviewPlaceholder(graphics, guiLeft, guiTop);
 
-        // Draw connection lines - FIXED: Corrected positioning
+        // Draw connection lines
         drawConnectionLines(graphics, guiLeft, guiTop);
 
-        // Phase 4B: Draw enhanced face selection dropdowns
+        // Draw enhanced face selection dropdowns
         drawEnhancedFaceDropdowns(graphics, guiLeft, guiTop);
 
-        // Phase 4B: Draw texture previews
+        // Draw texture previews
         drawTexturePreview(graphics, guiLeft, guiTop);
 
-        // Phase 4B: Draw enhanced inversion checkbox
+        // Draw enhanced inversion checkbox
         drawEnhancedInversionCheckbox(graphics, guiLeft, guiTop);
-
-        // NOTE: Dropdown popups are now rendered in render() method for proper z-order
     }
 
     /**
@@ -295,21 +327,21 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw connection lines between slots and preview - FIXED: Corrected positioning
+     * Draw connection lines between slots and preview
      */
     private void drawConnectionLines(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         // Line Y position - moved down 4px from current position
         int lineY = guiTop + LINE_Y;
 
-        // Left connection line - FIXED: Shifted left by 20px
+        // Left connection line
         graphics.fill(guiLeft + LEFT_LINE_START, lineY, guiLeft + LEFT_LINE_END, lineY + 1, 0xFF999999);
 
-        // Right connection line - FIXED: Shifted left by 20px
+        // Right connection line
         graphics.fill(guiLeft + RIGHT_LINE_START, lineY, guiLeft + RIGHT_LINE_END, lineY + 1, 0xFF999999);
     }
 
     /**
-     * Phase 4B: Draw enhanced face selection dropdowns with dynamic states
+     * Draw enhanced face selection dropdowns with dynamic states
      */
     private void drawEnhancedFaceDropdowns(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         // Left (toggle) face dropdown
@@ -322,7 +354,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw enhanced dropdown button with dynamic state - FIXED: Improved text display and arrow direction
+     * Draw enhanced dropdown button with dynamic state
      */
     private void drawEnhancedDropdownButton(@Nonnull GuiGraphics graphics, int x, int y,
                                             @Nonnull FaceSelectionData.DropdownState state, boolean isOpen) {
@@ -350,7 +382,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFF999999);
         }
 
-        // Draw dropdown arrow - FIXED: Arrow points down when closed, up when open
+        // Draw dropdown arrow
         if (state.isEnabled()) {
             int arrowColor = 0xFF000000;
             int arrowX = x + FACE_DROPDOWN_WIDTH - 10;
@@ -369,11 +401,11 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             }
         }
 
-        // Draw current selection or "Face" label - FIXED: Better text handling
+        // Draw current selection or "Face" label
         String displayText = state.isEnabled() ?
                 state.getSelectedOption().getDisplayName() : "Face";
 
-        // Truncate text if too long, but allow more characters now
+        // Truncate text if too long
         if (displayText.length() > 6) {
             displayText = displayText.substring(0, 6);
         }
@@ -382,7 +414,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Phase 4B: Draw 18x18px texture previews under dropdowns
+     * Draw 18x18px texture previews under dropdowns
      */
     private void drawTexturePreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         // Draw left (toggle) texture preview
@@ -413,21 +445,18 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
                 // Draw texture sprite scaled to 18x18
                 graphics.blit(x, y, 0, PREVIEW_SIZE, PREVIEW_SIZE, sprite);
-
-                System.out.println("Phase 4B Debug: Rendered texture preview for: " + texturePath);
             } else {
                 // Draw error/missing texture indicator
                 graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF00FF); // Magenta for missing
             }
         } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to render texture preview for " + texturePath + " - " + e.getMessage());
             // Draw error indicator
             graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF0000); // Red for error
         }
     }
 
     /**
-     * Phase 4B: Draw enhanced inversion checkbox with proper state
+     * Draw enhanced inversion checkbox with proper state
      */
     private void drawEnhancedInversionCheckbox(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         int checkboxX = guiLeft + INVERTED_X;
@@ -464,7 +493,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
 
-        // FIXED: Render dropdown popups AFTER everything else for proper z-order
+        // Render dropdown popups AFTER everything else for proper z-order
         int guiLeft = (this.width - this.imageWidth) / 2;
         int guiTop = (this.height - this.imageHeight) / 2;
 
@@ -478,7 +507,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Phase 4B: Draw dropdown popup menu - FIXED: Better text display and sizing
+     * Draw dropdown popup menu
      */
     private void drawDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
                                    @Nonnull FaceSelectionData.DropdownState state) {
@@ -504,7 +533,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 graphics.fill(x + 1, optionY, x + FACE_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
             }
 
-            // Draw option text - FIXED: Allow more characters to display
+            // Draw option text
             String optionText = option.getDisplayName();
             if (optionText.length() > 6) {
                 optionText = optionText.substring(0, 6);

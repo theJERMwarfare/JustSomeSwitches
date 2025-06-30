@@ -18,7 +18,7 @@ import javax.annotation.Nullable;
 /**
  * Enhanced server-side menu for the Switch Texture customization GUI
  * ---
- * Phase 4B: Fixed face selection integration and persistence
+ * Phase 4B: Fixed face selection persistence and reduced console output
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -65,8 +65,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             }
         };
 
-        System.out.println("Phase 4B: Menu constructor - BlockPos: " + blockPos);
-
         // Try to get the BlockEntity and load GUI slot data
         loadGuiSlotData();
 
@@ -97,8 +95,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
-
-        System.out.println("Phase 4B: Menu initialized with face selection support");
     }
 
     /**
@@ -151,8 +147,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
             ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
-
-            System.out.println("Phase 4B Debug: Block analysis triggered for slot changes");
         }
     }
 
@@ -176,8 +170,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private void loadGuiSlotData() {
         this.blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            System.out.println("Phase 4B: Loading GUI data from BlockEntity at " + blockPos);
-
             // Load GUI slot contents from BlockEntity
             ItemStack toggleItem = blockEntity.getGuiToggleItem();
             ItemStack baseItem = blockEntity.getGuiBaseItem();
@@ -189,9 +181,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             this.baseFaceSelection = blockEntity.getBaseFaceSelection();
             this.toggleFaceSelection = blockEntity.getToggleFaceSelection();
             this.inverted = blockEntity.isInverted();
-
-            System.out.println("Phase 4B: Loaded state - BaseFace: " + baseFaceSelection.getDisplayName() +
-                    ", ToggleFace: " + toggleFaceSelection.getDisplayName() + ", Inverted: " + inverted);
         }
     }
 
@@ -204,8 +193,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
 
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
-
-            System.out.println("Phase 4B Debug: Saved enhanced GUI slots");
         }
     }
 
@@ -231,8 +218,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // FIXED: Apply textures immediately when face selection changes
             applyTextures();
             forceBlockUpdate();
-
-            System.out.println("Phase 4B: Base face -> " + faceOption.getDisplayName());
         }
     }
 
@@ -247,8 +232,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // FIXED: Apply textures immediately when face selection changes
             applyTextures();
             forceBlockUpdate();
-
-            System.out.println("Phase 4B: Toggle face -> " + faceOption.getDisplayName());
         }
     }
 
@@ -260,7 +243,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             this.inverted = inverted;
             blockEntity.setInverted(inverted);
             forceBlockUpdate();
-            System.out.println("Phase 4B Debug: Inversion state set to: " + inverted);
         }
     }
 
@@ -295,6 +277,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
     /**
      * FIXED: Enhanced texture application with face selection support
+     * PERSISTENCE FIX: Don't reset face selections when slots are empty
      */
     public void applyTextures() {
         if (blockEntity != null) {
@@ -305,24 +288,24 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // Store GUI slot items for persistence and analysis
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
 
-            // FIXED: Apply toggle texture with face selection
+            // FIXED: Apply toggle texture with face selection (preserve face selection when empty)
             if (!toggleItem.isEmpty()) {
                 String effectiveTexturePath = getEffectiveTexturePathForItem(toggleItem, toggleFaceSelection);
                 blockEntity.setToggleTexture(effectiveTexturePath);
-                System.out.println("Phase 4B: Applied toggle texture: " + effectiveTexturePath + " (face: " + toggleFaceSelection.getDisplayName() + ")");
             } else {
                 blockEntity.resetToggleTexture();
-                setToggleFaceSelection(FaceSelectionData.FaceOption.ALL);
+                // PERSISTENCE FIX: Don't reset face selection when slot is empty
+                // Face selection should persist even when no block is in slot
             }
 
-            // FIXED: Apply base texture with face selection
+            // FIXED: Apply base texture with face selection (preserve face selection when empty)
             if (!baseItem.isEmpty()) {
                 String effectiveTexturePath = getEffectiveTexturePathForItem(baseItem, baseFaceSelection);
                 blockEntity.setBaseTexture(effectiveTexturePath);
-                System.out.println("Phase 4B: Applied base texture: " + effectiveTexturePath + " (face: " + baseFaceSelection.getDisplayName() + ")");
             } else {
                 blockEntity.resetBaseTexture();
-                setBaseFaceSelection(FaceSelectionData.FaceOption.ALL);
+                // PERSISTENCE FIX: Don't reset face selection when slot is empty
+                // Face selection should persist even when no block is in slot
             }
 
             // Force visual update with enhanced data
@@ -372,8 +355,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
             // Send block update to clients for immediate visual refresh
             level.sendBlockUpdated(blockPos, level.getBlockState(blockPos), level.getBlockState(blockPos), 3);
-
-            System.out.println("Phase 4B Debug: Enhanced block update with face selections and inversion");
         }
     }
 
@@ -407,7 +388,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         saveGuiSlotData();
 
         // Apply textures one final time when closing GUI
-        System.out.println("Phase 4B Debug: Enhanced menu closing - applying final textures");
         applyTextures();
     }
 

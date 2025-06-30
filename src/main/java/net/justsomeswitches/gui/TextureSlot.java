@@ -14,8 +14,7 @@ import javax.annotation.Nonnull;
 /**
  * Custom slot for texture blocks that only accepts solid, full-cube blocks
  * ---
- * Phase 3B Enhancement: Comprehensive block validation with shape checking
- * FIXED: Proper change notification to trigger texture updates
+ * Phase 4B Enhancement: Comprehensive block validation with silent operation
  */
 public class TextureSlot extends Slot {
 
@@ -45,7 +44,7 @@ public class TextureSlot extends Slot {
             return false;
         }
 
-        // FIXED: Check redstone connection capability with proper parameters
+        // Check redstone connection capability with proper parameters
         try {
             if (defaultState.canRedstoneConnectTo(null, null, Direction.NORTH) ||
                     defaultState.hasAnalogOutputSignal()) {
@@ -104,20 +103,20 @@ public class TextureSlot extends Slot {
     @Override
     public void setChanged() {
         super.setChanged();
-        System.out.println("Phase 3C Debug: TextureSlot changed - slot " + getSlotIndex() + ", item: " + getItem());
+        // Silent operation - no debug output
     }
 
     @Override
     @Nonnull
     public ItemStack remove(int amount) {
         ItemStack result = super.remove(amount);
-        System.out.println("Phase 3C Debug: TextureSlot item removed - slot " + getSlotIndex());
+        // Silent operation - no debug output
         return result;
     }
 
     @Override
     public void set(@Nonnull ItemStack stack) {
         super.set(stack);
-        System.out.println("Phase 3C Debug: TextureSlot item set - slot " + getSlotIndex() + ", item: " + stack);
+        // Silent operation - no debug output
     }
 }

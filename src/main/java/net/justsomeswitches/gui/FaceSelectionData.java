@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Face selection data management for dynamic dropdown system
  * ---
- * Phase 4B: Enhanced face selection with improved block analysis integration
+ * Phase 4B: Enhanced face selection with silent operation for performance
  */
 public class FaceSelectionData {
 
@@ -110,7 +110,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * Create dropdown state based on block analysis - ENHANCED with reduced output
+     * Create dropdown state based on block analysis - OPTIMIZED with silent operation
      */
     @Nonnull
     public static DropdownState createDropdownState(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
@@ -159,7 +159,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * Get preview texture based on current selection and block info - ENHANCED
+     * Get preview texture based on current selection and block info - OPTIMIZED
      */
     @Nullable
     private static String getPreviewTexture(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
@@ -214,7 +214,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * Get texture path for a specific face selection - ENHANCED
+     * Get texture path for a specific face selection - OPTIMIZED
      */
     @Nullable
     public static String getTextureForSelection(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,

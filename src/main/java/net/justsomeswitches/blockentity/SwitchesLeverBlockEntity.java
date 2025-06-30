@@ -23,16 +23,16 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Enhanced Block Entity for Switches Lever - Phase 4B
+ * Enhanced Block Entity for Switches Lever - Phase 4B Optimized
  * ---
  * This BlockEntity provides comprehensive NBT-based storage for individual switch blocks,
- * including advanced face selection and dynamic texture analysis capabilities.
+ * with performance optimizations to prevent excessive processing during rendering.
  * ---
- * Phase 4B enhancements:
- * - Face selection storage for each texture slot
- * - Dynamic block analysis integration
- * - Enhanced texture preview capabilities
- * - Professional error handling and validation
+ * Phase 4B optimizations:
+ * - Lazy analysis only when items present
+ * - Cached analysis results
+ * - Reduced console output
+ * - Efficient dropdown state management
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -65,6 +65,20 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     // Inversion state (Phase 4B)
     private boolean inverted = false;
+
+    // GUI slot storage
+    private ItemStack guiToggleItem = ItemStack.EMPTY;
+    private ItemStack guiBaseItem = ItemStack.EMPTY;
+
+    // ========================================
+    // PERFORMANCE OPTIMIZATION: CACHED ANALYSIS
+    // ========================================
+
+    // Cache analysis results to prevent repeated processing
+    private BlockTextureAnalyzer.BlockTextureInfo cachedBaseAnalysis = null;
+    private BlockTextureAnalyzer.BlockTextureInfo cachedToggleAnalysis = null;
+    private ItemStack lastAnalyzedBase = ItemStack.EMPTY;
+    private ItemStack lastAnalyzedToggle = ItemStack.EMPTY;
 
     // ========================================
     // PHASE 4B: ENHANCED MODEL DATA INTEGRATION
@@ -116,6 +130,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     /**
      * Get enhanced ModelData for custom model rendering
+     * OPTIMIZED: No analysis performed here - only data passing
      */
     @Override
     @Nonnull
@@ -133,7 +148,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
-        System.out.println("Phase 4B Debug: Enhanced SwitchesLeverBlockEntity created at " + pos);
     }
 
     // ========================================
@@ -157,7 +171,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // PHASE 4B: ENHANCED TEXTURE MANAGEMENT
+    // OPTIMIZED TEXTURE MANAGEMENT
     // ========================================
 
     /**
@@ -178,12 +192,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         try {
             ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(block);
             if (blockId != null) {
-                String texturePath = blockId.getNamespace() + ":block/" + blockId.getPath();
-                System.out.println("Phase 4B Debug: Extracted texture path: " + texturePath + " from item: " + blockId);
-                return texturePath;
+                return blockId.getNamespace() + ":block/" + blockId.getPath();
             }
         } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to extract texture from item: " + e.getMessage());
+            // Silent failure
         }
 
         return "";
@@ -197,7 +209,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             requestModelDataUpdate();
-            System.out.println("Phase 4B Debug: BlockEntity marked dirty and synced at " + worldPosition);
         }
     }
 
@@ -208,7 +219,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!texturePath.equals(this.baseTexturePath)) {
             this.baseTexturePath = texturePath;
             markDirtyAndSync();
-            System.out.println("Phase 4B Debug: BaseTexture updated to: " + texturePath);
             return true;
         }
         return false;
@@ -232,7 +242,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!texturePath.equals(this.toggleTexturePath)) {
             this.toggleTexturePath = texturePath;
             markDirtyAndSync();
-            System.out.println("Phase 4B Debug: ToggleTexture updated to: " + texturePath);
             return true;
         }
         return false;
@@ -250,7 +259,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // PHASE 4B: FACE SELECTION MANAGEMENT
+    // FACE SELECTION MANAGEMENT
     // ========================================
 
     /**
@@ -260,7 +269,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (this.baseFaceSelection != faceOption) {
             this.baseFaceSelection = faceOption;
             markDirtyAndSync();
-            System.out.println("Phase 4B Debug: Base face selection updated to: " + faceOption.getDisplayName());
             return true;
         }
         return false;
@@ -273,7 +281,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (this.toggleFaceSelection != faceOption) {
             this.toggleFaceSelection = faceOption;
             markDirtyAndSync();
-            System.out.println("Phase 4B Debug: Toggle face selection updated to: " + faceOption.getDisplayName());
             return true;
         }
         return false;
@@ -286,30 +293,39 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (this.inverted != inverted) {
             this.inverted = inverted;
             markDirtyAndSync();
-            System.out.println("Phase 4B Debug: Inversion state updated to: " + inverted);
             return true;
         }
         return false;
     }
 
     // ========================================
-    // PHASE 4B: BLOCK ANALYSIS INTEGRATION
+    // OPTIMIZED BLOCK ANALYSIS INTEGRATION
     // ========================================
 
     /**
-     * Get block analysis for base texture slot
+     * Get block analysis for base texture slot with caching
      */
     @Nonnull
     public BlockTextureAnalyzer.BlockTextureInfo getBaseBlockAnalysis() {
-        return BlockTextureAnalyzer.analyzeBlock(guiBaseItem);
+        // OPTIMIZATION: Only analyze if item changed or cache is empty
+        if (cachedBaseAnalysis == null || !ItemStack.matches(lastAnalyzedBase, guiBaseItem)) {
+            cachedBaseAnalysis = BlockTextureAnalyzer.analyzeBlock(guiBaseItem);
+            lastAnalyzedBase = guiBaseItem.copy();
+        }
+        return cachedBaseAnalysis;
     }
 
     /**
-     * Get block analysis for toggle texture slot
+     * Get block analysis for toggle texture slot with caching
      */
     @Nonnull
     public BlockTextureAnalyzer.BlockTextureInfo getToggleBlockAnalysis() {
-        return BlockTextureAnalyzer.analyzeBlock(guiToggleItem);
+        // OPTIMIZATION: Only analyze if item changed or cache is empty
+        if (cachedToggleAnalysis == null || !ItemStack.matches(lastAnalyzedToggle, guiToggleItem)) {
+            cachedToggleAnalysis = BlockTextureAnalyzer.analyzeBlock(guiToggleItem);
+            lastAnalyzedToggle = guiToggleItem.copy();
+        }
+        return cachedToggleAnalysis;
     }
 
     /**
@@ -317,6 +333,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      */
     @Nonnull
     public FaceSelectionData.DropdownState getBaseDropdownState() {
+        // OPTIMIZATION: Only create dropdown state if there's actually an item
+        if (guiBaseItem.isEmpty()) {
+            return FaceSelectionData.createDisabledState();
+        }
+
         BlockTextureAnalyzer.BlockTextureInfo blockInfo = getBaseBlockAnalysis();
         return FaceSelectionData.createDropdownState(blockInfo, baseFaceSelection);
     }
@@ -326,6 +347,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      */
     @Nonnull
     public FaceSelectionData.DropdownState getToggleDropdownState() {
+        // OPTIMIZATION: Only create dropdown state if there's actually an item
+        if (guiToggleItem.isEmpty()) {
+            return FaceSelectionData.createDisabledState();
+        }
+
         BlockTextureAnalyzer.BlockTextureInfo blockInfo = getToggleBlockAnalysis();
         return FaceSelectionData.createDropdownState(blockInfo, toggleFaceSelection);
     }
@@ -373,24 +399,27 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         if (changed) {
             markDirtyAndSync();
-            System.out.println("Phase 4B Debug: All customizations reset to defaults");
         }
     }
 
     /**
      * Reset base texture to default (for GUI compatibility)
+     * PERSISTENCE FIX: Don't reset face selection when resetting texture
      */
     public void resetBaseTexture() {
         setBaseTexture(DEFAULT_BASE_TEXTURE);
-        setBaseFaceSelection(FaceSelectionData.FaceOption.ALL);
+        // PERSISTENCE FIX: Don't reset face selection - let user keep their choice
+        // setBaseFaceSelection(FaceSelectionData.FaceOption.ALL);
     }
 
     /**
      * Reset toggle texture to default (for GUI compatibility)
+     * PERSISTENCE FIX: Don't reset face selection when resetting texture
      */
     public void resetToggleTexture() {
         setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
-        setToggleFaceSelection(FaceSelectionData.FaceOption.ALL);
+        // PERSISTENCE FIX: Don't reset face selection - let user keep their choice
+        // setToggleFaceSelection(FaceSelectionData.FaceOption.ALL);
     }
 
     /**
@@ -408,10 +437,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // GUI SLOT MANAGEMENT (For GUI Compatibility)
     // ========================================
 
-    // GUI slot storage
-    private ItemStack guiToggleItem = ItemStack.EMPTY;
-    private ItemStack guiBaseItem = ItemStack.EMPTY;
-
     /**
      * Get toggle item from GUI slot
      */
@@ -428,9 +453,16 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * Set GUI slot items (for GUI compatibility)
      */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
+        // Clear cache if items changed
+        if (!ItemStack.matches(this.guiToggleItem, toggleItem)) {
+            cachedToggleAnalysis = null;
+        }
+        if (!ItemStack.matches(this.guiBaseItem, baseItem)) {
+            cachedBaseAnalysis = null;
+        }
+
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
-        System.out.println("Phase 4B Debug: GUI slot items updated - Toggle: " + toggleItem + ", Base: " + baseItem);
     }
 
     /**
@@ -454,10 +486,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             textureChanged |= setBaseTexture(DEFAULT_BASE_TEXTURE);
             setBaseFaceSelection(FaceSelectionData.FaceOption.ALL);
         }
-
-        if (textureChanged) {
-            System.out.println("Phase 4B Debug: Textures applied from GUI at " + worldPosition);
-        }
     }
 
     /**
@@ -466,12 +494,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (!guiToggleItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiToggleItem);
-            System.out.println("Phase 4B Debug: Dropped toggle texture item: " + guiToggleItem);
         }
 
         if (!guiBaseItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiBaseItem);
-            System.out.println("Phase 4B Debug: Dropped base texture item: " + guiBaseItem);
         }
     }
 
@@ -501,10 +527,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!guiBaseItem.isEmpty()) {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
-
-        System.out.println("Phase 4B Debug: Enhanced NBT saved - Base: " + baseTexturePath +
-                ", Toggle: " + toggleTexturePath + ", BaseFace: " + baseFaceSelection.getDisplayName() +
-                ", ToggleFace: " + toggleFaceSelection.getDisplayName() + ", Inverted: " + inverted);
     }
 
     @Override
@@ -548,9 +570,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.guiBaseItem = ItemStack.EMPTY;
         }
 
-        System.out.println("Phase 4B Debug: Enhanced NBT loaded - Base: " + baseTexturePath +
-                ", Toggle: " + toggleTexturePath + ", BaseFace: " + baseFaceSelection.getDisplayName() +
-                ", ToggleFace: " + toggleFaceSelection.getDisplayName() + ", Inverted: " + inverted);
+        // Clear analysis cache on load
+        cachedBaseAnalysis = null;
+        cachedToggleAnalysis = null;
     }
 
     // ========================================
@@ -589,7 +611,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        System.out.println("Phase 4B Debug: Enhanced update tag created for client sync");
         return nbt;
     }
 
@@ -602,7 +623,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (nbt != null) {
             load(nbt);
             requestModelDataUpdate();
-            System.out.println("Phase 4B Debug: Received enhanced data packet from server");
         }
     }
 }

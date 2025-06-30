@@ -19,8 +19,7 @@ import java.util.Map;
 /**
  * Client-side setup and registration for Just Some Switches mod
  * ---
- * Phase 3C: Simplified Model-Based Texture System
- * Replaces vanilla models with custom models that support dynamic texture replacement
+ * Phase 4B: Silent operation with optimized texture system
  */
 @Mod.EventBusSubscriber(modid = "justsomeswitches", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class JustSomeSwitchesClientSetup {
@@ -43,19 +42,17 @@ public class JustSomeSwitchesClientSetup {
     /**
      * Model baking event - replaces vanilla models with custom models
      * ---
-     * Phase 3C: This is where we replace the vanilla switch models with our custom models
+     * This is where we replace the vanilla switch models with our custom models
      * that support dynamic texture replacement through ModelData
      */
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
         Map<ResourceLocation, BakedModel> models = event.getModels();
 
-        System.out.println("Phase 3C Debug: Starting model replacement for switches lever");
-
         // Replace switch lever models
         replaceSwitchModels(models);
 
-        System.out.println("Phase 3C Debug: Model replacement completed");
+        // Silent operation - no debug output
     }
 
     /**
@@ -94,12 +91,12 @@ public class JustSomeSwitchesClientSetup {
                     models.put(location, customModel);
                     replacedCount++;
 
-                    System.out.println("Phase 3C Debug: Replaced variant model: " + location);
+                    // Silent operation - no debug output per model
                 }
             }
         }
 
-        System.out.println("Phase 3C Debug: Replaced " + replacedCount + " switch models total");
+        // Silent operation - no debug output for total count
     }
 
     /**
@@ -119,23 +116,24 @@ public class JustSomeSwitchesClientSetup {
 
             return defaultState;
         } catch (Exception e) {
-            System.out.println("Phase 3C Debug: Error getting representative state for: " + modelLocation + " - " + e.getMessage());
+            // Silent operation - no debug output
             return null;
         }
     }
 
     /**
-     * Debug method called after models are loaded
+     * Debug method called after models are loaded (silent in production)
      */
     @SubscribeEvent
     public static void onModelsLoaded(ModelEvent.BakingCompleted event) {
-        System.out.println("Phase 3C Debug: Model baking completed - custom switch models should be active");
-
-        // Debug: List some model locations
+        // Silent operation - custom switch models should be active
+        // Debug: List some model locations (disabled for performance)
+        /*
         Map<ResourceLocation, BakedModel> models = event.getModels();
         models.keySet().stream()
                 .filter(location -> location.getNamespace().equals("justsomeswitches"))
                 .limit(5) // Limit output to avoid spam
-                .forEach(location -> System.out.println("Phase 3C Debug: Available model: " + location));
+                .forEach(location -> System.out.println("Available model: " + location));
+        */
     }
 }

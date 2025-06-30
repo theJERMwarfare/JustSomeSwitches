@@ -7,7 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -79,8 +78,6 @@ public class BlockTextureAnalyzer {
             return new BlockTextureInfo(false, Collections.emptyMap(), null);
         }
 
-        System.out.println("Phase 4B: Analyzing block: " + itemStack.getDisplayName().getString());
-
         // Use dynamic model analyzer for universal compatibility
         DynamicBlockModelAnalyzer.DynamicBlockInfo dynamicInfo =
                 DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack);
@@ -105,9 +102,6 @@ public class BlockTextureAnalyzer {
 
         boolean hasMultiple = dynamicInfo.hasMultipleTextures();
         String uniform = hasMultiple ? null : dynamicInfo.getPrimaryTexture();
-
-        System.out.println("Phase 4B: Analysis result - Multiple textures: " + hasMultiple +
-                ", Variables: " + textureVariables.keySet());
 
         return new BlockTextureInfo(hasMultiple, faceTextures, uniform);
     }
@@ -155,7 +149,7 @@ public class BlockTextureAnalyzer {
                 return sprite;
             }
 
-            // Try fallback patterns
+            // Try fallback patterns for face-specific textures
             if (texturePath.contains("_top") || texturePath.contains("_side") || texturePath.contains("_front")) {
                 String basePath = texturePath.replaceAll("_(top|side|front)$", "");
                 ResourceLocation fallbackLocation = new ResourceLocation(basePath);
@@ -170,7 +164,6 @@ public class BlockTextureAnalyzer {
 
             return null;
         } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to load texture sprite for " + texturePath + " - " + e.getMessage());
             return null;
         }
     }

@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * Custom model for SwitchesLever that handles dynamic texture replacement
- * FIXED: Ensures texture replacement works regardless of which getQuads method is called
+ * OPTIMIZED: Silent operation for performance
  */
 public class SwitchesLeverModel implements BakedModel {
 
@@ -43,59 +43,38 @@ public class SwitchesLeverModel implements BakedModel {
     }
 
     // ========================================
-    // FIXED: BOTH getQuads METHODS NOW HANDLE TEXTURE REPLACEMENT
+    // OPTIMIZED: SILENT TEXTURE REPLACEMENT
     // ========================================
 
     @Override
     @Nonnull
     public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand, @Nonnull ModelData extraData, @Nullable RenderType renderType) {
-        System.out.println("Phase 3C Debug: getQuads called WITH ModelData - side: " + side);
         return processQuads(state, side, rand, extraData, renderType);
     }
 
     @Override
     @Nonnull
     public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand) {
-        System.out.println("Phase 3C Debug: getQuads called WITHOUT ModelData - side: " + side + " - attempting to get ModelData");
-
-        // CRITICAL FIX: Try to get ModelData when not provided
-        ModelData modelData = ModelData.EMPTY;
-
-        // This method is called during item rendering or when ModelData isn't available
-        // For item rendering, we want to use default textures
-        // For block rendering, this shouldn't happen if everything is set up correctly
-
-        return processQuads(state, side, rand, modelData, null);
+        // For item rendering, use default textures without ModelData
+        return processQuads(state, side, rand, ModelData.EMPTY, null);
     }
 
     /**
-     * FIXED: Centralized quad processing that handles texture replacement
+     * OPTIMIZED: Centralized quad processing with silent operation
      */
     @Nonnull
     private List<BakedQuad> processQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand, @Nonnull ModelData extraData, @Nullable RenderType renderType) {
         // Get base model quads
         List<BakedQuad> baseQuads = baseModel.getQuads(state, side, rand, extraData, renderType);
 
-        System.out.println("Phase 3C Debug: processQuads - side: " + side + ", base quads: " + baseQuads.size());
-
         // Check if we have texture data
         net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.SwitchTextureData textureData =
                 extraData.get(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.TEXTURE_PROPERTY);
 
-        if (textureData != null) {
-            System.out.println("Phase 3C Debug: Found texture data - Base=" + textureData.getBaseTexture() +
-                    ", Toggle=" + textureData.getToggleTexture() + ", HasCustom=" + textureData.hasCustomTextures());
-
-            if (textureData.hasCustomTextures()) {
-                List<BakedQuad> replacedQuads = replaceTexturesInQuads(baseQuads, textureData);
-                System.out.println("Phase 3C Debug: Texture replacement completed - returning " + replacedQuads.size() + " modified quads");
-                return replacedQuads;
-            }
-        } else {
-            System.out.println("Phase 3C Debug: No texture data found - using base model quads");
+        if (textureData != null && textureData.hasCustomTextures()) {
+            return replaceTexturesInQuads(baseQuads, textureData);
         }
 
-        System.out.println("Phase 3C Debug: Using base model quads without texture replacement");
         return baseQuads;
     }
 
@@ -104,22 +83,14 @@ public class SwitchesLeverModel implements BakedModel {
      */
     @Nonnull
     private List<BakedQuad> replaceTexturesInQuads(@Nonnull List<BakedQuad> baseQuads, @Nonnull net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.SwitchTextureData textureData) {
-        System.out.println("Phase 3C Debug: Starting texture replacement - " + baseQuads.size() + " input quads");
-
         // Load texture sprites (with caching)
         TextureAtlasSprite baseSprite = getTextureSprite(textureData.getBaseTexture(), true);
         TextureAtlasSprite toggleSprite = getTextureSprite(textureData.getToggleTexture(), false);
 
-        System.out.println("Phase 3C Debug: Loaded sprites - Base: " + baseSprite.contents().name() +
-                ", Toggle: " + toggleSprite.contents().name());
-
         // Transform quads with new textures
-        List<BakedQuad> result = baseQuads.stream()
+        return baseQuads.stream()
                 .map(quad -> replaceQuadTexture(quad, baseSprite, toggleSprite))
                 .toList();
-
-        System.out.println("Phase 3C Debug: Texture replacement completed - " + result.size() + " output quads");
-        return result;
     }
 
     /**
@@ -133,20 +104,13 @@ public class SwitchesLeverModel implements BakedModel {
         // Get original texture from quad
         TextureAtlasSprite originalTexture = originalQuad.getSprite();
 
-        // Debug output for original texture
-        String originalName = originalTexture.contents().name().toString();
-        System.out.println("Phase 3C Debug: Processing quad with texture: " + originalName);
-
         // Determine which replacement texture to use based on original texture
         TextureAtlasSprite replacementSprite = determineReplacementTexture(originalTexture, baseSprite, toggleSprite);
 
         // If no replacement needed, return original
         if (replacementSprite == originalTexture) {
-            System.out.println("Phase 3C Debug: No replacement needed for texture: " + originalName);
             return originalQuad;
         }
-
-        System.out.println("Phase 3C Debug: Replacing texture " + originalName + " with " + replacementSprite.contents().name());
 
         // Create new quad with replaced texture
         return new BakedQuad(
@@ -167,28 +131,23 @@ public class SwitchesLeverModel implements BakedModel {
                                                            @Nonnull TextureAtlasSprite toggleSprite) {
 
         String originalName = originalTexture.contents().name().toString();
-        System.out.println("Phase 3C Debug: Determining replacement for: " + originalName);
 
         // Exclude powered/unpowered state textures
         if (shouldExcludeFromReplacement(originalName)) {
-            System.out.println("Phase 3C Debug: Excluded texture (powered/unpowered state): " + originalName);
             return originalTexture;
         }
 
         // Check if this is a base texture (cobblestone-like)
         if (isBaseTexture(originalName)) {
-            System.out.println("Phase 3C Debug: Identified as base texture -> replacing with " + baseSprite.contents().name());
             return baseSprite;
         }
 
         // Check if this is a toggle texture (wood-like)
         if (isToggleTexture(originalName)) {
-            System.out.println("Phase 3C Debug: Identified as toggle texture -> replacing with " + toggleSprite.contents().name());
             return toggleSprite;
         }
 
         // Default: no replacement
-        System.out.println("Phase 3C Debug: No replacement rule for texture: " + originalName);
         return originalTexture;
     }
 
@@ -371,10 +330,9 @@ public class SwitchesLeverModel implements BakedModel {
     @Override
     @NotNull
     public ModelData getModelData(@NotNull BlockAndTintGetter level, @NotNull BlockPos pos, @NotNull BlockState state, @NotNull ModelData modelData) {
-        // CRITICAL: Get BlockEntity and request its ModelData
+        // Get BlockEntity and request its ModelData
         if (level.getBlockEntity(pos) instanceof net.justsomeswitches.blockentity.SwitchesLeverBlockEntity blockEntity) {
             ModelData entityData = blockEntity.getModelData();
-            System.out.println("Phase 3C Debug: Custom model requesting ModelData from BlockEntity at " + pos);
 
             // Combine base model data with BlockEntity data
             return ModelData.builder()

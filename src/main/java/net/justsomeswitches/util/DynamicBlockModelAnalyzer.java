@@ -123,7 +123,6 @@ public class DynamicBlockModelAnalyzer {
             // Extract namespace and block name from blockId
             String[] parts = blockId.split(":");
             if (parts.length != 2) {
-                System.err.println("Phase 4B Error: Invalid blockId format: " + blockId);
                 return createFallbackInfo(blockId);
             }
 
@@ -131,7 +130,6 @@ public class DynamicBlockModelAnalyzer {
             String fullPath = parts[1]; // "block/blockname"
 
             if (!fullPath.startsWith("block/")) {
-                System.err.println("Phase 4B Error: Invalid block path: " + fullPath);
                 return createFallbackInfo(blockId);
             }
 
@@ -140,7 +138,6 @@ public class DynamicBlockModelAnalyzer {
             // Load the block model JSON file
             JsonObject modelJson = loadBlockModel(namespace, blockName);
             if (modelJson == null) {
-                System.out.println("Phase 4B Debug: Could not load model for " + blockId + ", using fallback");
                 return createFallbackInfo(blockId);
             }
 
@@ -159,12 +156,9 @@ public class DynamicBlockModelAnalyzer {
             // Determine primary texture
             String primaryTexture = getPrimaryTexture(filteredVariables);
 
-            System.out.println("Phase 4B: " + blockId + " -> " + filteredVariables.size() + " texture variables, multiple: " + hasMultipleTextures);
-
             return new DynamicBlockInfo(hasMultipleTextures, filteredVariables, primaryTexture);
 
         } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to analyze block model for " + blockId + " - " + e.getMessage());
             return createFallbackInfo(blockId);
         }
     }
@@ -191,12 +185,10 @@ public class DynamicBlockModelAnalyzer {
                         return resolveParentModels(modelJson, namespace, resourceManager);
                     }
                 }
-            } else {
-                // Model file not found - this is normal for some blocks
             }
 
         } catch (IOException e) {
-            System.err.println("Phase 4B Error: Failed to load model for " + namespace + ":" + blockName + " - " + e.getMessage());
+            // Silent failure - this is expected for many blocks
         }
 
         return null;
@@ -256,7 +248,7 @@ public class DynamicBlockModelAnalyzer {
                 }
 
             } catch (Exception e) {
-                System.err.println("Phase 4B Error: Failed to resolve parent model " + parentPath + " - " + e.getMessage());
+                // Silent failure - continue without parent resolution
             }
         }
 
@@ -347,7 +339,7 @@ public class DynamicBlockModelAnalyzer {
                 return blockRegistryName.getNamespace() + ":block/" + blockRegistryName.getPath();
             }
         } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to get block registry name - " + e.getMessage());
+            // Silent failure
         }
 
         return "minecraft:block/stone";
