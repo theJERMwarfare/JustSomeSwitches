@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Face selection data management for dynamic dropdown system
  * ---
- * Phase 4B: Advanced face selection with dynamic options based on block analysis
+ * Phase 4B: Enhanced face selection with improved block analysis integration
  */
 public class FaceSelectionData {
 
@@ -19,7 +19,7 @@ public class FaceSelectionData {
      * Face selection options - includes ALL plus specific faces
      */
     public enum FaceOption {
-        ALL("All Faces", "all"),
+        ALL("All", "all"),
         TOP("Top", "top", Direction.UP),
         BOTTOM("Bottom", "bottom", Direction.DOWN),
         NORTH("North", "north", Direction.NORTH),
@@ -110,53 +110,83 @@ public class FaceSelectionData {
     }
 
     /**
-     * Create dropdown state based on block analysis
+     * Create dropdown state based on block analysis - ENHANCED with reduced output
      */
     @Nonnull
     public static DropdownState createDropdownState(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
                                                     @Nonnull FaceOption currentSelection) {
 
-        if (!blockInfo.shouldEnableDropdown()) {
-            // Dropdown should be disabled - no multiple face textures
-            System.out.println("Phase 4B Debug: Dropdown disabled - no multiple face textures");
-            return new DropdownState(false, List.of(FaceOption.ALL), FaceOption.ALL, blockInfo.getUniformTexture());
-        }
-
-        // Build available options based on block analysis
+        // Always include ALL option as first choice
         List<FaceOption> availableOptions = new ArrayList<>();
         availableOptions.add(FaceOption.ALL); // Always include "All"
 
-        // Add specific faces that have different textures
-        for (Direction face : blockInfo.getAvailableFaces()) {
-            FaceOption faceOption = FaceOption.fromDirection(face);
-            if (faceOption != FaceOption.ALL) {
-                availableOptions.add(faceOption);
+        if (blockInfo.hasMultipleFaceTextures()) {
+            // Add specific faces that have different textures
+            for (Direction face : blockInfo.getAvailableFaces()) {
+                FaceOption faceOption = FaceOption.fromDirection(face);
+                if (faceOption != FaceOption.ALL && !availableOptions.contains(faceOption)) {
+                    availableOptions.add(faceOption);
+                }
+            }
+
+            // If we only have one face available, add common options for multi-face blocks
+            if (availableOptions.size() == 1) {
+                // For blocks like logs, add both Top and Side options
+                if (hasTopBottomDifference(blockInfo)) {
+                    availableOptions.add(FaceOption.TOP);
+                    availableOptions.add(FaceOption.NORTH); // Represent side faces
+                }
             }
         }
+
+        // Determine if dropdown should be enabled
+        boolean shouldEnable = blockInfo.hasMultipleFaceTextures() && availableOptions.size() > 1;
 
         // Determine preview texture based on current selection
         String previewTexture = getPreviewTexture(blockInfo, currentSelection);
 
-        System.out.println("Phase 4B Debug: Dropdown enabled with " + availableOptions.size() +
-                " options, preview: " + previewTexture);
-
-        return new DropdownState(true, availableOptions, currentSelection, previewTexture);
+        return new DropdownState(shouldEnable, availableOptions, currentSelection, previewTexture);
     }
 
     /**
-     * Get preview texture based on current selection and block info
+     * Check if block has top/bottom texture differences (like logs)
+     */
+    private static boolean hasTopBottomDifference(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo) {
+        String topTexture = blockInfo.getTextureForFace(Direction.UP);
+        String sideTexture = blockInfo.getTextureForFace(Direction.NORTH);
+
+        return topTexture != null && sideTexture != null && !topTexture.equals(sideTexture);
+    }
+
+    /**
+     * Get preview texture based on current selection and block info - ENHANCED
      */
     @Nullable
     private static String getPreviewTexture(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
                                             @Nonnull FaceOption selection) {
         if (selection.isAll()) {
-            // For "All", use the most common texture or first available
-            return blockInfo.getUniformTexture() != null ?
-                    blockInfo.getUniformTexture() :
-                    blockInfo.getFaceTextures().values().stream().findFirst().orElse(null);
+            // For "All", try to use the most appropriate texture
+            if (blockInfo.getUniformTexture() != null) {
+                return blockInfo.getUniformTexture();
+            }
+
+            // For multi-face blocks, prefer side texture for preview
+            String sideTexture = blockInfo.getTextureForFace(Direction.NORTH);
+            if (sideTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(sideTexture)) {
+                return sideTexture;
+            }
+
+            // Fallback to any available texture
+            return blockInfo.getFaceTextures().values().stream()
+                    .filter(net.justsomeswitches.util.BlockTextureAnalyzer::isValidTexture)
+                    .findFirst()
+                    .orElse(null);
         } else if (selection.getDirection() != null) {
             // For specific face, get that face's texture
-            return blockInfo.getTextureForFace(selection.getDirection());
+            String faceTexture = blockInfo.getTextureForFace(selection.getDirection());
+            if (faceTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(faceTexture)) {
+                return faceTexture;
+            }
         }
 
         return null;
@@ -184,19 +214,68 @@ public class FaceSelectionData {
     }
 
     /**
-     * Get texture path for a specific face selection
+     * Get texture path for a specific face selection - ENHANCED
      */
     @Nullable
     public static String getTextureForSelection(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
                                                 @Nonnull FaceOption selection) {
         if (selection.isAll()) {
-            // For "All", return uniform texture or fallback
-            return blockInfo.getUniformTexture();
+            // For "All", return most appropriate texture
+            if (blockInfo.getUniformTexture() != null) {
+                return blockInfo.getUniformTexture();
+            }
+
+            // For multi-face blocks, prefer side texture
+            String sideTexture = blockInfo.getTextureForFace(Direction.NORTH);
+            if (sideTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(sideTexture)) {
+                return sideTexture;
+            }
+
+            // Fallback to any valid texture
+            return blockInfo.getFaceTextures().values().stream()
+                    .filter(net.justsomeswitches.util.BlockTextureAnalyzer::isValidTexture)
+                    .findFirst()
+                    .orElse(null);
         } else if (selection.getDirection() != null) {
             // For specific face, return that face's texture
-            return blockInfo.getTextureForFace(selection.getDirection());
+            String faceTexture = blockInfo.getTextureForFace(selection.getDirection());
+            if (faceTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(faceTexture)) {
+                return faceTexture;
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Get effective texture path for model application
+     */
+    @Nonnull
+    public static String getEffectiveTexturePath(@Nonnull String baseTexturePath, @Nonnull FaceOption faceSelection) {
+        if (faceSelection.isAll() || faceSelection.getDirection() == null) {
+            return baseTexturePath;
+        }
+
+        // For specific face selections, try to construct face-specific texture path
+        Direction face = faceSelection.getDirection();
+
+        // Handle common face texture patterns
+        if (face == Direction.UP && !baseTexturePath.contains("_top")) {
+            String topTexture = baseTexturePath + "_top";
+            if (net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(topTexture)) {
+                return topTexture;
+            }
+        }
+
+        if ((face == Direction.NORTH || face == Direction.SOUTH || face == Direction.EAST || face == Direction.WEST)
+                && !baseTexturePath.contains("_side")) {
+            String sideTexture = baseTexturePath + "_side";
+            if (net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(sideTexture)) {
+                return sideTexture;
+            }
+        }
+
+        // Return base texture if no face-specific variant exists
+        return baseTexturePath;
     }
 }

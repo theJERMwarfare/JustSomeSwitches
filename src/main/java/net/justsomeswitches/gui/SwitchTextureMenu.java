@@ -18,8 +18,7 @@ import javax.annotation.Nullable;
 /**
  * Enhanced server-side menu for the Switch Texture customization GUI
  * ---
- * Phase 4B: Advanced face selection and block analysis integration
- * Supports dynamic dropdown states and texture preview functionality
+ * Phase 4B: Fixed face selection integration and persistence
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -66,7 +65,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             }
         };
 
-        System.out.println("Phase 4B Debug: Enhanced SwitchTextureMenu constructor - BlockPos: " + blockPos);
+        System.out.println("Phase 4B: Menu constructor - BlockPos: " + blockPos);
 
         // Try to get the BlockEntity and load GUI slot data
         loadGuiSlotData();
@@ -99,7 +98,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
 
-        System.out.println("Phase 4B Debug: Enhanced menu initialized with face selection support");
+        System.out.println("Phase 4B: Menu initialized with face selection support");
     }
 
     /**
@@ -139,7 +138,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * Enhanced auto-apply functionality - triggered when slots change
      */
     private void onSlotChanged() {
-        System.out.println("Phase 4B Debug: Slot changed - triggering enhanced auto-apply");
         triggerBlockAnalysis();
         applyTextures();
     }
@@ -173,12 +171,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Loads GUI slot data from the BlockEntity (for persistence)
+     * FIXED: Loads GUI slot data AND face selections from the BlockEntity
      */
     private void loadGuiSlotData() {
         this.blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            System.out.println("Phase 4B Debug: Enhanced menu initialized with BlockEntity at " + blockPos);
+            System.out.println("Phase 4B: Loading GUI data from BlockEntity at " + blockPos);
 
             // Load GUI slot contents from BlockEntity
             ItemStack toggleItem = blockEntity.getGuiToggleItem();
@@ -187,13 +185,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             textureContainer.setItem(TOGGLE_TEXTURE_SLOT, toggleItem);
             textureContainer.setItem(BASE_TEXTURE_SLOT, baseItem);
 
-            // Load face selections and inversion state
+            // FIXED: Load face selections and inversion state from BlockEntity
             this.baseFaceSelection = blockEntity.getBaseFaceSelection();
             this.toggleFaceSelection = blockEntity.getToggleFaceSelection();
             this.inverted = blockEntity.isInverted();
 
-            System.out.println("Phase 4B Debug: Loaded enhanced GUI state - Toggle: " + toggleItem +
-                    ", Base: " + baseItem + ", BaseFace: " + baseFaceSelection.getDisplayName() +
+            System.out.println("Phase 4B: Loaded state - BaseFace: " + baseFaceSelection.getDisplayName() +
                     ", ToggleFace: " + toggleFaceSelection.getDisplayName() + ", Inverted: " + inverted);
         }
     }
@@ -220,30 +217,38 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // PHASE 4B: FACE SELECTION METHODS
+    // FIXED: FACE SELECTION METHODS WITH IMMEDIATE APPLICATION
     // ========================================
 
     /**
-     * Set face selection for base texture slot
+     * FIXED: Set face selection for base texture slot with immediate application
      */
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (blockEntity != null && this.baseFaceSelection != faceOption) {
             this.baseFaceSelection = faceOption;
             blockEntity.setBaseFaceSelection(faceOption);
+
+            // FIXED: Apply textures immediately when face selection changes
+            applyTextures();
             forceBlockUpdate();
-            System.out.println("Phase 4B Debug: Base face selection set to: " + faceOption.getDisplayName());
+
+            System.out.println("Phase 4B: Base face -> " + faceOption.getDisplayName());
         }
     }
 
     /**
-     * Set face selection for toggle texture slot
+     * FIXED: Set face selection for toggle texture slot with immediate application
      */
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (blockEntity != null && this.toggleFaceSelection != faceOption) {
             this.toggleFaceSelection = faceOption;
             blockEntity.setToggleFaceSelection(faceOption);
+
+            // FIXED: Apply textures immediately when face selection changes
+            applyTextures();
             forceBlockUpdate();
-            System.out.println("Phase 4B Debug: Toggle face selection set to: " + faceOption.getDisplayName());
+
+            System.out.println("Phase 4B: Toggle face -> " + faceOption.getDisplayName());
         }
     }
 
@@ -285,56 +290,73 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     public boolean isInverted() { return inverted; }
 
     // ========================================
-    // ENHANCED TEXTURE APPLICATION
+    // ENHANCED TEXTURE APPLICATION WITH FACE SELECTION
     // ========================================
 
     /**
-     * Enhanced texture application with face selection support
+     * FIXED: Enhanced texture application with face selection support
      */
     public void applyTextures() {
-        System.out.println("Phase 4B Debug: Enhanced applyTextures called");
-
         if (blockEntity != null) {
             // Get items from the GUI slots
             ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
             ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
 
-            System.out.println("Phase 4B Debug: Enhanced applyTextures - Toggle item: " + toggleItem);
-            System.out.println("Phase 4B Debug: Enhanced applyTextures - Base item: " + baseItem);
-
             // Store GUI slot items for persistence and analysis
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
 
-            // Apply or reset toggle texture based on slot content
+            // FIXED: Apply toggle texture with face selection
             if (!toggleItem.isEmpty()) {
-                boolean success = blockEntity.setToggleTexture(toggleItem);
-                System.out.println("Phase 4B Debug: Enhanced applyTextures - Toggle texture set success: " + success);
+                String effectiveTexturePath = getEffectiveTexturePathForItem(toggleItem, toggleFaceSelection);
+                blockEntity.setToggleTexture(effectiveTexturePath);
+                System.out.println("Phase 4B: Applied toggle texture: " + effectiveTexturePath + " (face: " + toggleFaceSelection.getDisplayName() + ")");
             } else {
-                System.out.println("Phase 4B Debug: Enhanced applyTextures - Resetting toggle texture to default");
                 blockEntity.resetToggleTexture();
                 setToggleFaceSelection(FaceSelectionData.FaceOption.ALL);
             }
 
-            // Apply or reset base texture based on slot content
+            // FIXED: Apply base texture with face selection
             if (!baseItem.isEmpty()) {
-                boolean success = blockEntity.setBaseTexture(baseItem);
-                System.out.println("Phase 4B Debug: Enhanced applyTextures - Base texture set success: " + success);
+                String effectiveTexturePath = getEffectiveTexturePathForItem(baseItem, baseFaceSelection);
+                blockEntity.setBaseTexture(effectiveTexturePath);
+                System.out.println("Phase 4B: Applied base texture: " + effectiveTexturePath + " (face: " + baseFaceSelection.getDisplayName() + ")");
             } else {
-                System.out.println("Phase 4B Debug: Enhanced applyTextures - Resetting base texture to default");
                 blockEntity.resetBaseTexture();
                 setBaseFaceSelection(FaceSelectionData.FaceOption.ALL);
             }
 
             // Force visual update with enhanced data
             forceBlockUpdate();
-
-            System.out.println("Phase 4B Debug: Enhanced applyTextures complete - " +
-                    "Base: " + blockEntity.getBaseTexture() + " (" + baseFaceSelection.getDisplayName() + "), " +
-                    "Toggle: " + blockEntity.getToggleTexture() + " (" + toggleFaceSelection.getDisplayName() + "), " +
-                    "Inverted: " + inverted);
-        } else {
-            System.out.println("Phase 4B Debug: Enhanced applyTextures - blockEntity is null!");
         }
+    }
+
+    /**
+     * FIXED: Get effective texture path for item based on face selection
+     */
+    @Nonnull
+    private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull FaceSelectionData.FaceOption faceSelection) {
+        if (item.isEmpty()) {
+            return "minecraft:block/stone"; // Fallback
+        }
+
+        // Analyze the block to get texture information
+        BlockTextureAnalyzer.BlockTextureInfo blockInfo = BlockTextureAnalyzer.analyzeBlock(item);
+
+        // Get texture path for the specific face selection
+        String faceTexturePath = FaceSelectionData.getTextureForSelection(blockInfo, faceSelection);
+
+        if (faceTexturePath != null && BlockTextureAnalyzer.isValidTexture(faceTexturePath)) {
+            return faceTexturePath;
+        }
+
+        // Fallback to uniform texture
+        String fallbackPath = blockInfo.getUniformTexture();
+        if (fallbackPath != null) {
+            return fallbackPath;
+        }
+
+        // Final fallback
+        return "minecraft:block/stone";
     }
 
     /**

@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Enhanced client-side screen for the Switch Texture customization GUI
  * ---
- * Phase 4B: Advanced face selection dropdowns, texture previews, and dynamic UI state management
+ * Phase 4B: Fixed dropdown rendering order and improved UI positioning
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
@@ -27,14 +27,14 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
     // Central preview positioning
     private static final int PREVIEW_CENTER_X = 88;  // Center of 176px
-    private static final int PREVIEW_CENTER_Y = 36;  // CORRECTED: Same height as slots
+    private static final int PREVIEW_CENTER_Y = 36;  // Same height as slots
 
     // Face dropdown positioning - directly under slots
     private static final int LEFT_FACE_X = 17;    // Centered under left slot
-    private static final int LEFT_FACE_Y = 53;    // CORRECTED: Directly under slots
+    private static final int LEFT_FACE_Y = 53;    // Directly under slots
     private static final int RIGHT_FACE_X = 121;  // Centered under right slot
-    private static final int RIGHT_FACE_Y = 53;   // CORRECTED: Directly under slots
-    private static final int FACE_DROPDOWN_WIDTH = 38;
+    private static final int RIGHT_FACE_Y = 53;   // Directly under slots
+    private static final int FACE_DROPDOWN_WIDTH = 48;  // Increased width for better text display
     private static final int FACE_DROPDOWN_HEIGHT = 12;
 
     // Texture preview positioning (18x18px under dropdowns)
@@ -44,15 +44,22 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int RIGHT_PREVIEW_Y = 67; // Under right dropdown
     private static final int PREVIEW_SIZE = 18;
 
-    // Inverted checkbox positioning - CORRECTED: Properly centered
-    private static final int INVERTED_X = 59;     // CORRECTED: Properly centered
+    // Inverted checkbox positioning
+    private static final int INVERTED_X = 59;     // Centered
     private static final int INVERTED_Y = 54;     // Same level as face dropdowns
 
-    // Apply button positioning - CORRECTED: Much higher
+    // Apply button positioning
     private static final int APPLY_BUTTON_X = 66;
-    private static final int APPLY_BUTTON_Y = 68;  // CORRECTED: Much higher position
+    private static final int APPLY_BUTTON_Y = 68;  // Higher position
     private static final int BUTTON_WIDTH = 48;
     private static final int BUTTON_HEIGHT = 15;
+
+    // Connection line positioning - FIXED: Shifted left by 20px
+    private static final int LEFT_LINE_START = 48;   // Shifted left from 68
+    private static final int LEFT_LINE_END = 68;     // Shifted left from 88
+    private static final int RIGHT_LINE_START = 108; // Shifted left from 128
+    private static final int RIGHT_LINE_END = 128;   // Shifted left from 148
+    private static final int LINE_Y = 35;
 
     // GUI components
     private Button applyButton;
@@ -257,7 +264,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Draw central preview area placeholder text
         drawPreviewPlaceholder(graphics, guiLeft, guiTop);
 
-        // Draw connection lines
+        // Draw connection lines - FIXED: Corrected positioning
         drawConnectionLines(graphics, guiLeft, guiTop);
 
         // Phase 4B: Draw enhanced face selection dropdowns
@@ -269,14 +276,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Phase 4B: Draw enhanced inversion checkbox
         drawEnhancedInversionCheckbox(graphics, guiLeft, guiTop);
 
-        // Phase 4B: Draw dropdown popups if open
-        if (showingLeftDropdown) {
-            drawDropdownPopup(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y + FACE_DROPDOWN_HEIGHT, leftDropdownState);
-        }
-
-        if (showingRightDropdown) {
-            drawDropdownPopup(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y + FACE_DROPDOWN_HEIGHT, rightDropdownState);
-        }
+        // NOTE: Dropdown popups are now rendered in render() method for proper z-order
     }
 
     /**
@@ -295,21 +295,17 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw connection lines between slots and preview - ADJUSTED from current locations
+     * Draw connection lines between slots and preview - FIXED: Corrected positioning
      */
     private void drawConnectionLines(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         // Line Y position - moved down 4px from current position
-        int lineY = guiTop + 35; // Down 4px from previous position
+        int lineY = guiTop + LINE_Y;
 
-        // Left connection line - moved right 3px from current, 20px long
-        int leftLineStart = guiLeft + 28 + 18 + 18; // Right 3px from current position
-        int leftLineEnd = leftLineStart + 20; // 20px long
-        graphics.fill(leftLineStart, lineY, leftLineEnd, lineY + 1, 0xFF999999);
+        // Left connection line - FIXED: Shifted left by 20px
+        graphics.fill(guiLeft + LEFT_LINE_START, lineY, guiLeft + LEFT_LINE_END, lineY + 1, 0xFF999999);
 
-        // Right connection line - moved left 3px from current, 20px long
-        int rightLineEnd = guiLeft + 132 + 18 - 17; // Left 3px from current position
-        int rightLineStart = rightLineEnd - 20; // 20px long
-        graphics.fill(rightLineStart, lineY, rightLineEnd, lineY + 1, 0xFF999999);
+        // Right connection line - FIXED: Shifted left by 20px
+        graphics.fill(guiLeft + RIGHT_LINE_START, lineY, guiLeft + RIGHT_LINE_END, lineY + 1, 0xFF999999);
     }
 
     /**
@@ -326,7 +322,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw enhanced dropdown button with dynamic state
+     * Draw enhanced dropdown button with dynamic state - FIXED: Improved text display and arrow direction
      */
     private void drawEnhancedDropdownButton(@Nonnull GuiGraphics graphics, int x, int y,
                                             @Nonnull FaceSelectionData.DropdownState state, boolean isOpen) {
@@ -354,58 +350,35 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + FACE_DROPDOWN_HEIGHT, 0xFF999999);
         }
 
-        // Draw dropdown arrow (only if enabled)
+        // Draw dropdown arrow - FIXED: Arrow points down when closed, up when open
         if (state.isEnabled()) {
             int arrowColor = 0xFF000000;
-            graphics.fill(x + FACE_DROPDOWN_WIDTH - 8, y + 4, x + FACE_DROPDOWN_WIDTH - 6, y + 5, arrowColor);
-            graphics.fill(x + FACE_DROPDOWN_WIDTH - 9, y + 5, x + FACE_DROPDOWN_WIDTH - 5, y + 6, arrowColor);
-            graphics.fill(x + FACE_DROPDOWN_WIDTH - 10, y + 6, x + FACE_DROPDOWN_WIDTH - 4, y + 7, arrowColor);
+            int arrowX = x + FACE_DROPDOWN_WIDTH - 10;
+            int arrowY = y + 4;
+
+            if (!isOpen) {
+                // Down arrow (closed state)
+                graphics.fill(arrowX + 2, arrowY, arrowX + 4, arrowY + 1, arrowColor);     // Top line
+                graphics.fill(arrowX + 1, arrowY + 1, arrowX + 5, arrowY + 2, arrowColor); // Middle line
+                graphics.fill(arrowX, arrowY + 2, arrowX + 6, arrowY + 3, arrowColor);     // Bottom line
+            } else {
+                // Up arrow (open state)
+                graphics.fill(arrowX, arrowY + 2, arrowX + 6, arrowY + 3, arrowColor);     // Bottom line
+                graphics.fill(arrowX + 1, arrowY + 1, arrowX + 5, arrowY + 2, arrowColor); // Middle line
+                graphics.fill(arrowX + 2, arrowY, arrowX + 4, arrowY + 1, arrowColor);     // Top line
+            }
         }
 
-        // Draw current selection or "Face" label
+        // Draw current selection or "Face" label - FIXED: Better text handling
         String displayText = state.isEnabled() ?
                 state.getSelectedOption().getDisplayName() : "Face";
-        if (displayText.length() > 4) {
-            displayText = displayText.substring(0, 4); // Truncate for space
+
+        // Truncate text if too long, but allow more characters now
+        if (displayText.length() > 6) {
+            displayText = displayText.substring(0, 6);
         }
 
         graphics.drawString(this.font, displayText, x + 2, y + 2, textColor, false);
-    }
-
-    /**
-     * Phase 4B: Draw dropdown popup menu
-     */
-    private void drawDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
-                                   @Nonnull FaceSelectionData.DropdownState state) {
-        List<FaceSelectionData.FaceOption> options = state.getAvailableOptions();
-        int popupHeight = options.size() * 12;
-
-        // Draw popup background
-        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFFC6C6C6);
-
-        // Draw popup border
-        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + 1, 0xFF000000);
-        graphics.fill(x, y, x + 1, y + popupHeight, 0xFF000000);
-        graphics.fill(x, y + popupHeight - 1, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
-        graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
-
-        // Draw options
-        for (int i = 0; i < options.size(); i++) {
-            FaceSelectionData.FaceOption option = options.get(i);
-            int optionY = y + (i * 12);
-
-            // Highlight selected option
-            if (option == state.getSelectedOption()) {
-                graphics.fill(x + 1, optionY, x + FACE_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
-            }
-
-            // Draw option text
-            String optionText = option.getDisplayName();
-            if (optionText.length() > 4) {
-                optionText = optionText.substring(0, 4);
-            }
-            graphics.drawString(this.font, optionText, x + 2, optionY + 2, 0xFF000000, false);
-        }
     }
 
     /**
@@ -490,6 +463,54 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
+
+        // FIXED: Render dropdown popups AFTER everything else for proper z-order
+        int guiLeft = (this.width - this.imageWidth) / 2;
+        int guiTop = (this.height - this.imageHeight) / 2;
+
+        if (showingLeftDropdown) {
+            drawDropdownPopup(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y + FACE_DROPDOWN_HEIGHT, leftDropdownState);
+        }
+
+        if (showingRightDropdown) {
+            drawDropdownPopup(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y + FACE_DROPDOWN_HEIGHT, rightDropdownState);
+        }
+    }
+
+    /**
+     * Phase 4B: Draw dropdown popup menu - FIXED: Better text display and sizing
+     */
+    private void drawDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
+                                   @Nonnull FaceSelectionData.DropdownState state) {
+        List<FaceSelectionData.FaceOption> options = state.getAvailableOptions();
+        int popupHeight = options.size() * 12;
+
+        // Draw popup background
+        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFFC6C6C6);
+
+        // Draw popup border
+        graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + 1, 0xFF000000);
+        graphics.fill(x, y, x + 1, y + popupHeight, 0xFF000000);
+        graphics.fill(x, y + popupHeight - 1, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+        graphics.fill(x + FACE_DROPDOWN_WIDTH - 1, y, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+
+        // Draw options
+        for (int i = 0; i < options.size(); i++) {
+            FaceSelectionData.FaceOption option = options.get(i);
+            int optionY = y + (i * 12);
+
+            // Highlight selected option
+            if (option == state.getSelectedOption()) {
+                graphics.fill(x + 1, optionY, x + FACE_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
+            }
+
+            // Draw option text - FIXED: Allow more characters to display
+            String optionText = option.getDisplayName();
+            if (optionText.length() > 6) {
+                optionText = optionText.substring(0, 6);
+            }
+            graphics.drawString(this.font, optionText, x + 2, optionY + 2, 0xFF000000, false);
+        }
     }
 
     @Override

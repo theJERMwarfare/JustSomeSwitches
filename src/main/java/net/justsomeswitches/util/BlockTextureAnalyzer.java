@@ -8,21 +8,20 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * Utility class for analyzing block textures and face-specific texture information
+ * Block texture analyzer using dynamic model reading system
  * ---
- * Phase 4B: Sophisticated block analysis for dynamic face selection system
+ * Phase 4B: Streamlined system using DynamicBlockModelAnalyzer for universal compatibility
  */
 public class BlockTextureAnalyzer {
 
     /**
-     * Result of block texture analysis
+     * Result of block texture analysis (converted from dynamic system)
      */
     public static class BlockTextureInfo {
         private final boolean hasMultipleFaceTextures;
@@ -36,23 +35,23 @@ public class BlockTextureAnalyzer {
             this.hasMultipleFaceTextures = hasMultipleFaceTextures;
             this.faceTextures = new HashMap<>(faceTextures);
             this.uniformTexture = uniformTexture;
-
-            // Determine available faces (faces with different textures)
             this.availableFaces = new ArrayList<>();
+
+            // Create available faces list for compatibility
             if (hasMultipleFaceTextures) {
                 Set<String> uniqueTextures = new HashSet<>(faceTextures.values());
                 if (uniqueTextures.size() > 1) {
-                    // Only include faces that have unique textures
-                    Map<String, List<Direction>> textureToFaces = new HashMap<>();
-                    faceTextures.forEach((face, texture) ->
-                            textureToFaces.computeIfAbsent(texture, k -> new ArrayList<>()).add(face));
-
-                    // Add faces that have textures different from others
-                    textureToFaces.forEach((texture, faces) -> {
-                        if (faces.size() == 1 || uniqueTextures.size() > 2) {
-                            availableFaces.addAll(faces);
-                        }
-                    });
+                    // Add representative faces
+                    faceTextures.entrySet().stream()
+                            .collect(HashMap<String, List<Direction>>::new,
+                                    (m, e) -> m.computeIfAbsent(e.getValue(), k -> new ArrayList<>()).add(e.getKey()),
+                                    (m1, m2) -> m2.forEach((k, v) -> m1.merge(k, v, (v1, v2) -> { v1.addAll(v2); return v1; })))
+                            .values()
+                            .forEach(faces -> {
+                                if (!availableFaces.contains(faces.get(0))) {
+                                    availableFaces.add(faces.get(0));
+                                }
+                            });
                 }
             }
         }
@@ -72,7 +71,7 @@ public class BlockTextureAnalyzer {
     }
 
     /**
-     * Analyze an ItemStack to determine its face texture properties
+     * Analyze an ItemStack using the dynamic model reading system
      */
     @Nonnull
     public static BlockTextureInfo analyzeBlock(@Nonnull ItemStack itemStack) {
@@ -80,120 +79,65 @@ public class BlockTextureAnalyzer {
             return new BlockTextureInfo(false, Collections.emptyMap(), null);
         }
 
-        Block block = blockItem.getBlock();
-        BlockState defaultState = block.defaultBlockState();
+        System.out.println("Phase 4B: Analyzing block: " + itemStack.getDisplayName().getString());
 
-        System.out.println("Phase 4B Debug: Analyzing block: " + block.getDescriptionId());
+        // Use dynamic model analyzer for universal compatibility
+        DynamicBlockModelAnalyzer.DynamicBlockInfo dynamicInfo =
+                DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack);
 
-        return analyzeBlockState(block, defaultState);
+        // Convert dynamic info to legacy format for compatibility
+        return convertDynamicToLegacy(dynamicInfo);
     }
 
     /**
-     * Analyze a block state to determine face texture information
+     * Convert dynamic analysis result to legacy BlockTextureInfo format
      */
     @Nonnull
-    private static BlockTextureInfo analyzeBlockState(@Nonnull Block block, @Nonnull BlockState state) {
-        try {
-            String blockId = getBlockId(block);
+    private static BlockTextureInfo convertDynamicToLegacy(@Nonnull DynamicBlockModelAnalyzer.DynamicBlockInfo dynamicInfo) {
+        Map<Direction, String> faceTextures = new HashMap<>();
+        Map<String, String> textureVariables = dynamicInfo.getTextureVariables();
 
-            // Get textures for each face
-            Map<Direction, String> faceTextures = new HashMap<>();
-
-            for (Direction face : Direction.values()) {
-                String faceTexture = getFaceTexture(blockId, face);
-                if (faceTexture != null) {
-                    faceTextures.put(face, faceTexture);
-                }
-            }
-
-            // Analyze if block has multiple face textures
-            Set<String> uniqueTextures = new HashSet<>(faceTextures.values());
-            boolean hasMultipleFaceTextures = uniqueTextures.size() > 1;
-
-            String uniformTexture = uniqueTextures.size() == 1 ?
-                    uniqueTextures.iterator().next() : null;
-
-            System.out.println("Phase 4B Debug: Block analysis - Multiple faces: " +
-                    hasMultipleFaceTextures + ", Unique textures: " + uniqueTextures.size());
-
-            return new BlockTextureInfo(hasMultipleFaceTextures, faceTextures, uniformTexture);
-
-        } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to analyze block " + block.getDescriptionId() + " - " + e.getMessage());
-            return new BlockTextureInfo(false, Collections.emptyMap(), null);
+        // Map texture variables to face directions
+        for (Direction face : Direction.values()) {
+            String texturePath = getTextureForFace(textureVariables, face);
+            faceTextures.put(face, texturePath);
         }
+
+        boolean hasMultiple = dynamicInfo.hasMultipleTextures();
+        String uniform = hasMultiple ? null : dynamicInfo.getPrimaryTexture();
+
+        System.out.println("Phase 4B: Analysis result - Multiple textures: " + hasMultiple +
+                ", Variables: " + textureVariables.keySet());
+
+        return new BlockTextureInfo(hasMultiple, faceTextures, uniform);
     }
 
     /**
-     * Get texture path for a specific face of a block
+     * Map texture variables to face directions
+     */
+    @Nonnull
+    private static String getTextureForFace(@Nonnull Map<String, String> textureVariables, @Nonnull Direction face) {
+        // Priority mapping for face directions
+        String texture = switch (face) {
+            case UP -> getTextureByPriority(textureVariables, "top", "up", "end", "all");
+            case DOWN -> getTextureByPriority(textureVariables, "bottom", "down", "end", "all");
+            case NORTH, SOUTH, EAST, WEST -> getTextureByPriority(textureVariables, "side", "front", "all");
+        };
+
+        return texture != null ? texture : textureVariables.values().stream().findFirst().orElse("minecraft:block/stone");
+    }
+
+    /**
+     * Get texture by priority order
      */
     @Nullable
-    private static String getFaceTexture(@Nonnull String blockId, @Nonnull Direction face) {
-        try {
-            // For most blocks, determine face-specific texture patterns
-
-            // Logs have different textures for top/bottom vs sides
-            if (blockId.contains("log") || blockId.contains("wood")) {
-                if (face == Direction.UP || face == Direction.DOWN) {
-                    return blockId.replace("_log", "_log_top").replace("_wood", "_log_top");
-                } else {
-                    return blockId; // Side texture
-                }
+    private static String getTextureByPriority(@Nonnull Map<String, String> textureVariables, @Nonnull String... priorities) {
+        for (String priority : priorities) {
+            if (textureVariables.containsKey(priority)) {
+                return textureVariables.get(priority);
             }
-
-            // Grass block has different textures
-            if (blockId.equals("minecraft:block/grass_block")) {
-                return switch (face) {
-                    case UP -> "minecraft:block/grass_block_top";
-                    case DOWN -> "minecraft:block/dirt";
-                    default -> "minecraft:block/grass_block_side";
-                };
-            }
-
-            // Dirt path has different top texture
-            if (blockId.equals("minecraft:block/dirt_path")) {
-                return face == Direction.UP ? "minecraft:block/dirt_path_top" : "minecraft:block/dirt_path_side";
-            }
-
-            // Farmland has different top texture
-            if (blockId.equals("minecraft:block/farmland")) {
-                return face == Direction.UP ? "minecraft:block/farmland" : "minecraft:block/dirt";
-            }
-
-            // Furnaces and similar blocks
-            if (blockId.contains("furnace")) {
-                return switch (face) {
-                    case NORTH -> blockId + "_front"; // Assuming north is front
-                    case UP, DOWN -> blockId + "_top";
-                    default -> blockId + "_side";
-                };
-            }
-
-            // For most other blocks, assume uniform texture
-            return blockId;
-
-        } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to get face texture for " + blockId + " face " + face + " - " + e.getMessage());
-            return blockId; // Fallback to base texture
         }
-    }
-
-    /**
-     * Get the block ID for texture analysis
-     */
-    @Nonnull
-    private static String getBlockId(@Nonnull Block block) {
-        try {
-            ResourceLocation blockRegistryName = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
-            if (blockRegistryName != null) {
-                return blockRegistryName.getNamespace() + ":block/" + blockRegistryName.getPath();
-            }
-        } catch (Exception e) {
-            System.err.println("Phase 4B Error: Failed to get block registry name for " + block.getDescriptionId() + " - " + e.getMessage());
-        }
-
-        // Fallback
-        return "minecraft:block/stone";
+        return null;
     }
 
     /**
@@ -203,9 +147,28 @@ public class BlockTextureAnalyzer {
     public static TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
         try {
             ResourceLocation textureLocation = new ResourceLocation(texturePath);
-            return Minecraft.getInstance()
+            TextureAtlasSprite sprite = Minecraft.getInstance()
                     .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                     .apply(textureLocation);
+
+            if (sprite != null && !sprite.contents().name().toString().contains("missingno")) {
+                return sprite;
+            }
+
+            // Try fallback patterns
+            if (texturePath.contains("_top") || texturePath.contains("_side") || texturePath.contains("_front")) {
+                String basePath = texturePath.replaceAll("_(top|side|front)$", "");
+                ResourceLocation fallbackLocation = new ResourceLocation(basePath);
+                TextureAtlasSprite fallbackSprite = Minecraft.getInstance()
+                        .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+                        .apply(fallbackLocation);
+
+                if (fallbackSprite != null && !fallbackSprite.contents().name().toString().contains("missingno")) {
+                    return fallbackSprite;
+                }
+            }
+
+            return null;
         } catch (Exception e) {
             System.err.println("Phase 4B Error: Failed to load texture sprite for " + texturePath + " - " + e.getMessage());
             return null;
