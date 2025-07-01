@@ -215,21 +215,35 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * FIXED: Load BlockEntity and sync face selections FIRST (before container creation)
+     * CRITICAL FIX: Load BlockEntity and sync face selections AFTER any preservation operations
      */
     private void loadBlockEntityData() {
         this.blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            System.out.println("DEBUG Menu: Loading BlockEntity data and syncing face selections FIRST");
+            System.out.println("DEBUG Menu: Loading BlockEntity data and syncing face selections");
 
-            // CRITICAL: Sync face selections from BlockEntity to menu variables BEFORE any auto-apply can trigger
-            this.baseFaceSelection = blockEntity.getBaseFaceSelection();
-            this.toggleFaceSelection = blockEntity.getToggleFaceSelection();
-            this.inverted = blockEntity.isInverted();
+            // CRITICAL FIX: Give BlockEntity time to complete any preservation operations
+            try {
+                Thread.sleep(10); // Brief pause to ensure preservation is complete
+            } catch (InterruptedException e) {
+                // Ignore
+            }
 
-            System.out.println("DEBUG Menu: PRE-SYNCED base face selection: " + baseFaceSelection);
-            System.out.println("DEBUG Menu: PRE-SYNCED toggle face selection: " + toggleFaceSelection);
-            System.out.println("DEBUG Menu: PRE-SYNCED inverted state: " + inverted);
+            // CRITICAL: Sync face selections from BlockEntity to menu variables
+            FaceSelectionData.FaceOption blockEntityBaseFace = blockEntity.getBaseFaceSelection();
+            FaceSelectionData.FaceOption blockEntityToggleFace = blockEntity.getToggleFaceSelection();
+            boolean blockEntityInverted = blockEntity.isInverted();
+
+            System.out.println("DEBUG Menu: BlockEntity current state - Base: " + blockEntityBaseFace +
+                    ", Toggle: " + blockEntityToggleFace + ", Inverted: " + blockEntityInverted);
+
+            // CRITICAL FIX: Use BlockEntity's actual current values, not potentially stale values
+            this.baseFaceSelection = blockEntityBaseFace;
+            this.toggleFaceSelection = blockEntityToggleFace;
+            this.inverted = blockEntityInverted;
+
+            System.out.println("DEBUG Menu: SYNCHRONIZED to BlockEntity state - Base: " + baseFaceSelection +
+                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
         }
     }
 
