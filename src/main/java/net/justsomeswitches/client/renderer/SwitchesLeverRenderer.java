@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * Block Entity Renderer for Switches Lever with complete texture replacement
  * ---
- * FUNCTIONAL: Applies custom textures through rendering pipeline
+ * OPTIMIZED: Reduced debug output for performance and cleaner console
  */
 public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverBlockEntity> {
 
@@ -42,23 +42,13 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
                        @Nonnull PoseStack poseStack, @Nonnull MultiBufferSource bufferSource,
                        int packedLight, int packedOverlay) {
 
-        // Debug output for texture state
-        System.out.println("DEBUG Renderer: Rendering switch with custom textures - " +
-                "Base: " + blockEntity.getBaseFaceSelection() +
-                ", Toggle: " + blockEntity.getToggleFaceSelection());
-        System.out.println("DEBUG Renderer: Block Entity Renderer is working!");
-
         BlockState blockState = blockEntity.getBlockState();
 
         if (blockEntity.hasCustomTextures()) {
-            System.out.println("DEBUG Renderer: Has custom textures - applying modifications");
-            System.out.println("DEBUG Renderer: Base texture: " + blockEntity.getBaseTexture());
-            System.out.println("DEBUG Renderer: Toggle texture: " + blockEntity.getToggleTexture());
-
+            // OPTIMIZED: Reduced debug output
             renderWithCustomTextures(blockEntity, blockState, poseStack, bufferSource,
                     packedLight, packedOverlay);
         } else {
-            System.out.println("DEBUG Renderer: No custom textures - using vanilla rendering");
             renderVanilla(blockState, poseStack, bufferSource, packedLight, packedOverlay);
         }
     }
@@ -72,9 +62,6 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
                                           @Nonnull MultiBufferSource bufferSource,
                                           int packedLight, int packedOverlay) {
 
-        System.out.println("DEBUG Renderer: Applying custom textures - Base: " +
-                blockEntity.getBaseTexture() + ", Toggle: " + blockEntity.getToggleTexture());
-
         // Get the base model
         BakedModel baseModel = blockRenderer.getBlockModel(blockState);
 
@@ -84,9 +71,6 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
         // Get base and toggle textures
         TextureAtlasSprite baseSprite = getTextureSprite(blockEntity.getBaseTexture());
         TextureAtlasSprite toggleSprite = getTextureSprite(blockEntity.getToggleTexture());
-
-        System.out.println("DEBUG Renderer: Loaded sprites - Base: " + baseSprite.contents().name() +
-                ", Toggle: " + toggleSprite.contents().name());
 
         // Process all quads for all faces (including null for general quads)
         RandomSource random = RandomSource.create();
@@ -101,8 +85,6 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
         List<BakedQuad> generalQuads = baseModel.getQuads(blockState, null, random);
         processQuads(generalQuads, poseStack, vertexConsumer, baseSprite, toggleSprite,
                 packedLight, packedOverlay);
-
-        System.out.println("DEBUG Renderer: Custom texture rendering completed");
     }
 
     /**
@@ -122,21 +104,15 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
             TextureAtlasSprite originalSprite = quad.getSprite();
             String originalTextureName = originalSprite.contents().name().toString();
 
-            System.out.println("DEBUG Renderer: Processing quad with original texture: " + originalTextureName);
-
             // Determine replacement texture
             TextureAtlasSprite replacementSprite = determineReplacementTexture(
                     originalSprite, baseSprite, toggleSprite);
 
             if (replacementSprite != originalSprite) {
-                System.out.println("DEBUG Renderer: Replacing " + originalTextureName +
-                        " with " + replacementSprite.contents().name());
-
                 // Create modified quad with new texture
                 renderQuadWithCustomTexture(quad, replacementSprite, pose, normal,
                         vertexConsumer, packedLight, packedOverlay);
             } else {
-                System.out.println("DEBUG Renderer: No replacement for " + originalTextureName);
                 // Render original quad
                 renderOriginalQuad(quad, pose, normal, vertexConsumer, packedLight, packedOverlay);
             }
@@ -345,8 +321,7 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
                     .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                     .apply(textureLocation);
         } catch (Exception e) {
-            System.out.println("DEBUG Renderer: Error loading texture " + texturePath + " - " + e.getMessage());
-            // Fallback to missing texture
+            // Fallback to missing texture (silent operation)
             return Minecraft.getInstance()
                     .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                     .apply(new ResourceLocation("minecraft:missingno"));

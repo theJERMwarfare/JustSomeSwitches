@@ -111,14 +111,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         @Override
         public void set(@Nonnull ItemStack stack) {
             super.set(stack);
-            System.out.println("DEBUG Slot: Item placed in slot " + getSlotIndex() + " - " + stack);
+            // Silent operation for performance
         }
 
         @Override
         @Nonnull
         public ItemStack remove(int amount) {
             ItemStack result = super.remove(amount);
-            System.out.println("DEBUG Slot: Item removed from slot " + getSlotIndex() + " - " + result);
+            // Silent operation for performance
             return result;
         }
     }
@@ -136,7 +136,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private void onSlotChangedAutoApply() {
         // FIXED: Don't auto-apply during initialization to prevent face selection reset
         if (isInitializing) {
-            System.out.println("DEBUG Menu: Skipping auto-apply during initialization");
             return;
         }
 
@@ -153,35 +152,52 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // Store GUI slot items
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
 
-            // CRITICAL FIX: Save current face selections to BlockEntity immediately
-            blockEntity.setBaseFaceSelection(baseFaceSelection);
-            blockEntity.setToggleFaceSelection(toggleFaceSelection);
-            blockEntity.setInverted(inverted);
-
-            // Apply toggle texture with face selection
-            if (!toggleItem.isEmpty()) {
-                String effectiveTexturePath = getEffectiveTexturePathForItem(toggleItem, toggleFaceSelection);
-                blockEntity.setToggleTexture(effectiveTexturePath);
-                System.out.println("DEBUG Menu: Auto-applied toggle texture: " + effectiveTexturePath);
-            } else {
-                blockEntity.resetToggleTexture();
-                System.out.println("DEBUG Menu: Auto-reset toggle texture to default");
-            }
-
-            // Apply base texture with face selection
-            if (!baseItem.isEmpty()) {
-                String effectiveTexturePath = getEffectiveTexturePathForItem(baseItem, baseFaceSelection);
-                blockEntity.setBaseTexture(effectiveTexturePath);
-                System.out.println("DEBUG Menu: Auto-applied base texture: " + effectiveTexturePath);
-            } else {
-                blockEntity.resetBaseTexture();
-                System.out.println("DEBUG Menu: Auto-reset base texture to default");
-            }
+            // CRITICAL FIX: Apply current face selections and textures together
+            applyTexturesWithFaceSelections(toggleItem, baseItem);
 
             // Force visual update
             forceBlockUpdate();
             System.out.println("DEBUG Menu: Auto-apply completed with visual update");
         }
+    }
+
+    /**
+     * CRITICAL FIX: Apply textures and face selections atomically
+     */
+    private void applyTexturesWithFaceSelections(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
+        if (blockEntity == null) return;
+
+        // STEP 1: Set face selections FIRST (this triggers NBT save)
+        boolean baseFaceChanged = blockEntity.setBaseFaceSelection(baseFaceSelection);
+        boolean toggleFaceChanged = blockEntity.setToggleFaceSelection(toggleFaceSelection);
+        boolean invertedChanged = blockEntity.setInverted(inverted);
+
+        System.out.println("DEBUG Menu: Face selection sync - Base changed: " + baseFaceChanged +
+                ", Toggle changed: " + toggleFaceChanged + ", Inverted changed: " + invertedChanged);
+
+        // STEP 2: Apply textures with current face selections
+        if (!toggleItem.isEmpty()) {
+            String effectiveTexturePath = getEffectiveTexturePathForItem(toggleItem, toggleFaceSelection);
+            blockEntity.setToggleTexture(effectiveTexturePath);
+            System.out.println("DEBUG Menu: Applied toggle texture: " + effectiveTexturePath + " with face: " + toggleFaceSelection);
+        } else {
+            blockEntity.resetToggleTexture();
+            System.out.println("DEBUG Menu: Reset toggle texture to default");
+        }
+
+        if (!baseItem.isEmpty()) {
+            String effectiveTexturePath = getEffectiveTexturePathForItem(baseItem, baseFaceSelection);
+            blockEntity.setBaseTexture(effectiveTexturePath);
+            System.out.println("DEBUG Menu: Applied base texture: " + effectiveTexturePath + " with face: " + baseFaceSelection);
+        } else {
+            blockEntity.resetBaseTexture();
+            System.out.println("DEBUG Menu: Reset base texture to default");
+        }
+
+        // STEP 3: Force immediate NBT save to prevent race conditions
+        blockEntity.setChanged();
+
+        System.out.println("DEBUG Menu: Atomic texture+face application completed");
     }
 
     /**
@@ -245,65 +261,71 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // FIXED: FACE SELECTION METHODS WITH IMMEDIATE BLOCKENTITY SYNC
+    // FIXED: FACE SELECTION METHODS WITH ATOMIC SYNC
     // ========================================
 
     /**
-     * Set face selection for base texture slot (triggers auto-apply)
+     * FIXED: Set face selection for base texture slot with atomic sync
      */
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.baseFaceSelection != faceOption) {
             System.out.println("DEBUG Menu: Base face selection changed from " + this.baseFaceSelection + " to " + faceOption);
             this.baseFaceSelection = faceOption;
 
-            // CRITICAL FIX: Immediately update BlockEntity to prevent desync
-            if (blockEntity != null) {
-                blockEntity.setBaseFaceSelection(faceOption);
-            }
+            // CRITICAL FIX: Immediately sync to BlockEntity and apply textures atomically
+            if (blockEntity != null && !isInitializing) {
+                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
-            // AUTO-APPLY: Trigger immediate application when face selection changes (user interaction)
-            if (!isInitializing) {
-                onSlotChangedAutoApply();
+                // Apply both face selection and current texture atomically
+                applyTexturesWithFaceSelections(toggleItem, baseItem);
+                forceBlockUpdate();
+
+                System.out.println("DEBUG Menu: Atomic base face selection sync completed");
             }
         }
     }
 
     /**
-     * Set face selection for toggle texture slot (triggers auto-apply)
+     * FIXED: Set face selection for toggle texture slot with atomic sync
      */
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.toggleFaceSelection != faceOption) {
             System.out.println("DEBUG Menu: Toggle face selection changed from " + this.toggleFaceSelection + " to " + faceOption);
             this.toggleFaceSelection = faceOption;
 
-            // CRITICAL FIX: Immediately update BlockEntity to prevent desync
-            if (blockEntity != null) {
-                blockEntity.setToggleFaceSelection(faceOption);
-            }
+            // CRITICAL FIX: Immediately sync to BlockEntity and apply textures atomically
+            if (blockEntity != null && !isInitializing) {
+                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
-            // AUTO-APPLY: Trigger immediate application when face selection changes (user interaction)
-            if (!isInitializing) {
-                onSlotChangedAutoApply();
+                // Apply both face selection and current texture atomically
+                applyTexturesWithFaceSelections(toggleItem, baseItem);
+                forceBlockUpdate();
+
+                System.out.println("DEBUG Menu: Atomic toggle face selection sync completed");
             }
         }
     }
 
     /**
-     * Set inversion state (triggers auto-apply)
+     * FIXED: Set inversion state with atomic sync
      */
     public void setInverted(boolean inverted) {
         if (this.inverted != inverted) {
             System.out.println("DEBUG Menu: Inverted state changed from " + this.inverted + " to " + inverted);
             this.inverted = inverted;
 
-            // CRITICAL FIX: Immediately update BlockEntity to prevent desync
-            if (blockEntity != null) {
-                blockEntity.setInverted(inverted);
-            }
+            // CRITICAL FIX: Immediately sync to BlockEntity and apply textures atomically
+            if (blockEntity != null && !isInitializing) {
+                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
-            // AUTO-APPLY: Trigger immediate application when inversion changes (user interaction)
-            if (!isInitializing) {
-                onSlotChangedAutoApply();
+                // Apply both inversion state and current textures atomically
+                applyTexturesWithFaceSelections(toggleItem, baseItem);
+                forceBlockUpdate();
+
+                System.out.println("DEBUG Menu: Atomic inversion state sync completed");
             }
         }
     }

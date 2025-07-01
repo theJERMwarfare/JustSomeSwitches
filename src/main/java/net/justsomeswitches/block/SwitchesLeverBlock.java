@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 /**
  * Enhanced Switches Lever Block with BlockEntity support for texture customization
  * ---
- * FIXED: Face selection persistence through block state changes
+ * FIXED: Z-fighting resolution using RenderShape.INVISIBLE
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -47,7 +47,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
     public SwitchesLeverBlock(Properties properties) {
         super(properties);
-        System.out.println("DEBUG Block: SwitchesLeverBlock created");
+        System.out.println("DEBUG Block: SwitchesLeverBlock created with Block Entity Renderer approach");
     }
 
     // ========================================
@@ -85,14 +85,15 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // BLOCK ENTITY RENDERER APPROACH
+    // CRITICAL FIX: Z-FIGHTING RESOLUTION
     // ========================================
 
     @Override
     @Nonnull
     public RenderShape getRenderShape(@Nonnull BlockState state) {
-        // Use vanilla rendering - Block Entity Renderer will handle custom textures
-        return RenderShape.MODEL;
+        // FIXED: Use INVISIBLE to prevent vanilla model rendering
+        // Block Entity Renderer will handle ALL rendering to eliminate z-fighting
+        return RenderShape.INVISIBLE;
     }
 
     // ========================================
