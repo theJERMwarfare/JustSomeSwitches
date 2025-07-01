@@ -29,13 +29,19 @@ public class JustSomeSwitchesClientSetup {
      */
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
+        System.out.println("DEBUG Client: ===== CLIENT SETUP STARTING =====");
+
         // Register screens for our menu types
         event.enqueueWork(() -> {
+            System.out.println("DEBUG Client: Registering GUI screen");
+
             // Register the Switch Texture GUI screen
             MenuScreens.register(
                     JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(),
                     SwitchTextureScreen::new
             );
+
+            System.out.println("DEBUG Client: Registering Block Entity Renderer");
 
             // ALTERNATIVE APPROACH: Register Block Entity Renderer instead of custom models
             net.minecraft.client.renderer.blockentity.BlockEntityRenderers.register(
@@ -43,7 +49,7 @@ public class JustSomeSwitchesClientSetup {
                     net.justsomeswitches.client.renderer.SwitchesLeverRenderer::new
             );
 
-            System.out.println("DEBUG Client: Registered Block Entity Renderer for texture replacement");
+            System.out.println("DEBUG Client: ===== CLIENT SETUP COMPLETE =====");
         });
     }
 
