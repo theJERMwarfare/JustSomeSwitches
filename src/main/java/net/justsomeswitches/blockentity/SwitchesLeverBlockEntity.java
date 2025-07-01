@@ -23,10 +23,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Enhanced Block Entity for Switches Lever - FIXED Face Selection Persistence
+ * Enhanced Block Entity for Switches Lever - Auto-Apply System
  * ---
  * This BlockEntity provides comprehensive NBT-based storage for individual switch blocks,
- * with FIXED face selection persistence and NO auto-apply behavior.
+ * with streamlined auto-apply functionality and optimized face selection persistence.
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -42,7 +42,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private static final String BASE_TEXTURE_KEY = "base_texture_path";
     private static final String TOGGLE_TEXTURE_KEY = "toggle_texture_path";
 
-    // FIXED: NBT keys for face selection storage with proper persistence
+    // NBT keys for face selection storage
     private static final String BASE_FACE_KEY = "base_face_selection";
     private static final String TOGGLE_FACE_KEY = "toggle_face_selection";
 
@@ -53,7 +53,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
     private String toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
 
-    // FIXED: Face selections with proper initialization and persistence
+    // Face selections with proper initialization
     private FaceSelectionData.FaceOption baseFaceSelection = FaceSelectionData.FaceOption.ALL;
     private FaceSelectionData.FaceOption toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
 
@@ -254,22 +254,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: FACE SELECTION MANAGEMENT WITH PERSISTENCE
+    // FACE SELECTION MANAGEMENT WITH AUTO-APPLY
     // ========================================
 
     /**
-     * FIXED: Set base face selection with proper persistence
+     * Set base face selection with optimized persistence for auto-apply system
      */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.baseFaceSelection != faceOption) {
             System.out.println("DEBUG BlockEntity: Setting base face selection from " + this.baseFaceSelection + " to " + faceOption);
-
-            // Add stack trace for debugging (to see what's calling this)
-            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            if (stackTrace.length > 2) {
-                System.out.println("DEBUG BlockEntity: Called from: " + stackTrace[2].getClassName() + "." + stackTrace[2].getMethodName());
-            }
-
             this.baseFaceSelection = faceOption;
             markDirtyAndSync();
             return true;
@@ -278,18 +271,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * FIXED: Set toggle face selection with proper persistence
+     * Set toggle face selection with optimized persistence for auto-apply system
      */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.toggleFaceSelection != faceOption) {
             System.out.println("DEBUG BlockEntity: Setting toggle face selection from " + this.toggleFaceSelection + " to " + faceOption);
-
-            // Add stack trace for debugging (to see what's calling this)
-            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            if (stackTrace.length > 2) {
-                System.out.println("DEBUG BlockEntity: Called from: " + stackTrace[2].getClassName() + "." + stackTrace[2].getMethodName());
-            }
-
             this.toggleFaceSelection = faceOption;
             markDirtyAndSync();
             return true;
@@ -492,7 +478,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: ENHANCED NBT SERIALIZATION WITH PROPER PERSISTENCE
+    // OPTIMIZED NBT SERIALIZATION FOR AUTO-APPLY
     // ========================================
 
     @Override
@@ -505,7 +491,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
 
-        // FIXED: Save face selections with proper serialization
+        // Save face selections with proper serialization
         String baseSerializedName = baseFaceSelection.getSerializedName();
         String toggleSerializedName = toggleFaceSelection.getSerializedName();
 
@@ -523,11 +509,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        System.out.println("DEBUG BlockEntity: Saving - Base face: " + baseFaceSelection + " -> '" + baseSerializedName +
-                "', Toggle face: " + toggleFaceSelection + " -> '" + toggleSerializedName + "'");
-        System.out.println("DEBUG BlockEntity: Saved base face selection: " + baseFaceSelection);
-        System.out.println("DEBUG BlockEntity: Saved toggle face selection: " + toggleFaceSelection);
-        System.out.println("DEBUG BlockEntity: Saved inverted state: " + inverted);
+        System.out.println("DEBUG BlockEntity: Saved face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
     }
 
     @Override
@@ -548,7 +530,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // FIXED: Load face selections with proper deserialization
+        // Load face selections with proper deserialization
         String baseFaceName = nbt.getString(BASE_FACE_KEY);
         FaceSelectionData.FaceOption loadedBaseFace = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
                 FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
@@ -556,9 +538,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
         FaceSelectionData.FaceOption loadedToggleFace = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
                 FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
-
-        System.out.println("DEBUG BlockEntity: NBT contained - Base face: '" + baseFaceName + "' -> " + loadedBaseFace +
-                ", Toggle face: '" + toggleFaceName + "' -> " + loadedToggleFace);
 
         // Set the loaded values
         this.baseFaceSelection = loadedBaseFace;
@@ -584,11 +563,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
 
-        System.out.println("DEBUG BlockEntity: Loaded base face selection: " + baseFaceSelection);
-        System.out.println("DEBUG BlockEntity: Loaded toggle face selection: " + toggleFaceSelection);
+        System.out.println("DEBUG BlockEntity: Loaded face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
         System.out.println("DEBUG BlockEntity: Loaded inverted state: " + inverted);
-        System.out.println("DEBUG BlockEntity: Loaded toggle item: " + guiToggleItem);
-        System.out.println("DEBUG BlockEntity: Loaded base item: " + guiBaseItem);
     }
 
     // ========================================

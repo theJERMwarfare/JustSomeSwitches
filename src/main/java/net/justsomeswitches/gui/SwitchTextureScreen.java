@@ -1,7 +1,6 @@
 package net.justsomeswitches.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
@@ -15,7 +14,7 @@ import java.util.List;
 /**
  * Enhanced client-side screen for the Switch Texture customization GUI
  * ---
- * FIXED: Manual-only application with proper debug output
+ * SIMPLIFIED: Auto-apply system without Apply button
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
@@ -48,27 +47,17 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int INVERTED_X = 59;     // Centered
     private static final int INVERTED_Y = 54;     // Same level as face dropdowns
 
-    // Apply button positioning
-    private static final int APPLY_BUTTON_X = 66;
-    private static final int APPLY_BUTTON_Y = 68;  // Higher position
-    private static final int BUTTON_WIDTH = 48;
-    private static final int BUTTON_HEIGHT = 15;
-
-    // Connection line positioning - FIXED: Shifted left by 20px
-    private static final int LEFT_LINE_START = 48;   // Shifted left from 68
-    private static final int LEFT_LINE_END = 68;     // Shifted left from 88
-    private static final int RIGHT_LINE_START = 108; // Shifted left from 128
-    private static final int RIGHT_LINE_END = 128;   // Shifted left from 148
+    // Connection line positioning
+    private static final int LEFT_LINE_START = 48;
+    private static final int LEFT_LINE_END = 68;
+    private static final int RIGHT_LINE_START = 108;
+    private static final int RIGHT_LINE_END = 128;
     private static final int LINE_Y = 35;
-
-    // GUI components
-    private Button applyButton;
 
     // State tracking for change detection
     private FaceSelectionData.DropdownState lastLeftDropdownState = FaceSelectionData.createDisabledState();
     private FaceSelectionData.DropdownState lastRightDropdownState = FaceSelectionData.createDisabledState();
     private boolean lastCheckboxState = false;
-    private boolean lastApplyButtonState = false;
 
     // Current dynamic state tracking
     private FaceSelectionData.DropdownState leftDropdownState = FaceSelectionData.createDisabledState();
@@ -90,7 +79,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         this.inventoryLabelX = 8;   // Standard position
         this.inventoryLabelY = 86;  // Moved down 1px from current (was 85)
 
-        System.out.println("DEBUG Screen: Screen created");
+        System.out.println("DEBUG Screen: Screen created with AUTO-APPLY system");
     }
 
     @Override
@@ -100,20 +89,12 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int guiLeft = (this.width - this.imageWidth) / 2;
         int guiTop = (this.height - this.imageHeight) / 2;
 
-        System.out.println("DEBUG Screen: Initializing GUI components at (" + guiLeft + ", " + guiTop + ")");
+        System.out.println("DEBUG Screen: Initializing AUTO-APPLY GUI components at (" + guiLeft + ", " + guiTop + ")");
 
-        // Create Apply button - positioned with updated coordinates
-        applyButton = Button.builder(
-                        Component.literal("Apply"),
-                        button -> onApplyButtonClicked()
-                )
-                .bounds(guiLeft + APPLY_BUTTON_X, guiTop + APPLY_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .build();
-
-        addRenderableWidget(applyButton);
+        // NO APPLY BUTTON in auto-apply system
         updateUIState();
 
-        System.out.println("DEBUG Screen: Apply button created at (" + (guiLeft + APPLY_BUTTON_X) + ", " + (guiTop + APPLY_BUTTON_Y) + ")");
+        System.out.println("DEBUG Screen: Auto-apply system initialized - no manual Apply button needed");
     }
 
     @Override
@@ -123,14 +104,13 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * UI state update with change detection
+     * UI state update with change detection for auto-apply system
      */
     private void updateUIState() {
         // Get current state
         FaceSelectionData.DropdownState newLeftState = menu.getToggleDropdownState();
         FaceSelectionData.DropdownState newRightState = menu.getBaseDropdownState();
         boolean newCheckboxState = menu.isInverted();
-        boolean newApplyButtonState = menu.hasValidBlockEntity();
 
         // Only update if something actually changed
         boolean stateChanged = false;
@@ -158,11 +138,8 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             System.out.println("DEBUG Screen: Checkbox state changed to " + newCheckboxState);
         }
 
-        if (applyButton != null && applyButton.active != newApplyButtonState) {
-            applyButton.active = newApplyButtonState;
-            lastApplyButtonState = newApplyButtonState;
-            stateChanged = true;
-            System.out.println("DEBUG Screen: Apply button state changed to " + newApplyButtonState);
+        if (stateChanged) {
+            System.out.println("DEBUG Screen: UI state updated - auto-apply system handling changes");
         }
     }
 
@@ -178,7 +155,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Enhanced mouse click handling for dropdowns and checkbox
+     * Enhanced mouse click handling for dropdowns and checkbox (auto-apply)
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -206,14 +183,14 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             }
         }
 
-        // Handle checkbox click
+        // Handle checkbox click (triggers auto-apply)
         if (isWithinBounds(mouseX, mouseY, guiLeft + INVERTED_X, guiTop + INVERTED_Y, 10, 10)) {
-            System.out.println("DEBUG Screen: Checkbox clicked");
+            System.out.println("DEBUG Screen: Checkbox clicked - auto-apply will trigger");
             toggleInversionState();
             return true;
         }
 
-        // Handle dropdown selection clicks
+        // Handle dropdown selection clicks (triggers auto-apply)
         if (showingLeftDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, true)) {
             return true;
         }
@@ -259,7 +236,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Handle dropdown selection clicks
+     * Handle dropdown selection clicks (triggers auto-apply)
      */
     private boolean handleDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop, boolean isLeft) {
         FaceSelectionData.DropdownState dropdownState = isLeft ? leftDropdownState : rightDropdownState;
@@ -271,11 +248,11 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         for (int i = 0; i < options.size(); i++) {
             int optionY = dropdownY + (i * 12);
             if (isWithinBounds(mouseX, mouseY, dropdownX, optionY, FACE_DROPDOWN_WIDTH, 12)) {
-                // Selection made
+                // Selection made - triggers auto-apply
                 FaceSelectionData.FaceOption selectedOption = options.get(i);
 
                 System.out.println("DEBUG Screen: Dropdown selection - " + (isLeft ? "left" : "right") +
-                        " dropdown, selected: " + selectedOption);
+                        " dropdown, selected: " + selectedOption + " - AUTO-APPLY will trigger");
 
                 if (isLeft) {
                     menu.setToggleFaceSelection(selectedOption);
@@ -293,25 +270,12 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Toggle inversion checkbox state
+     * Toggle inversion checkbox state (triggers auto-apply)
      */
     private void toggleInversionState() {
         checkboxState = !checkboxState;
         menu.setInverted(checkboxState);
-        System.out.println("DEBUG Screen: Inversion toggled to " + checkboxState);
-    }
-
-    /**
-     * FIXED: Manual Apply button click handler
-     */
-    private void onApplyButtonClicked() {
-        if (menu.hasValidBlockEntity()) {
-            System.out.println("DEBUG Screen: APPLY BUTTON CLICKED - Manual texture application");
-            menu.applyTextures();
-            updateUIState();
-        } else {
-            System.out.println("DEBUG Screen: Apply button clicked but no valid BlockEntity");
-        }
+        System.out.println("DEBUG Screen: Inversion toggled to " + checkboxState + " - AUTO-APPLY triggered");
     }
 
     @Override
@@ -336,6 +300,8 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
         // Draw enhanced inversion checkbox
         drawEnhancedInversionCheckbox(graphics, guiLeft, guiTop);
+
+        // NO Apply button in auto-apply system
     }
 
     /**
@@ -346,7 +312,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int centerY = guiTop + PREVIEW_CENTER_Y;
 
         // Just draw placeholder text - slot background is in the image
-        Component previewText = Component.literal("Preview");
+        Component previewText = Component.literal("Auto-Apply");
         int textWidth = this.font.width(previewText);
         int textX = centerX - textWidth / 2;
         int textY = centerY - 4;
