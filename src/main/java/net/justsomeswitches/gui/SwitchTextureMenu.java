@@ -18,7 +18,7 @@ import javax.annotation.Nullable;
 /**
  * Enhanced server-side menu for the Switch Texture customization GUI
  * ---
- * SIMPLIFIED: Auto-apply system with immediate texture updates
+ * FIXED: Menu-BlockEntity synchronization to prevent face selection resets
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -153,7 +153,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // Store GUI slot items
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
 
-            // Save current face selections to BlockEntity
+            // CRITICAL FIX: Save current face selections to BlockEntity immediately
             blockEntity.setBaseFaceSelection(baseFaceSelection);
             blockEntity.setToggleFaceSelection(toggleFaceSelection);
             blockEntity.setInverted(inverted);
@@ -245,7 +245,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // FACE SELECTION METHODS WITH AUTO-APPLY
+    // FIXED: FACE SELECTION METHODS WITH IMMEDIATE BLOCKENTITY SYNC
     // ========================================
 
     /**
@@ -255,6 +255,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         if (this.baseFaceSelection != faceOption) {
             System.out.println("DEBUG Menu: Base face selection changed from " + this.baseFaceSelection + " to " + faceOption);
             this.baseFaceSelection = faceOption;
+
+            // CRITICAL FIX: Immediately update BlockEntity to prevent desync
+            if (blockEntity != null) {
+                blockEntity.setBaseFaceSelection(faceOption);
+            }
+
             // AUTO-APPLY: Trigger immediate application when face selection changes (user interaction)
             if (!isInitializing) {
                 onSlotChangedAutoApply();
@@ -269,6 +275,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         if (this.toggleFaceSelection != faceOption) {
             System.out.println("DEBUG Menu: Toggle face selection changed from " + this.toggleFaceSelection + " to " + faceOption);
             this.toggleFaceSelection = faceOption;
+
+            // CRITICAL FIX: Immediately update BlockEntity to prevent desync
+            if (blockEntity != null) {
+                blockEntity.setToggleFaceSelection(faceOption);
+            }
+
             // AUTO-APPLY: Trigger immediate application when face selection changes (user interaction)
             if (!isInitializing) {
                 onSlotChangedAutoApply();
@@ -283,6 +295,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         if (this.inverted != inverted) {
             System.out.println("DEBUG Menu: Inverted state changed from " + this.inverted + " to " + inverted);
             this.inverted = inverted;
+
+            // CRITICAL FIX: Immediately update BlockEntity to prevent desync
+            if (blockEntity != null) {
+                blockEntity.setInverted(inverted);
+            }
+
             // AUTO-APPLY: Trigger immediate application when inversion changes (user interaction)
             if (!isInitializing) {
                 onSlotChangedAutoApply();

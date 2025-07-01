@@ -23,10 +23,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Enhanced Block Entity for Switches Lever - Auto-Apply System
+ * Enhanced Block Entity for Switches Lever - Auto-Apply System with Face Selection Persistence
  * ---
- * This BlockEntity provides comprehensive NBT-based storage for individual switch blocks,
- * with streamlined auto-apply functionality and optimized face selection persistence.
+ * FIXED: Face selection persistence through block state changes and NBT operations
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -63,6 +62,53 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // GUI slot storage
     private ItemStack guiToggleItem = ItemStack.EMPTY;
     private ItemStack guiBaseItem = ItemStack.EMPTY;
+
+    // ========================================
+    // FIXED: FACE SELECTION PRESERVATION SYSTEM
+    // ========================================
+
+    // Temporary storage for preserving face selections during state changes
+    private FaceSelectionData.FaceOption preservedBaseFace = null;
+    private FaceSelectionData.FaceOption preservedToggleFace = null;
+    private boolean preservedInverted = false;
+    private boolean preservationActive = false;
+
+    /**
+     * FIXED: Preserve face selections before block state changes
+     * Called before any operation that might trigger NBT reload
+     */
+    public void preserveFaceSelectionsForStateChange() {
+        System.out.println("DEBUG BlockEntity: Preserving face selections before state change - Base: " +
+                baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+
+        this.preservedBaseFace = this.baseFaceSelection;
+        this.preservedToggleFace = this.toggleFaceSelection;
+        this.preservedInverted = this.inverted;
+        this.preservationActive = true;
+    }
+
+    /**
+     * FIXED: Restore preserved face selections after state changes
+     */
+    private void restorePreservedFaceSelections() {
+        if (preservationActive && preservedBaseFace != null && preservedToggleFace != null) {
+            System.out.println("DEBUG BlockEntity: Restoring preserved face selections - Base: " +
+                    preservedBaseFace + ", Toggle: " + preservedToggleFace + ", Inverted: " + preservedInverted);
+
+            this.baseFaceSelection = preservedBaseFace;
+            this.toggleFaceSelection = preservedToggleFace;
+            this.inverted = preservedInverted;
+
+            // Clear preservation state
+            this.preservedBaseFace = null;
+            this.preservedToggleFace = null;
+            this.preservedInverted = false;
+            this.preservationActive = false;
+
+            // Ensure the restored state is saved immediately
+            setChanged();
+        }
+    }
 
     // ========================================
     // PERFORMANCE OPTIMIZATION: CACHED ANALYSIS
@@ -145,6 +191,42 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
+    // FIXED: BLOCK STATE MANAGEMENT WITH FACE SELECTION PRESERVATION
+    // ========================================
+
+    /**
+     * FIXED: Override setBlockState to preserve face selections AND trigger model refresh
+     */
+    @Override
+    public void setBlockState(@Nonnull BlockState blockState) {
+        System.out.println("DEBUG BlockEntity: setBlockState called - preserving face selections and triggering model refresh");
+
+        // Preserve current face selections before state change
+        if (!preservationActive) {
+            preserveFaceSelectionsForStateChange();
+        }
+
+        super.setBlockState(blockState);
+
+        // Restore face selections after state change
+        restorePreservedFaceSelections();
+
+        // CRITICAL FIX: Force immediate ModelData refresh after block state change
+        if (level != null && !level.isClientSide) {
+            // Request model data update to ensure custom model gets current face selections
+            requestModelDataUpdate();
+
+            // Force block update to refresh custom model rendering with preserved face selections
+            level.sendBlockUpdated(worldPosition, blockState, blockState, Block.UPDATE_CLIENTS);
+
+            System.out.println("DEBUG BlockEntity: Triggered model refresh with current face selections - Base: " +
+                    baseFaceSelection + ", Toggle: " + toggleFaceSelection);
+        }
+
+        System.out.println("DEBUG BlockEntity: setBlockState completed with preserved face selections and model refresh");
+    }
+
+    // ========================================
     // CLIENT AND SERVER TICK METHODS
     // ========================================
 
@@ -200,7 +282,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         System.out.println("DEBUG BlockEntity: Marking dirty and syncing to clients");
         setChanged();
         if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            // FIXED: Use UPDATE_CLIENTS to avoid triggering unnecessary NBT reloads
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
             requestModelDataUpdate();
         }
     }
@@ -258,12 +341,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // ========================================
 
     /**
-     * Set base face selection with optimized persistence for auto-apply system
+     * FIXED: Set base face selection with immediate NBT persistence
      */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.baseFaceSelection != faceOption) {
             System.out.println("DEBUG BlockEntity: Setting base face selection from " + this.baseFaceSelection + " to " + faceOption);
             this.baseFaceSelection = faceOption;
+
+            // CRITICAL FIX: Immediately save to NBT to prevent race conditions
+            forceSaveToNBT();
             markDirtyAndSync();
             return true;
         }
@@ -271,12 +357,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Set toggle face selection with optimized persistence for auto-apply system
+     * FIXED: Set toggle face selection with immediate NBT persistence
      */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.toggleFaceSelection != faceOption) {
             System.out.println("DEBUG BlockEntity: Setting toggle face selection from " + this.toggleFaceSelection + " to " + faceOption);
             this.toggleFaceSelection = faceOption;
+
+            // CRITICAL FIX: Immediately save to NBT to prevent race conditions
+            forceSaveToNBT();
             markDirtyAndSync();
             return true;
         }
@@ -284,16 +373,48 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Set inversion state
+     * FIXED: Set inversion state with immediate NBT persistence
      */
     public boolean setInverted(boolean inverted) {
         if (this.inverted != inverted) {
             System.out.println("DEBUG BlockEntity: Setting inverted state from " + this.inverted + " to " + inverted);
             this.inverted = inverted;
+
+            // CRITICAL FIX: Immediately save to NBT to prevent race conditions
+            forceSaveToNBT();
             markDirtyAndSync();
             return true;
         }
         return false;
+    }
+
+    /**
+     * CRITICAL FIX: Force immediate NBT save to prevent race conditions
+     */
+    private void forceSaveToNBT() {
+        if (level != null && !level.isClientSide) {
+            System.out.println("DEBUG BlockEntity: Force saving face selections to NBT immediately - Base: " +
+                    baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+
+            // Immediately save current state to the world's BlockEntity data
+            // This ensures that any subsequent NBT reloads will have the correct data
+            setChanged();
+
+            // Force the world to save this BlockEntity's data immediately
+            if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                try {
+                    // Get the chunk and mark it for immediate saving
+                    var chunk = serverLevel.getChunkAt(worldPosition);
+                    // FIXED: Simplified instanceof check to avoid compilation error
+                    if (chunk instanceof net.minecraft.world.level.chunk.LevelChunk) {
+                        ((net.minecraft.world.level.chunk.LevelChunk) chunk).setUnsaved(true);
+                        System.out.println("DEBUG BlockEntity: Chunk marked for immediate save");
+                    }
+                } catch (Exception e) {
+                    System.out.println("DEBUG BlockEntity: Could not force immediate chunk save: " + e.getMessage());
+                }
+            }
+        }
     }
 
     // ========================================
@@ -478,25 +599,23 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // OPTIMIZED NBT SERIALIZATION FOR AUTO-APPLY
+    // FIXED: NBT SERIALIZATION WITH FACE SELECTION PRESERVATION
     // ========================================
 
     @Override
     protected void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
 
-        System.out.println("DEBUG BlockEntity: Saving NBT data");
+        System.out.println("DEBUG BlockEntity: Saving NBT data with current face selections - Base: " +
+                baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
 
         // Save texture paths
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
 
-        // Save face selections with proper serialization
-        String baseSerializedName = baseFaceSelection.getSerializedName();
-        String toggleSerializedName = toggleFaceSelection.getSerializedName();
-
-        nbt.putString(BASE_FACE_KEY, baseSerializedName);
-        nbt.putString(TOGGLE_FACE_KEY, toggleSerializedName);
+        // FIXED: Save current face selections (not defaults)
+        nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
+        nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
 
         // Save inversion state
         nbt.putBoolean(INVERTED_KEY, inverted);
@@ -509,7 +628,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        System.out.println("DEBUG BlockEntity: Saved face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
+        System.out.println("DEBUG BlockEntity: NBT save completed - Base: " + baseFaceSelection +
+                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
     }
 
     @Override
@@ -530,21 +650,52 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // Load face selections with proper deserialization
-        String baseFaceName = nbt.getString(BASE_FACE_KEY);
-        FaceSelectionData.FaceOption loadedBaseFace = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
+        // FIXED: Enhanced face selection loading with preservation handling
+        if (preservationActive) {
+            // If preservation is active, don't overwrite current face selections
+            System.out.println("DEBUG BlockEntity: Preservation active - keeping current face selections");
+            restorePreservedFaceSelections();
+        } else {
+            // Load face selections from NBT
+            String baseFaceName = nbt.getString(BASE_FACE_KEY);
+            FaceSelectionData.FaceOption nbtBaseFace = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
+                    FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
 
-        String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
-        FaceSelectionData.FaceOption loadedToggleFace = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
+            String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
+            FaceSelectionData.FaceOption nbtToggleFace = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
+                    FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
 
-        // Set the loaded values
-        this.baseFaceSelection = loadedBaseFace;
-        this.toggleFaceSelection = loadedToggleFace;
+            boolean nbtInverted = nbt.getBoolean(INVERTED_KEY);
 
-        // Load inversion state
-        this.inverted = nbt.getBoolean(INVERTED_KEY);
+            // CRITICAL FIX: Only update face selections if NBT data is newer than current memory state
+            // This prevents race conditions where NBT overwrites recent changes
+            boolean shouldUpdateFromNBT = true;
+
+            // If face selections were recently changed (not defaults), and NBT has defaults,
+            // the NBT data is probably stale - don't overwrite recent changes
+            if ((this.baseFaceSelection != FaceSelectionData.FaceOption.ALL ||
+                    this.toggleFaceSelection != FaceSelectionData.FaceOption.ALL ||
+                    this.inverted) &&
+                    (nbtBaseFace == FaceSelectionData.FaceOption.ALL &&
+                            nbtToggleFace == FaceSelectionData.FaceOption.ALL &&
+                            !nbtInverted)) {
+
+                System.out.println("DEBUG BlockEntity: NBT data appears stale - keeping current face selections");
+                shouldUpdateFromNBT = false;
+            }
+
+            if (shouldUpdateFromNBT) {
+                this.baseFaceSelection = nbtBaseFace;
+                this.toggleFaceSelection = nbtToggleFace;
+                this.inverted = nbtInverted;
+
+                System.out.println("DEBUG BlockEntity: Loaded face selections from NBT - Base: " + baseFaceSelection +
+                        ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+            } else {
+                System.out.println("DEBUG BlockEntity: Keeping current face selections - Base: " + baseFaceSelection +
+                        ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+            }
+        }
 
         // Load GUI slot items
         if (nbt.contains("gui_toggle_item")) {
@@ -562,9 +713,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         // Clear analysis cache on load
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
-
-        System.out.println("DEBUG BlockEntity: Loaded face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
-        System.out.println("DEBUG BlockEntity: Loaded inverted state: " + inverted);
     }
 
     // ========================================

@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 /**
  * Enhanced Switches Lever Block with BlockEntity support for texture customization
  * ---
- * FIXED: Manual-only texture application with comprehensive debug output
+ * FIXED: Face selection persistence through block state changes
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -85,15 +85,13 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // VANILLA RENDERING WITH CUSTOM MODELS
+    // BLOCK ENTITY RENDERER APPROACH
     // ========================================
 
     @Override
     @Nonnull
     public RenderShape getRenderShape(@Nonnull BlockState state) {
-        // Use vanilla rendering with custom models
-        // This allows our custom models to handle texture replacement
-        // without z-fighting issues from Block Entity Renderers
+        // Use vanilla rendering - Block Entity Renderer will handle custom textures
         return RenderShape.MODEL;
     }
 
@@ -139,6 +137,11 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
         System.out.println("DEBUG Block: Switch lever used at " + pos + " by player " + player.getName().getString());
 
+        // FIXED: Preserve face selections before state change
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            blockEntity.preserveFaceSelectionsForStateChange();
+        }
+
         // Toggle the powered state (unchanged lever behavior)
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
@@ -156,21 +159,39 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         Direction attachedDirection = getAttachedDirection(state);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);
 
-        // Trigger model update for texture changes
-        triggerModelUpdate(level, pos);
+        // FIXED: Ensure model updates happen after BlockEntity has restored face selections
+        // Add a small delay to ensure BlockEntity setBlockState has completed
+        level.scheduleTick(pos, this, 1);
 
         return InteractionResult.CONSUME;
     }
 
     /**
-     * Trigger model update when block state changes
-     * This ensures custom models receive updated ModelData
+     * FIXED: Delayed model update to ensure face selections are restored first
      */
-    private void triggerModelUpdate(@Nonnull Level level, @Nonnull BlockPos pos) {
+    @Override
+    public void tick(@Nonnull BlockState state, @Nonnull net.minecraft.server.level.ServerLevel level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource random) {
+        // This is called after the scheduled tick from the use() method
+        triggerModelUpdatePreservingFaceSelections(level, pos);
+    }
+
+    /**
+     * FIXED: Trigger model update while preserving face selections
+     * Uses UPDATE_CLIENTS instead of UPDATE_ALL to avoid NBT reload
+     */
+    private void triggerModelUpdatePreservingFaceSelections(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: Triggering model update for custom textures");
-            // Force ModelData refresh by sending block update
-            level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_ALL);
+            System.out.println("DEBUG Block: Triggering model update preserving face selections");
+
+            // CRITICAL FIX: Use UPDATE_CLIENTS instead of UPDATE_ALL to avoid NBT reload
+            // UPDATE_ALL (3) causes NBT to reload, which resets face selections
+            // UPDATE_CLIENTS (2) only updates client rendering without NBT reload
+            level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_CLIENTS);
+
+            // Force ModelData refresh without triggering NBT reload
+            blockEntity.requestModelDataUpdate();
+
+            System.out.println("DEBUG Block: Model update completed with face selection preservation");
         }
     }
 
@@ -210,7 +231,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // ENHANCED BLOCK UPDATES
+    // ENHANCED BLOCK UPDATES WITH FACE SELECTION PRESERVATION
     // ========================================
 
     @Override
@@ -218,17 +239,19 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                                 @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
 
-        // Ensure model updates are triggered for texture changes
+        // FIXED: Ensure model updates preserve face selections
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
-                System.out.println("DEBUG Block: Neighbor changed, updating custom texture model");
+                System.out.println("DEBUG Block: Neighbor changed, updating custom texture model with face preservation");
+
+                // FIXED: Use UPDATE_CLIENTS to preserve face selections
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         }
     }
 
     /**
-     * Enhanced state change handling for texture updates
+     * Enhanced state change handling for texture updates with face selection preservation
      */
     @Override
     public void setPlacedBy(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state,
@@ -242,7 +265,9 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         // Initialize BlockEntity and trigger initial model update
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             System.out.println("DEBUG Block: Initializing BlockEntity with default textures");
-            level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
+
+            // FIXED: Use UPDATE_CLIENTS for initial setup to avoid unnecessary NBT operations
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
         }
     }
 
