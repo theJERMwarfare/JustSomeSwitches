@@ -10,11 +10,18 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * FIXED: Face Selection Data System - Use actual JSON variable names from block models
+ * OPTIMIZED: Face Selection Data System with Minimal Debug Output
  * ---
- * Shows exact variable names from block JSON files (e.g., "end", "side" for oak logs)
+ * CRITICAL FIX: Drastically reduced console output to eliminate performance issues
  */
 public class FaceSelectionData {
+
+    // Enable debug only for critical issues
+    private static final boolean DEBUG_ENABLED = false;
+
+    // Cache to prevent repeated dropdown creation debug spam
+    private static final Map<String, DropdownState> dropdownStateCache = new HashMap<>();
+    private static final Map<ItemStack, String> blockAnalysisCache = new HashMap<>();
 
     /**
      * Face option enum - keep original for backward compatibility, but add JSON variable support
@@ -133,216 +140,156 @@ public class FaceSelectionData {
         @Nonnull
         public List<Component> getDisplayOptions() {
             return availableOptions.stream()
-                    .map(option -> (Component) Component.literal(option.getDisplayName()))
+                    .map(option -> Component.literal(option.getDisplayName()))
                     .toList();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (!(obj instanceof DropdownState other)) return false;
+            return enabled == other.enabled &&
+                    selectedOption == other.selectedOption &&
+                    availableOptions.equals(other.availableOptions) &&
+                    Objects.equals(previewTexture, other.previewTexture);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(enabled, availableOptions, selectedOption, previewTexture);
         }
     }
 
     /**
-     * FIXED: Create dropdown state using actual JSON variable names from block model
+     * OPTIMIZED: Create dropdown state with caching and minimal debug output
      */
     @Nonnull
     public static DropdownState createDropdownState(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
-                                                    @Nonnull FaceOption currentSelection) {
+                                                    @Nonnull FaceOption selectedOption) {
+        // Create cache key
+        String cacheKey = blockInfo.toString() + "_" + selectedOption.getSerializedName();
 
+        // Check cache first
+        DropdownState cached = dropdownStateCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        boolean hasMultipleFaces = blockInfo.hasMultipleFaceTextures();
+
+        if (DEBUG_ENABLED) {
+            System.out.println("DEBUG FaceSelection: Creating dropdown for block with multiple faces: " + hasMultipleFaces);
+        }
+
+        if (!hasMultipleFaces) {
+            DropdownState disabled = new DropdownState(false, List.of(FaceOption.ALL), FaceOption.ALL, null);
+            dropdownStateCache.put(cacheKey, disabled);
+            return disabled;
+        }
+
+        // Analyze face textures ONLY if needed
         List<FaceOption> availableOptions = new ArrayList<>();
-        availableOptions.add(FaceOption.ALL); // Always include "all"
+        availableOptions.add(FaceOption.ALL);
 
-        System.out.println("DEBUG FaceSelection: Creating dropdown for block with multiple faces: " + blockInfo.hasMultipleFaceTextures());
+        // Get texture variables from block model
+        List<String> textureVariables = getTextureVariables(blockInfo);
 
-        if (blockInfo.hasMultipleFaceTextures()) {
-            // CRITICAL FIX: Try to get actual texture variables from dynamic analysis first
-            Set<String> actualVariables = getActualTextureVariablesFromDynamicAnalysis(blockInfo);
+        if (DEBUG_ENABLED && !textureVariables.isEmpty()) {
+            System.out.println("DEBUG FaceSelection: Found texture variables: " + textureVariables);
+        }
 
-            // If dynamic analysis didn't work, fall back to pattern analysis
-            if (actualVariables.isEmpty() || actualVariables.size() == 1) {
-                actualVariables = getActualTextureVariables(blockInfo);
-            }
-
-            System.out.println("DEBUG FaceSelection: Found actual texture variables: " + actualVariables);
-
-            // Add face options based on actual JSON variables
-            for (String variable : actualVariables) {
-                if (!variable.equals("all")) {
-                    FaceOption faceOption = FaceOption.fromJsonVariable(variable);
-                    if (!availableOptions.contains(faceOption)) {
-                        availableOptions.add(faceOption);
-                        System.out.println("DEBUG FaceSelection: Added face option: " + faceOption + " for JSON variable: " + variable);
-                    }
+        // Convert texture variables to face options
+        for (String variable : textureVariables) {
+            FaceOption faceOption = FaceOption.fromJsonVariable(variable);
+            if (faceOption != FaceOption.ALL && !availableOptions.contains(faceOption)) {
+                availableOptions.add(faceOption);
+                if (DEBUG_ENABLED) {
+                    System.out.println("DEBUG FaceSelection: Added face option: " + faceOption + " for JSON variable: " + variable);
                 }
             }
         }
 
-        // CRITICAL FIX: Always ensure current selection is available to prevent resets
-        if (!availableOptions.contains(currentSelection)) {
-            System.out.println("DEBUG FaceSelection: Current selection " + currentSelection +
-                    " not in available options " + availableOptions + ", adding it to prevent reset");
-            availableOptions.add(currentSelection);
+        // Validate selected option
+        FaceOption validatedSelection = validateSelection(selectedOption, availableOptions);
+
+        // Create dropdown state
+        String previewTexture = getTextureForSelection(blockInfo, validatedSelection);
+        DropdownState result = new DropdownState(true, availableOptions, validatedSelection, previewTexture);
+
+        // Cache the result
+        dropdownStateCache.put(cacheKey, result);
+
+        if (DEBUG_ENABLED) {
+            System.out.println("DEBUG FaceSelection: Final dropdown - Enabled: " + result.isEnabled() +
+                    ", Options: " + availableOptions + ", Selected: " + validatedSelection);
         }
 
-        // Determine if dropdown should be enabled
-        boolean shouldEnable = blockInfo.hasMultipleFaceTextures() && availableOptions.size() > 1;
-
-        // Get preview texture based on current selection
-        String previewTexture = getPreviewTexture(blockInfo, currentSelection);
-
-        System.out.println("DEBUG FaceSelection: Final dropdown - Enabled: " + shouldEnable +
-                ", Options: " + availableOptions + ", Selected: " + currentSelection);
-
-        return new DropdownState(shouldEnable, availableOptions, currentSelection, previewTexture);
+        return result;
     }
 
     /**
-     * CRITICAL FIX: Get texture variables directly from DynamicBlockModelAnalyzer
+     * OPTIMIZED: Get texture variables with caching
      */
     @Nonnull
-    private static Set<String> getActualTextureVariablesFromDynamicAnalysis(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo) {
-        Set<String> variables = new HashSet<>();
+    private static List<String> getTextureVariables(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo) {
+        // Check for common patterns first
+        Map<String, String> faceTextures = blockInfo.getFaceTextures();
+        Set<String> uniqueTextures = new HashSet<>(faceTextures.values());
 
-        try {
-            // We need to somehow get access to the original ItemStack or block to run dynamic analysis
-            // For now, this is a placeholder - the real implementation would need the ItemStack
-            // This method would use DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack)
+        List<String> variables = new ArrayList<>();
 
-            // Since we can't get the ItemStack from BlockTextureInfo, return empty set
-            // The caller will fall back to pattern analysis
+        // Detect log pattern (end/side)
+        if (uniqueTextures.size() == 2) {
+            boolean hasLogPattern = uniqueTextures.stream().anyMatch(tex ->
+                    tex.contains("_log") && (tex.contains("_top") || tex.contains("_log")));
 
-        } catch (Exception e) {
-            System.out.println("DEBUG FaceSelection: Error in dynamic analysis: " + e.getMessage());
-        }
-
-        return variables;
-    }
-
-    /**
-     * CRITICAL FIX: Get actual texture variable names from block model JSON
-     */
-    @Nonnull
-    private static Set<String> getActualTextureVariables(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo) {
-        Set<String> variables = new HashSet<>();
-
-        // Get the face texture map to analyze texture differences
-        Map<Direction, String> faceTextures = blockInfo.getFaceTextures();
-        System.out.println("DEBUG FaceSelection: Analyzing face textures: " + faceTextures);
-
-        // Collect all unique texture paths
-        Set<String> uniqueTextures = new HashSet<>();
-        for (String texture : faceTextures.values()) {
-            if (texture != null && !texture.isEmpty()) {
-                uniqueTextures.add(texture);
+            if (hasLogPattern) {
+                variables.add("side");
+                variables.add("end");
+                if (DEBUG_ENABLED) {
+                    System.out.println("DEBUG FaceSelection: Detected log pattern - added 'end' and 'side' variables");
+                }
+                return variables;
             }
         }
 
-        System.out.println("DEBUG FaceSelection: Found unique textures: " + uniqueTextures);
-
-        // CRITICAL FIX: Analyze texture patterns to determine JSON variables
+        // Add standard face options for multi-texture blocks
         if (uniqueTextures.size() > 1) {
-            // Multiple textures - analyze patterns
-            String topTexture = faceTextures.get(Direction.UP);
-            String bottomTexture = faceTextures.get(Direction.DOWN);
-            String northTexture = faceTextures.get(Direction.NORTH);
-            String southTexture = faceTextures.get(Direction.SOUTH);
-            String eastTexture = faceTextures.get(Direction.EAST);
-            String westTexture = faceTextures.get(Direction.WEST);
-
-            // Check for vertical vs horizontal texture differences (like logs)
-            if (topTexture != null && northTexture != null && !topTexture.equals(northTexture)) {
-                // This is likely a log pattern: top/bottom different from sides
-                variables.add("end");   // For top/bottom faces
-                variables.add("side");  // For horizontal faces
-                System.out.println("DEBUG FaceSelection: Detected log pattern - added 'end' and 'side' variables");
-            } else {
-                // Add variables based on actual texture patterns
-                for (String texture : uniqueTextures) {
-                    String variable = extractVariableFromTexturePath(texture);
-                    if (variable != null) {
-                        variables.add(variable);
-                    }
-                }
-
-                // Ensure we have meaningful variables
-                if (variables.isEmpty()) {
-                    // Fallback for complex patterns
-                    if (topTexture != null && !topTexture.equals(northTexture)) {
-                        variables.add("top");
-                        variables.add("side");
-                    } else {
-                        variables.add("all");
-                    }
+            // Add actual texture variables found
+            for (String texture : uniqueTextures) {
+                String variable = extractVariableFromTexture(texture);
+                if (!variable.equals("all") && !variables.contains(variable)) {
+                    variables.add(variable);
                 }
             }
-        } else {
-            // Single texture - uniform block
-            variables.add("all");
         }
 
-        System.out.println("DEBUG FaceSelection: Final texture variables: " + variables);
+        if (DEBUG_ENABLED && !variables.isEmpty()) {
+            System.out.println("DEBUG FaceSelection: Found actual texture variables: " + variables);
+        }
+
         return variables;
     }
 
     /**
-     * IMPROVED: Extract variable name from texture path with better pattern detection
-     */
-    @Nullable
-    private static String extractVariableFromTexturePath(@Nonnull String texturePath) {
-        try {
-            // Extract the texture name from the path
-            String[] parts = texturePath.split("/");
-            String textureName = parts[parts.length - 1];
-
-            System.out.println("DEBUG FaceSelection: Analyzing texture name: " + textureName);
-
-            // IMPROVED: Better pattern detection for common block types
-            if (textureName.contains("_top") || textureName.contains("_end")) {
-                return "end";
-            } else if (textureName.contains("_side")) {
-                return "side";
-            } else if (textureName.contains("_front")) {
-                return "front";
-            } else if (textureName.contains("_back")) {
-                return "back";
-            } else if (textureName.contains("_bottom")) {
-                return "end"; // Bottom also maps to "end" for logs
-            }
-
-            // For base textures without suffixes (like "oak_log"), this usually represents the "side" texture
-            if (!textureName.contains("_")) {
-                return "side";
-            }
-
-        } catch (Exception e) {
-            System.out.println("DEBUG FaceSelection: Error extracting variable from path " + texturePath + ": " + e.getMessage());
-        }
-
-        return null;
-    }
-
-    /**
-     * Get actual texture variables from ItemStack using DynamicBlockModelAnalyzer
+     * Extract variable name from texture path
      */
     @Nonnull
-    public static Set<String> getTextureVariablesFromItemStack(@Nonnull ItemStack itemStack) {
-        try {
-            DynamicBlockModelAnalyzer.DynamicBlockInfo dynamicInfo =
-                    DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack);
-
-            Map<String, String> textureVariables = dynamicInfo.getTextureVariables();
-            System.out.println("DEBUG FaceSelection: Dynamic analysis found texture variables: " + textureVariables.keySet());
-
-            return new HashSet<>(textureVariables.keySet());
-
-        } catch (Exception e) {
-            System.out.println("DEBUG FaceSelection: Error getting texture variables from ItemStack: " + e.getMessage());
-            return Set.of("all");
-        }
+    private static String extractVariableFromTexture(@Nonnull String texturePath) {
+        if (texturePath.contains("_top")) return "end";
+        if (texturePath.contains("_log") && !texturePath.contains("_top")) return "side";
+        if (texturePath.contains("_front")) return "front";
+        if (texturePath.contains("_back")) return "back";
+        if (texturePath.contains("_side")) return "side";
+        return "all";
     }
 
     /**
-     * Get preview texture with simple direct lookup
+     * Get texture path for a specific face selection - maps to actual JSON variables
      */
     @Nullable
-    private static String getPreviewTexture(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
-                                            @Nonnull FaceOption selection) {
+    public static String getTextureForSelection(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
+                                                @Nonnull FaceOption selection) {
         if (selection.isAll()) {
             // For "All", return the most appropriate texture
             if (blockInfo.getUniformTexture() != null) {
@@ -393,60 +340,10 @@ public class FaceSelectionData {
     }
 
     /**
-     * Get texture path for a specific face selection - maps to actual JSON variables
+     * Clear caches (for memory management)
      */
-    @Nullable
-    public static String getTextureForSelection(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
-                                                @Nonnull FaceOption selection) {
-        if (selection.isAll()) {
-            // For "all", return most appropriate texture
-            if (blockInfo.getUniformTexture() != null) {
-                return blockInfo.getUniformTexture();
-            }
-
-            // For multi-face blocks, prefer side texture
-            String sideTexture = blockInfo.getTextureForFace(Direction.NORTH);
-            if (sideTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(sideTexture)) {
-                return sideTexture;
-            }
-
-            // Fallback to any available texture
-            return blockInfo.getFaceTextures().values().stream()
-                    .filter(net.justsomeswitches.util.BlockTextureAnalyzer::isValidTexture)
-                    .findFirst()
-                    .orElse(null);
-        } else {
-            // Map face option to appropriate direction based on JSON variable
-            Direction targetDirection = mapFaceOptionToDirection(selection, blockInfo);
-            if (targetDirection != null) {
-                String faceTexture = blockInfo.getTextureForFace(targetDirection);
-                if (faceTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(faceTexture)) {
-                    return faceTexture;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Map face option to appropriate direction based on block type and JSON variables
-     */
-    @Nullable
-    private static Direction mapFaceOptionToDirection(@Nonnull FaceOption faceOption,
-                                                      @Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo) {
-        return switch (faceOption) {
-            case END -> Direction.UP;      // "end" variable typically maps to top/bottom faces
-            case SIDE -> Direction.NORTH;  // "side" variable typically maps to horizontal faces
-            case FRONT -> Direction.NORTH;
-            case BACK -> Direction.SOUTH;
-            case TOP -> Direction.UP;
-            case BOTTOM -> Direction.DOWN;
-            case NORTH -> Direction.NORTH;
-            case SOUTH -> Direction.SOUTH;
-            case EAST -> Direction.EAST;
-            case WEST -> Direction.WEST;
-            default -> null;
-        };
+    public static void clearCaches() {
+        dropdownStateCache.clear();
+        blockAnalysisCache.clear();
     }
 }
