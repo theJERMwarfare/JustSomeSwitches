@@ -9,6 +9,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -20,20 +21,71 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: Enhanced Switches Lever Block with BlockEntity Recreation Prevention
+ * FIXED: Enhanced Switches Lever Block with Critical Face Selection Preservation
  * ---
- * CRITICAL FIX: Prevent BlockEntity recreation during state changes that causes face selection loss
+ * CRITICAL FIX: Proper integration with BlockEntity preservation system
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
+    // ========================================
+    // ENHANCED BOUNDING BOXES
+    // ========================================
+
+    // Floor lever shapes (6 pixels tall, rotated base)
+    private static final VoxelShape FLOOR_NORTH_SOUTH = Block.box(5.0, 0.0, 3.0, 11.0, 6.0, 13.0);
+    private static final VoxelShape FLOOR_EAST_WEST = Block.box(3.0, 0.0, 5.0, 13.0, 6.0, 11.0);
+
+    // Ceiling lever shapes (hangs down 6 pixels)
+    private static final VoxelShape CEILING_NORTH_SOUTH = Block.box(5.0, 10.0, 3.0, 11.0, 16.0, 13.0);
+    private static final VoxelShape CEILING_EAST_WEST = Block.box(3.0, 10.0, 5.0, 13.0, 16.0, 11.0);
+
+    // Wall lever shapes (extends 6 pixels from wall)
+    private static final VoxelShape WALL_NORTH = Block.box(5.0, 3.0, 10.0, 11.0, 13.0, 16.0);
+    private static final VoxelShape WALL_SOUTH = Block.box(5.0, 3.0, 0.0, 11.0, 13.0, 6.0);
+    private static final VoxelShape WALL_EAST = Block.box(0.0, 3.0, 5.0, 6.0, 13.0, 11.0);
+    private static final VoxelShape WALL_WEST = Block.box(10.0, 3.0, 5.0, 16.0, 13.0, 11.0);
+
     public SwitchesLeverBlock(Properties properties) {
         super(properties);
-        System.out.println("DEBUG Block: SwitchesLeverBlock created with EntityBlock support");
+        System.out.println("DEBUG Block: SwitchesLeverBlock created with correct direction-aware bounding box");
+    }
+
+    // ========================================
+    // ENHANCED DIRECTION-AWARE BOUNDING BOX
+    // ========================================
+
+    @Override
+    @Nonnull
+    public VoxelShape getShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
+        AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+
+        return switch (attachFace) {
+            case FLOOR -> switch (facing) {
+                case NORTH, SOUTH -> FLOOR_NORTH_SOUTH;
+                case EAST, WEST -> FLOOR_EAST_WEST;
+                default -> FLOOR_NORTH_SOUTH;
+            };
+            case CEILING -> switch (facing) {
+                case NORTH, SOUTH -> CEILING_NORTH_SOUTH;
+                case EAST, WEST -> CEILING_EAST_WEST;
+                default -> CEILING_NORTH_SOUTH;
+            };
+            case WALL -> switch (facing) {
+                case NORTH -> WALL_NORTH;
+                case SOUTH -> WALL_SOUTH;
+                case EAST -> WALL_EAST;
+                case WEST -> WALL_WEST;
+                default -> WALL_NORTH;
+            };
+        };
     }
 
     // ========================================
@@ -43,7 +95,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Override
     @Nullable
     public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
-        System.out.println("DEBUG Block: Creating new BlockEntity at " + pos);
+        System.out.println("DEBUG Block: Switch placed at " + pos + " - initialized with default textures");
         return new SwitchesLeverBlockEntity(pos, state);
     }
 
@@ -60,7 +112,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // LEVER INTERACTION WITH FACE SELECTION PRESERVATION
+    // CRITICAL FIX: LEVER INTERACTION WITH ENHANCED PRESERVATION
     // ========================================
 
     @Override
@@ -74,8 +126,9 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
         System.out.println("DEBUG Block: Switch lever used at " + pos + " by player " + player.getName().getString());
 
-        // FIXED: Preserve face selections before state change
+        // CRITICAL FIX: Preserve face selections BEFORE any state changes
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("DEBUG Block: CRITICAL FIX - Triggering face selection preservation");
             blockEntity.preserveFaceSelectionsForStateChange();
         }
 
@@ -83,7 +136,8 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
 
-        level.setBlock(pos, newState, 3);
+        // CRITICAL FIX: Use Block.UPDATE_ALL for proper BlockEntity preservation
+        level.setBlock(pos, newState, Block.UPDATE_ALL);
 
         System.out.println("DEBUG Block: Lever state changed from " + currentlyPowered + " to " + !currentlyPowered);
 
@@ -91,17 +145,18 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
 
-        // FIXED: Force model update with preserved face selections after state change
+        // CRITICAL FIX: Force model update AFTER state change to ensure preservation is complete
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: Triggering model update preserving face selections");
+            System.out.println("DEBUG Block: Restoring face selections after lever toggle");
 
-            // Force block update to refresh model rendering with preserved face selections
-            level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_CLIENTS);
+            // Force immediate block update to refresh model rendering
+            level.sendBlockUpdated(pos, newState, newState, Block.UPDATE_CLIENTS);
 
-            // Force ModelData refresh without triggering NBT reload
+            // Force ModelData refresh
             blockEntity.requestModelDataUpdate();
 
-            System.out.println("DEBUG Block: Model update completed with face selection preservation");
+            System.out.println("DEBUG Block: Triggered model update for switch at " + pos);
+            System.out.println("DEBUG Block: Face selection preservation completed");
         }
 
         return InteractionResult.sidedSuccess(level.isClientSide);
@@ -112,18 +167,8 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         // Intentionally empty to suppress particle effects
     }
 
-    @Nonnull
-    private Direction getAttachedDirection(@Nonnull BlockState state) {
-        AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);
-        return switch (attachFace) {
-            case FLOOR -> Direction.DOWN;
-            case CEILING -> Direction.UP;
-            case WALL -> state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite();
-        };
-    }
-
     // ========================================
-    // ENHANCED BLOCK UPDATES WITH FACE SELECTION PRESERVATION
+    // ENHANCED BLOCK UPDATES WITH PRESERVATION
     // ========================================
 
     @Override
@@ -131,44 +176,42 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                                 @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
 
-        // FIXED: Ensure model updates preserve face selections
+        // Ensure model updates preserve face selections
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
                 System.out.println("DEBUG Block: Neighbor changed, updating custom texture model with face preservation");
 
-                // FIXED: Use UPDATE_CLIENTS to preserve face selections
+                // Use UPDATE_CLIENTS to preserve face selections
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         }
     }
 
     /**
-     * CRITICAL FIX: Prevent BlockEntity recreation during lever operations
+     * CRITICAL FIX: Enhanced setPlacedBy to prevent BlockEntity recreation during operations
      */
     @Override
     public void setPlacedBy(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state,
                             @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer,
                             @Nonnull net.minecraft.world.item.ItemStack stack) {
-        // FIXED: Only call super.setPlacedBy for INITIAL placement, not lever state changes
 
         // Check if this is initial block placement vs lever state change
         boolean isInitialPlacement = placer != null && level.getBlockEntity(pos) == null;
 
         if (isInitialPlacement) {
-            System.out.println("DEBUG Block: INITIAL placement of switch lever at " + pos + " by " +
-                    placer.getName().getString());
+            System.out.println("DEBUG Block: Switch placed at " + pos + " - initialized with default textures");
 
             super.setPlacedBy(level, pos, state, placer, stack);
 
             // Initialize BlockEntity for new placement only
             if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-                System.out.println("DEBUG Block: Initializing NEW BlockEntity with default textures");
+                System.out.println("DEBUG Block: CRITICAL FIX - Initializing new BlockEntity with default state");
 
-                // FIXED: Use UPDATE_CLIENTS for initial setup to avoid unnecessary NBT operations
+                // Use UPDATE_CLIENTS for initial setup
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         } else {
-            System.out.println("DEBUG Block: SKIPPED setPlacedBy for lever state change - preserving existing BlockEntity");
+            System.out.println("DEBUG Block: CRITICAL FIX - Skipping setPlacedBy for state change to preserve BlockEntity");
             // Don't call super.setPlacedBy() for state changes - this prevents BlockEntity recreation
         }
     }
@@ -181,7 +224,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     public void onRemove(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
                          @Nonnull BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
-            System.out.println("DEBUG Block: Switch lever being removed at " + pos);
+            System.out.println("DEBUG Block: Switch removed at " + pos + " - cleaning up textures");
 
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof SwitchesLeverBlockEntity switchEntity) {

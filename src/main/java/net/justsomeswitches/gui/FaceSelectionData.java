@@ -10,9 +10,9 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * OPTIMIZED: Face Selection Data System with Minimal Debug Output
+ * OPTIMIZED: Face Selection Data System with Minimal Debug Output and Fixed Types
  * ---
- * CRITICAL FIX: Drastically reduced console output to eliminate performance issues
+ * CRITICAL FIX: Resolved Component and Map type mismatches for compilation
  */
 public class FaceSelectionData {
 
@@ -140,7 +140,7 @@ public class FaceSelectionData {
         @Nonnull
         public List<Component> getDisplayOptions() {
             return availableOptions.stream()
-                    .map(option -> Component.literal(option.getDisplayName()))
+                    .map(option -> (Component) Component.literal(option.getDisplayName()))
                     .toList();
         }
 
@@ -228,12 +228,12 @@ public class FaceSelectionData {
     }
 
     /**
-     * OPTIMIZED: Get texture variables with caching
+     * OPTIMIZED: Get texture variables with caching and FIXED TYPE
      */
     @Nonnull
     private static List<String> getTextureVariables(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo) {
-        // Check for common patterns first
-        Map<String, String> faceTextures = blockInfo.getFaceTextures();
+        // Check for common patterns first - FIXED: Use correct Direction->String map type
+        Map<Direction, String> faceTextures = blockInfo.getFaceTextures();
         Set<String> uniqueTextures = new HashSet<>(faceTextures.values());
 
         List<String> variables = new ArrayList<>();

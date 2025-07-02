@@ -16,9 +16,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Enhanced server-side menu for the Switch Texture customization GUI
+ * FIXED: Enhanced server-side menu with Critical Face Selection Persistence Fix
  * ---
- * FIXED: Menu-BlockEntity synchronization to prevent face selection resets
+ * CRITICAL FIX: Prevents face selection resets during menu operations
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -43,13 +43,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private final Level level;
     private SwitchesLeverBlockEntity blockEntity;
 
-    // Face selection state tracking
+    // CRITICAL FIX: Face selection state tracking with proper initialization
     private FaceSelectionData.FaceOption baseFaceSelection = FaceSelectionData.FaceOption.ALL;
     private FaceSelectionData.FaceOption toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
     private boolean inverted = false;
 
-    // FIXED: Flag to prevent auto-apply during initial loading
+    // CRITICAL FIX: Prevent overwriting during initialization
     private boolean isInitializing = true;
+    private boolean hasLoadedFromBlockEntity = false;
 
     /**
      * Constructor for the Switch Texture Menu with auto-apply system
@@ -60,8 +61,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         this.blockPos = blockPos;
         this.level = playerInventory.player.level();
 
-        // FIXED: Load BlockEntity data FIRST before creating container
-        loadBlockEntityData();
+        System.out.println("DEBUG Menu: Menu opened with AUTO-APPLY system for position " + blockPos);
+
+        // CRITICAL FIX: Load BlockEntity data FIRST and ONLY ONCE
+        loadBlockEntityDataOnce();
 
         // AUTO-APPLY: Container that triggers immediate application
         this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT) {
@@ -73,10 +76,9 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             }
         };
 
-        // FIXED: Load GUI slot items AFTER face selections are synced
+        // CRITICAL FIX: Load GUI slot items AFTER face selections are synced
         loadGuiSlotItems();
 
-        System.out.println("DEBUG Menu: Menu opened with AUTO-APPLY system for position " + blockPos);
         System.out.println("DEBUG Menu: Found BlockEntity: " + (blockEntity != null));
 
         // Add texture slots with auto-apply behavior
@@ -95,9 +97,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
 
-        // FIXED: Initialization complete - enable auto-apply
+        // CRITICAL FIX: Initialization complete - enable auto-apply
         this.isInitializing = false;
         System.out.println("DEBUG Menu: Initialization complete - auto-apply system enabled");
+        System.out.println("DEBUG Menu: Face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
     }
 
     /**
@@ -134,7 +137,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * AUTO-APPLY: Slot changed handler for immediate texture application
      */
     private void onSlotChangedAutoApply() {
-        // FIXED: Don't auto-apply during initialization to prevent face selection reset
+        // CRITICAL FIX: Don't auto-apply during initialization to prevent face selection reset
         if (isInitializing) {
             return;
         }
@@ -152,8 +155,8 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // Store GUI slot items
             blockEntity.setGuiSlotItems(toggleItem, baseItem);
 
-            // CRITICAL FIX: Apply current face selections and textures together
-            applyTexturesWithFaceSelections(toggleItem, baseItem);
+            // CRITICAL FIX: Apply current face selections and textures together atomically
+            applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
 
             // Force visual update
             forceBlockUpdate();
@@ -162,12 +165,15 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * CRITICAL FIX: Apply textures and face selections atomically
+     * CRITICAL FIX: Apply textures using MENU's current face selections (not BlockEntity's)
      */
-    private void applyTexturesWithFaceSelections(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
+    private void applyTexturesWithCurrentFaceSelections(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         if (blockEntity == null) return;
 
-        // STEP 1: Set face selections FIRST (this triggers NBT save)
+        System.out.println("DEBUG Menu: CRITICAL FIX - Applying textures with MENU's face selections");
+        System.out.println("DEBUG Menu: Current menu selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+
+        // STEP 1: Set face selections in BlockEntity from MENU's current values
         boolean baseFaceChanged = blockEntity.setBaseFaceSelection(baseFaceSelection);
         boolean toggleFaceChanged = blockEntity.setToggleFaceSelection(toggleFaceSelection);
         boolean invertedChanged = blockEntity.setInverted(inverted);
@@ -197,7 +203,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // STEP 3: Force immediate NBT save to prevent race conditions
         blockEntity.setChanged();
 
-        System.out.println("DEBUG Menu: Atomic texture+face application completed");
+        System.out.println("DEBUG Menu: CRITICAL FIX - Atomic texture+face application completed using menu's selections");
     }
 
     /**
@@ -215,40 +221,40 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * CRITICAL FIX: Load BlockEntity and sync face selections AFTER any preservation operations
+     * CRITICAL FIX: Load BlockEntity data ONLY ONCE during initialization
      */
-    private void loadBlockEntityData() {
+    private void loadBlockEntityDataOnce() {
+        if (hasLoadedFromBlockEntity) {
+            System.out.println("DEBUG Menu: CRITICAL FIX - Skipping BlockEntity reload to preserve face selections");
+            return;
+        }
+
         this.blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            System.out.println("DEBUG Menu: Loading BlockEntity data and syncing face selections");
+            System.out.println("DEBUG Menu: CRITICAL FIX - Loading BlockEntity data ONCE during initialization");
 
-            // CRITICAL FIX: Give BlockEntity time to complete any preservation operations
-            try {
-                Thread.sleep(10); // Brief pause to ensure preservation is complete
-            } catch (InterruptedException e) {
-                // Ignore
-            }
-
-            // CRITICAL: Sync face selections from BlockEntity to menu variables
+            // CRITICAL FIX: Only load if this is the FIRST time
             FaceSelectionData.FaceOption blockEntityBaseFace = blockEntity.getBaseFaceSelection();
             FaceSelectionData.FaceOption blockEntityToggleFace = blockEntity.getToggleFaceSelection();
             boolean blockEntityInverted = blockEntity.isInverted();
 
-            System.out.println("DEBUG Menu: BlockEntity current state - Base: " + blockEntityBaseFace +
+            System.out.println("DEBUG Menu: BlockEntity stored state - Base: " + blockEntityBaseFace +
                     ", Toggle: " + blockEntityToggleFace + ", Inverted: " + blockEntityInverted);
 
-            // CRITICAL FIX: Use BlockEntity's actual current values, not potentially stale values
+            // CRITICAL FIX: Use BlockEntity's values only on initial load
             this.baseFaceSelection = blockEntityBaseFace;
             this.toggleFaceSelection = blockEntityToggleFace;
             this.inverted = blockEntityInverted;
 
-            System.out.println("DEBUG Menu: SYNCHRONIZED to BlockEntity state - Base: " + baseFaceSelection +
+            this.hasLoadedFromBlockEntity = true;
+
+            System.out.println("DEBUG Menu: CRITICAL FIX - Initial sync complete - Base: " + baseFaceSelection +
                     ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
         }
     }
 
     /**
-     * FIXED: Load GUI slot items AFTER face selections are already synced
+     * Load GUI slot items AFTER face selections are already synced
      */
     private void loadGuiSlotItems() {
         if (blockEntity != null) {
@@ -263,7 +269,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
             System.out.println("DEBUG Menu: Loaded toggle item: " + toggleItem);
             System.out.println("DEBUG Menu: Loaded base item: " + baseItem);
-            System.out.println("DEBUG Menu: Face selections were already synced - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
         }
     }
 
@@ -275,71 +280,71 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // FIXED: FACE SELECTION METHODS WITH ATOMIC SYNC
+    // CRITICAL FIX: FACE SELECTION METHODS WITH MENU STATE PROTECTION
     // ========================================
 
     /**
-     * FIXED: Set face selection for base texture slot with atomic sync
+     * CRITICAL FIX: Set face selection for base texture slot with menu state protection
      */
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.baseFaceSelection != faceOption) {
-            System.out.println("DEBUG Menu: Base face selection changed from " + this.baseFaceSelection + " to " + faceOption);
+            System.out.println("DEBUG Menu: CRITICAL FIX - Base face selection changed from " + this.baseFaceSelection + " to " + faceOption);
             this.baseFaceSelection = faceOption;
 
-            // CRITICAL FIX: Immediately sync to BlockEntity and apply textures atomically
+            // CRITICAL FIX: Immediately apply with current menu state
             if (blockEntity != null && !isInitializing) {
                 ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
                 ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
-                // Apply both face selection and current texture atomically
-                applyTexturesWithFaceSelections(toggleItem, baseItem);
+                // Apply textures with MENU's current face selections
+                applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
                 forceBlockUpdate();
 
-                System.out.println("DEBUG Menu: Atomic base face selection sync completed");
+                System.out.println("DEBUG Menu: CRITICAL FIX - Base face selection applied with menu state protection");
             }
         }
     }
 
     /**
-     * FIXED: Set face selection for toggle texture slot with atomic sync
+     * CRITICAL FIX: Set face selection for toggle texture slot with menu state protection
      */
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         if (this.toggleFaceSelection != faceOption) {
-            System.out.println("DEBUG Menu: Toggle face selection changed from " + this.toggleFaceSelection + " to " + faceOption);
+            System.out.println("DEBUG Menu: CRITICAL FIX - Toggle face selection changed from " + this.toggleFaceSelection + " to " + faceOption);
             this.toggleFaceSelection = faceOption;
 
-            // CRITICAL FIX: Immediately sync to BlockEntity and apply textures atomically
+            // CRITICAL FIX: Immediately apply with current menu state
             if (blockEntity != null && !isInitializing) {
                 ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
                 ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
-                // Apply both face selection and current texture atomically
-                applyTexturesWithFaceSelections(toggleItem, baseItem);
+                // Apply textures with MENU's current face selections
+                applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
                 forceBlockUpdate();
 
-                System.out.println("DEBUG Menu: Atomic toggle face selection sync completed");
+                System.out.println("DEBUG Menu: CRITICAL FIX - Toggle face selection applied with menu state protection");
             }
         }
     }
 
     /**
-     * FIXED: Set inversion state with atomic sync
+     * CRITICAL FIX: Set inversion state with menu state protection
      */
     public void setInverted(boolean inverted) {
         if (this.inverted != inverted) {
-            System.out.println("DEBUG Menu: Inverted state changed from " + this.inverted + " to " + inverted);
+            System.out.println("DEBUG Menu: CRITICAL FIX - Inverted state changed from " + this.inverted + " to " + inverted);
             this.inverted = inverted;
 
-            // CRITICAL FIX: Immediately sync to BlockEntity and apply textures atomically
+            // CRITICAL FIX: Immediately apply with current menu state
             if (blockEntity != null && !isInitializing) {
                 ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
                 ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
-                // Apply both inversion state and current textures atomically
-                applyTexturesWithFaceSelections(toggleItem, baseItem);
+                // Apply textures with MENU's current face selections
+                applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
                 forceBlockUpdate();
 
-                System.out.println("DEBUG Menu: Atomic inversion state sync completed");
+                System.out.println("DEBUG Menu: CRITICAL FIX - Inversion state applied with menu state protection");
             }
         }
     }
@@ -445,7 +450,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
-        System.out.println("DEBUG Menu: GUI closed - auto-apply system handled all updates during interaction");
+        System.out.println("DEBUG Menu: CRITICAL FIX - GUI closed with face selections preserved in menu state");
     }
 
     @Override

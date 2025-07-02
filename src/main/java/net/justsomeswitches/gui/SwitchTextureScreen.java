@@ -68,6 +68,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private boolean showingLeftDropdown = false;
     private boolean showingRightDropdown = false;
 
+    // Debug control
+    private static final boolean MINIMAL_DEBUG = false; // Disable debug output
+
     public SwitchTextureScreen(@Nonnull SwitchTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
 
@@ -79,7 +82,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         this.inventoryLabelX = 8;   // Standard position
         this.inventoryLabelY = 86;  // Moved down 1px from current (was 85)
 
-        System.out.println("DEBUG Screen: Screen created with AUTO-APPLY system");
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG Screen: Screen created with AUTO-APPLY system");
+        }
     }
 
     @Override
@@ -89,12 +94,16 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int guiLeft = (this.width - this.imageWidth) / 2;
         int guiTop = (this.height - this.imageHeight) / 2;
 
-        System.out.println("DEBUG Screen: Initializing AUTO-APPLY GUI components at (" + guiLeft + ", " + guiTop + ")");
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG Screen: Initializing AUTO-APPLY GUI components at (" + guiLeft + ", " + guiTop + ")");
+        }
 
         // NO APPLY BUTTON in auto-apply system
         updateUIState();
 
-        System.out.println("DEBUG Screen: Auto-apply system initialized - no manual Apply button needed");
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG Screen: Auto-apply system initialized - no manual Apply button needed");
+        }
     }
 
     @Override
@@ -119,26 +128,32 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             leftDropdownState = newLeftState;
             lastLeftDropdownState = newLeftState;
             stateChanged = true;
-            System.out.println("DEBUG Screen: Left dropdown state changed - enabled: " + newLeftState.isEnabled() +
-                    ", selected: " + newLeftState.getSelectedOption());
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG Screen: Left dropdown state changed - enabled: " + newLeftState.isEnabled() +
+                        ", selected: " + newLeftState.getSelectedOption());
+            }
         }
 
         if (!dropdownStatesEqual(rightDropdownState, newRightState)) {
             rightDropdownState = newRightState;
             lastRightDropdownState = newRightState;
             stateChanged = true;
-            System.out.println("DEBUG Screen: Right dropdown state changed - enabled: " + newRightState.isEnabled() +
-                    ", selected: " + newRightState.getSelectedOption());
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG Screen: Right dropdown state changed - enabled: " + newRightState.isEnabled() +
+                        ", selected: " + newRightState.getSelectedOption());
+            }
         }
 
         if (checkboxState != newCheckboxState) {
             checkboxState = newCheckboxState;
             lastCheckboxState = newCheckboxState;
             stateChanged = true;
-            System.out.println("DEBUG Screen: Checkbox state changed to " + newCheckboxState);
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG Screen: Checkbox state changed to " + newCheckboxState);
+            }
         }
 
-        if (stateChanged) {
+        if (stateChanged && MINIMAL_DEBUG) {
             System.out.println("DEBUG Screen: UI state updated - auto-apply system handling changes");
         }
     }
@@ -162,13 +177,17 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int guiLeft = (this.width - this.imageWidth) / 2;
         int guiTop = (this.height - this.imageHeight) / 2;
 
-        System.out.println("DEBUG Screen: Mouse clicked at (" + mouseX + ", " + mouseY + ")");
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG Screen: Mouse clicked at (" + mouseX + ", " + mouseY + ")");
+        }
 
         // Handle dropdown clicks
         if (isWithinBounds(mouseX, mouseY, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y,
                 FACE_DROPDOWN_WIDTH, FACE_DROPDOWN_HEIGHT)) {
             if (leftDropdownState.isEnabled()) {
-                System.out.println("DEBUG Screen: Left dropdown clicked");
+                if (MINIMAL_DEBUG) {
+                    System.out.println("DEBUG Screen: Left dropdown clicked");
+                }
                 toggleLeftDropdown();
                 return true;
             }
@@ -177,7 +196,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         if (isWithinBounds(mouseX, mouseY, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y,
                 FACE_DROPDOWN_WIDTH, FACE_DROPDOWN_HEIGHT)) {
             if (rightDropdownState.isEnabled()) {
-                System.out.println("DEBUG Screen: Right dropdown clicked");
+                if (MINIMAL_DEBUG) {
+                    System.out.println("DEBUG Screen: Right dropdown clicked");
+                }
                 toggleRightDropdown();
                 return true;
             }
@@ -185,7 +206,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
         // Handle checkbox click (triggers auto-apply)
         if (isWithinBounds(mouseX, mouseY, guiLeft + INVERTED_X, guiTop + INVERTED_Y, 10, 10)) {
-            System.out.println("DEBUG Screen: Checkbox clicked - auto-apply will trigger");
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG Screen: Checkbox clicked - auto-apply will trigger");
+            }
             toggleInversionState();
             return true;
         }
@@ -201,7 +224,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
         // Close dropdowns if clicking elsewhere
         if (showingLeftDropdown || showingRightDropdown) {
-            System.out.println("DEBUG Screen: Closing dropdowns (clicked elsewhere)");
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG Screen: Closing dropdowns (clicked elsewhere)");
+            }
             showingLeftDropdown = false;
             showingRightDropdown = false;
             return true;
@@ -223,7 +248,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private void toggleLeftDropdown() {
         showingLeftDropdown = !showingLeftDropdown;
         showingRightDropdown = false; // Close other dropdown
-        System.out.println("DEBUG Screen: Left dropdown toggled - showing: " + showingLeftDropdown);
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG Screen: Left dropdown toggled - showing: " + showingLeftDropdown);
+        }
     }
 
     /**
@@ -232,7 +259,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private void toggleRightDropdown() {
         showingRightDropdown = !showingRightDropdown;
         showingLeftDropdown = false; // Close other dropdown
-        System.out.println("DEBUG Screen: Right dropdown toggled - showing: " + showingRightDropdown);
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG Screen: Right dropdown toggled - showing: " + showingRightDropdown);
+        }
     }
 
     /**
@@ -251,8 +280,10 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 // Selection made - triggers auto-apply
                 FaceSelectionData.FaceOption selectedOption = options.get(i);
 
-                System.out.println("DEBUG Screen: Dropdown selection - " + (isLeft ? "left" : "right") +
-                        " dropdown, selected: " + selectedOption + " - AUTO-APPLY will trigger");
+                if (MINIMAL_DEBUG) {
+                    System.out.println("DEBUG Screen: Dropdown selection - " + (isLeft ? "left" : "right") +
+                            " dropdown, selected: " + selectedOption + " - AUTO-APPLY will trigger");
+                }
 
                 if (isLeft) {
                     menu.setToggleFaceSelection(selectedOption);
@@ -275,7 +306,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private void toggleInversionState() {
         checkboxState = !checkboxState;
         menu.setInverted(checkboxState);
-        System.out.println("DEBUG Screen: Inversion toggled to " + checkboxState + " - AUTO-APPLY triggered");
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG Screen: Inversion toggled to " + checkboxState + " - AUTO-APPLY triggered");
+        }
     }
 
     @Override
