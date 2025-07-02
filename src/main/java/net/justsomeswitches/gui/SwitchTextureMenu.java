@@ -18,7 +18,7 @@ import javax.annotation.Nullable;
 /**
  * FIXED: Enhanced server-side menu with Critical Face Selection Persistence Fix
  * ---
- * CRITICAL FIX: Prevents face selection resets during menu operations
+ * CRITICAL FIX: Properly saves face selections to BlockEntity when GUI closes
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -447,10 +447,34 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         return BlockTextureAnalyzer.analyzeBlock(baseItem);
     }
 
+    /**
+     * CRITICAL FIX: Save menu face selections to BlockEntity when GUI closes
+     */
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
-        System.out.println("DEBUG Menu: CRITICAL FIX - GUI closed with face selections preserved in menu state");
+
+        System.out.println("DEBUG Menu: CRITICAL FIX - GUI closing, saving menu face selections to BlockEntity");
+
+        if (blockEntity != null) {
+            // CRITICAL FIX: Save menu's current face selections to BlockEntity permanently
+            boolean baseFaceChanged = blockEntity.setBaseFaceSelection(baseFaceSelection);
+            boolean toggleFaceChanged = blockEntity.setToggleFaceSelection(toggleFaceSelection);
+            boolean invertedChanged = blockEntity.setInverted(inverted);
+
+            System.out.println("DEBUG Menu: Final save - Base: " + baseFaceSelection + " (changed: " + baseFaceChanged + ")");
+            System.out.println("DEBUG Menu: Final save - Toggle: " + toggleFaceSelection + " (changed: " + toggleFaceChanged + ")");
+            System.out.println("DEBUG Menu: Final save - Inverted: " + inverted + " (changed: " + invertedChanged + ")");
+
+            // Force immediate save to NBT
+            blockEntity.setChanged();
+
+            System.out.println("DEBUG Menu: CRITICAL FIX - Menu face selections permanently saved to BlockEntity");
+        } else {
+            System.out.println("DEBUG Menu: WARNING - No BlockEntity available for final face selection save");
+        }
+
+        System.out.println("DEBUG Menu: CRITICAL FIX - GUI closed with face selections preserved in BlockEntity");
     }
 
     @Override

@@ -3,14 +3,14 @@ package net.justsomeswitches.config;
 /**
  * Global debug configuration for Just Some Switches mod
  * ---
- * USAGE: Set DEBUG_ENABLED = false for production to eliminate all debug output
+ * USAGE: Set DEBUG_ENABLED = true for testing the face selection fix
  */
 public class DebugConfig {
 
     /**
-     * Master debug switch - set to false for production builds
+     * Master debug switch - set to true for testing face selection fix
      */
-    public static final boolean DEBUG_ENABLED = false;  // ← Set to false for clean console
+    public static final boolean DEBUG_ENABLED = true;  // ← Set to true for testing
 
     /**
      * Specific debug categories
