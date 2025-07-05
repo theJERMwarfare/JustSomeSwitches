@@ -28,9 +28,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: Enhanced Switches Lever Block with Critical Face Selection Preservation
+ * CRITICAL FIX: Enhanced Switches Lever Block with Proper Preservation Timing
  * ---
- * CRITICAL FIX: Proper integration with BlockEntity preservation system
+ * SOLUTION: Ensure face selections are preserved BEFORE block state changes occur
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -112,7 +112,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // CRITICAL FIX: LEVER INTERACTION WITH ENHANCED PRESERVATION
+    // CRITICAL FIX: ENHANCED LEVER INTERACTION WITH PROPER PRESERVATION TIMING
     // ========================================
 
     @Override
@@ -126,15 +126,35 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
         System.out.println("DEBUG Block: Switch lever used at " + pos + " by player " + player.getName().getString());
 
-        // CRITICAL FIX: Preserve face selections BEFORE any state changes
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: CRITICAL FIX - Triggering face selection preservation");
+        // CRITICAL FIX: Get BlockEntity BEFORE any state changes
+        SwitchesLeverBlockEntity blockEntity = null;
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity entity) {
+            blockEntity = entity;
+        }
+
+        // CRITICAL FIX: If we have a BlockEntity, preserve face selections BEFORE state change
+        if (blockEntity != null) {
+            System.out.println("DEBUG Block: CRITICAL FIX - Preserving face selections before state change");
+            System.out.println("DEBUG Block: Current state before preservation - Base: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+
+            // CRITICAL FIX: Force immediate preservation
             blockEntity.preserveFaceSelectionsForStateChange();
+
+            // Wait a moment to ensure NBT save completes
+            try {
+                Thread.sleep(1); // Minimal delay to ensure NBT persistence
+            } catch (InterruptedException e) {
+                // Continue if interrupted
+            }
         }
 
         // Toggle the powered state (unchanged lever behavior)
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
+
+        System.out.println("DEBUG Block: CRITICAL FIX - Applying state change with preservation active");
+        System.out.println("DEBUG Block: State changing from powered=" + currentlyPowered + " to powered=" + !currentlyPowered);
 
         // CRITICAL FIX: Use Block.UPDATE_ALL for proper BlockEntity preservation
         level.setBlock(pos, newState, Block.UPDATE_ALL);
@@ -145,18 +165,19 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
 
-        // CRITICAL FIX: Force model update AFTER state change to ensure preservation is complete
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: Restoring face selections after lever toggle");
+        // CRITICAL FIX: Verify preservation worked and force visual update
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity updatedEntity) {
+            System.out.println("DEBUG Block: CRITICAL FIX - Verifying preservation after state change");
+            System.out.println("DEBUG Block: State after preservation - Base: " + updatedEntity.getBaseFaceSelection() +
+                    ", Toggle: " + updatedEntity.getToggleFaceSelection() + ", Inverted: " + updatedEntity.isInverted());
 
-            // Force immediate block update to refresh model rendering
+            // Force immediate visual refresh
             level.sendBlockUpdated(pos, newState, newState, Block.UPDATE_CLIENTS);
+            updatedEntity.requestModelDataUpdate();
 
-            // Force ModelData refresh
-            blockEntity.requestModelDataUpdate();
-
-            System.out.println("DEBUG Block: Triggered model update for switch at " + pos);
-            System.out.println("DEBUG Block: Face selection preservation completed");
+            System.out.println("DEBUG Block: Face selection preservation verification completed");
+        } else {
+            System.out.println("DEBUG Block: ERROR - BlockEntity not found after state change!");
         }
 
         return InteractionResult.sidedSuccess(level.isClientSide);

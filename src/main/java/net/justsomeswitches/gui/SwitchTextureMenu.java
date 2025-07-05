@@ -16,9 +16,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: Enhanced server-side menu with Critical Face Selection Persistence Fix
+ * CRITICAL FIX: Enhanced server-side menu with Immediate NBT Persistence for Face Selections
  * ---
- * CRITICAL FIX: Properly saves face selections to BlockEntity when GUI closes
+ * SOLUTION: Force immediate NBT saves when face selections change to prevent loss during state changes
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -165,7 +165,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * CRITICAL FIX: Apply textures using MENU's current face selections (not BlockEntity's)
+     * CRITICAL FIX: Apply textures using MENU's current face selections with immediate NBT save
      */
     private void applyTexturesWithCurrentFaceSelections(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         if (blockEntity == null) return;
@@ -200,8 +200,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             System.out.println("DEBUG Menu: Reset base texture to default");
         }
 
-        // STEP 3: Force immediate NBT save to prevent race conditions
-        blockEntity.setChanged();
+        // CRITICAL FIX: Force immediate NBT persistence from Menu side as well
+        if (baseFaceChanged || toggleFaceChanged || invertedChanged) {
+            System.out.println("DEBUG Menu: CRITICAL FIX - Triggering immediate NBT save due to face selection changes");
+            blockEntity.preserveFaceSelectionsForStateChange();
+        }
 
         System.out.println("DEBUG Menu: CRITICAL FIX - Atomic texture+face application completed using menu's selections");
     }
@@ -466,8 +469,9 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             System.out.println("DEBUG Menu: Final save - Toggle: " + toggleFaceSelection + " (changed: " + toggleFaceChanged + ")");
             System.out.println("DEBUG Menu: Final save - Inverted: " + inverted + " (changed: " + invertedChanged + ")");
 
-            // Force immediate save to NBT
-            blockEntity.setChanged();
+            // CRITICAL FIX: Force immediate NBT save on GUI close
+            System.out.println("DEBUG Menu: CRITICAL FIX - Forcing immediate NBT save on GUI close");
+            blockEntity.preserveFaceSelectionsForStateChange();
 
             System.out.println("DEBUG Menu: CRITICAL FIX - Menu face selections permanently saved to BlockEntity");
         } else {
