@@ -16,9 +16,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: Enhanced server-side menu with Critical Face Selection Persistence Fix
+ * ENHANCED DEBUG: Switch Texture Menu with Comprehensive Face Selection Tracking
  * ---
- * CRITICAL FIX: Properly saves face selections to BlockEntity when GUI closes
+ * CRITICAL DEBUG: Added detailed tracing to identify menu initialization issues
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -43,6 +43,9 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private final Level level;
     private SwitchesLeverBlockEntity blockEntity;
 
+    // ENHANCED DEBUG: Instance tracking
+    private final String menuInstanceId;
+
     // CRITICAL FIX: Face selection state tracking with proper initialization
     private FaceSelectionData.FaceOption baseFaceSelection = FaceSelectionData.FaceOption.ALL;
     private FaceSelectionData.FaceOption toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
@@ -53,15 +56,22 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private boolean hasLoadedFromBlockEntity = false;
 
     /**
-     * Constructor for the Switch Texture Menu with auto-apply system
+     * ENHANCED DEBUG: Constructor with comprehensive tracking
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
 
         this.blockPos = blockPos;
         this.level = playerInventory.player.level();
+        this.menuInstanceId = Integer.toHexString(System.identityHashCode(this));
 
-        System.out.println("DEBUG Menu: Menu opened with AUTO-APPLY system for position " + blockPos);
+        System.out.println("DEBUG Menu: ===== ENHANCED DEBUG - MENU CREATION START =====");
+        System.out.println("DEBUG Menu: Menu instance ID: " + menuInstanceId);
+        System.out.println("DEBUG Menu: Container ID: " + containerId);
+        System.out.println("DEBUG Menu: Block position: " + blockPos);
+        System.out.println("DEBUG Menu: Player: " + playerInventory.player.getName().getString());
+        System.out.println("DEBUG Menu: Initial menu state - Base: " + baseFaceSelection +
+                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
 
         // CRITICAL FIX: Load BlockEntity data FIRST and ONLY ONCE
         loadBlockEntityDataOnce();
@@ -80,6 +90,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         loadGuiSlotItems();
 
         System.out.println("DEBUG Menu: Found BlockEntity: " + (blockEntity != null));
+        if (blockEntity != null) {
+            String blockEntityId = Integer.toHexString(System.identityHashCode(blockEntity));
+            System.out.println("DEBUG Menu: BlockEntity instance ID: " + blockEntityId);
+        }
 
         // Add texture slots with auto-apply behavior
         addSlot(new EnhancedTextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
@@ -99,8 +113,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
         // CRITICAL FIX: Initialization complete - enable auto-apply
         this.isInitializing = false;
-        System.out.println("DEBUG Menu: Initialization complete - auto-apply system enabled");
-        System.out.println("DEBUG Menu: Face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
+        System.out.println("DEBUG Menu: ===== ENHANCED DEBUG - MENU CREATION END =====");
+        System.out.println("DEBUG Menu: Final initialization state - Base: " + baseFaceSelection +
+                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+        System.out.println("DEBUG Menu: Auto-apply system enabled");
     }
 
     /**
@@ -139,11 +155,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private void onSlotChangedAutoApply() {
         // CRITICAL FIX: Don't auto-apply during initialization to prevent face selection reset
         if (isInitializing) {
+            System.out.println("DEBUG Menu: Skipping auto-apply during initialization (instance: " + menuInstanceId + ")");
             return;
         }
 
         if (blockEntity != null) {
-            System.out.println("DEBUG Menu: AUTO-APPLY triggered by slot change");
+            System.out.println("DEBUG Menu: AUTO-APPLY triggered by slot change (instance: " + menuInstanceId + ")");
 
             // Get items from the GUI slots
             ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
@@ -160,7 +177,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
             // Force visual update
             forceBlockUpdate();
-            System.out.println("DEBUG Menu: Auto-apply completed with visual update");
+            System.out.println("DEBUG Menu: Auto-apply completed with visual update (instance: " + menuInstanceId + ")");
         }
     }
 
@@ -170,7 +187,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private void applyTexturesWithCurrentFaceSelections(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         if (blockEntity == null) return;
 
-        System.out.println("DEBUG Menu: CRITICAL FIX - Applying textures with MENU's face selections");
+        System.out.println("DEBUG Menu: CRITICAL FIX - Applying textures with MENU's face selections (instance: " + menuInstanceId + ")");
         System.out.println("DEBUG Menu: Current menu selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
 
         // STEP 1: Set face selections in BlockEntity from MENU's current values
@@ -221,19 +238,27 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * CRITICAL FIX: Load BlockEntity data ONLY ONCE during initialization
+     * ENHANCED DEBUG: Load BlockEntity data ONLY ONCE during initialization with comprehensive tracking
      */
     private void loadBlockEntityDataOnce() {
+        System.out.println("DEBUG Menu: === ENHANCED DEBUG - BLOCKENTITY LOADING START ===");
+        System.out.println("DEBUG Menu: Menu instance: " + menuInstanceId);
+        System.out.println("DEBUG Menu: hasLoadedFromBlockEntity: " + hasLoadedFromBlockEntity);
+
         if (hasLoadedFromBlockEntity) {
             System.out.println("DEBUG Menu: CRITICAL FIX - Skipping BlockEntity reload to preserve face selections");
+            System.out.println("DEBUG Menu: Current preserved selections - Base: " + baseFaceSelection +
+                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
             return;
         }
 
         this.blockEntity = getBlockEntity();
         if (blockEntity != null) {
+            String blockEntityId = Integer.toHexString(System.identityHashCode(blockEntity));
             System.out.println("DEBUG Menu: CRITICAL FIX - Loading BlockEntity data ONCE during initialization");
+            System.out.println("DEBUG Menu: BlockEntity instance ID: " + blockEntityId);
 
-            // CRITICAL FIX: Only load if this is the FIRST time
+            // ENHANCED DEBUG: Show current BlockEntity state
             FaceSelectionData.FaceOption blockEntityBaseFace = blockEntity.getBaseFaceSelection();
             FaceSelectionData.FaceOption blockEntityToggleFace = blockEntity.getToggleFaceSelection();
             boolean blockEntityInverted = blockEntity.isInverted();
@@ -254,19 +279,39 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             System.out.println("DEBUG Menu: AFTER SYNC - Menu state - Base: " + baseFaceSelection +
                     ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
 
+            // ENHANCED DEBUG: Verify sync was successful
+            boolean baseSyncSuccess = (baseFaceSelection == blockEntityBaseFace);
+            boolean toggleSyncSuccess = (toggleFaceSelection == blockEntityToggleFace);
+            boolean invertedSyncSuccess = (inverted == blockEntityInverted);
+
+            System.out.println("DEBUG Menu: SYNC VERIFICATION - Base: " + baseSyncSuccess +
+                    ", Toggle: " + toggleSyncSuccess + ", Inverted: " + invertedSyncSuccess);
+
+            if (baseSyncSuccess && toggleSyncSuccess && invertedSyncSuccess) {
+                System.out.println("DEBUG Menu: ✅ SYNC SUCCESSFUL - All face selections loaded correctly");
+            } else {
+                System.out.println("DEBUG Menu: ❌ SYNC FAILED - Face selections not loaded correctly");
+            }
+
             this.hasLoadedFromBlockEntity = true;
 
             System.out.println("DEBUG Menu: CRITICAL FIX - Initial sync complete - Base: " + baseFaceSelection +
                     ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
         } else {
-            System.out.println("DEBUG Menu: ERROR - No BlockEntity found at position " + blockPos);
+            System.out.println("DEBUG Menu: ⚠️ ERROR - No BlockEntity found at position " + blockPos);
+            System.out.println("DEBUG Menu: BlockState at position: " + (level != null ? level.getBlockState(blockPos) : "null level"));
         }
+
+        System.out.println("DEBUG Menu: === ENHANCED DEBUG - BLOCKENTITY LOADING END ===");
     }
 
     /**
      * Load GUI slot items AFTER face selections are already synced
      */
     private void loadGuiSlotItems() {
+        System.out.println("DEBUG Menu: === LOADING GUI SLOT ITEMS ===");
+        System.out.println("DEBUG Menu: Menu instance: " + menuInstanceId);
+
         if (blockEntity != null) {
             System.out.println("DEBUG Menu: Loading GUI slot items (face selections already synced)");
 
@@ -279,7 +324,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
             System.out.println("DEBUG Menu: Loaded toggle item: " + toggleItem);
             System.out.println("DEBUG Menu: Loaded base item: " + baseItem);
+        } else {
+            System.out.println("DEBUG Menu: ⚠️ No BlockEntity available for GUI slot loading");
         }
+
+        System.out.println("DEBUG Menu: === GUI SLOT LOADING COMPLETE ===");
     }
 
     /**
@@ -290,19 +339,25 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // CRITICAL FIX: FACE SELECTION METHODS WITH MENU STATE PROTECTION
+    // ENHANCED DEBUG: FACE SELECTION METHODS WITH COMPREHENSIVE TRACKING
     // ========================================
 
     /**
-     * CRITICAL FIX: Set face selection for base texture slot with menu state protection
+     * ENHANCED DEBUG: Set face selection for base texture slot with comprehensive tracking
      */
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
+        System.out.println("DEBUG Menu: === SETTING BASE FACE SELECTION ===");
+        System.out.println("DEBUG Menu: Menu instance: " + menuInstanceId);
+        System.out.println("DEBUG Menu: Current base selection: " + this.baseFaceSelection);
+        System.out.println("DEBUG Menu: New base selection: " + faceOption);
+
         if (this.baseFaceSelection != faceOption) {
             System.out.println("DEBUG Menu: CRITICAL FIX - Base face selection changed from " + this.baseFaceSelection + " to " + faceOption);
             this.baseFaceSelection = faceOption;
 
             // CRITICAL FIX: Immediately apply with current menu state
             if (blockEntity != null && !isInitializing) {
+                System.out.println("DEBUG Menu: Applying base face change immediately");
                 ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
                 ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
@@ -311,20 +366,33 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                 forceBlockUpdate();
 
                 System.out.println("DEBUG Menu: CRITICAL FIX - Base face selection applied with menu state protection");
+            } else {
+                System.out.println("DEBUG Menu: Skipping immediate application - " +
+                        (blockEntity == null ? "no BlockEntity" : "initializing"));
             }
+        } else {
+            System.out.println("DEBUG Menu: Base face selection unchanged - no action needed");
         }
+
+        System.out.println("DEBUG Menu: === BASE FACE SELECTION SET COMPLETE ===");
     }
 
     /**
-     * CRITICAL FIX: Set face selection for toggle texture slot with menu state protection
+     * ENHANCED DEBUG: Set face selection for toggle texture slot with comprehensive tracking
      */
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
+        System.out.println("DEBUG Menu: === SETTING TOGGLE FACE SELECTION ===");
+        System.out.println("DEBUG Menu: Menu instance: " + menuInstanceId);
+        System.out.println("DEBUG Menu: Current toggle selection: " + this.toggleFaceSelection);
+        System.out.println("DEBUG Menu: New toggle selection: " + faceOption);
+
         if (this.toggleFaceSelection != faceOption) {
             System.out.println("DEBUG Menu: CRITICAL FIX - Toggle face selection changed from " + this.toggleFaceSelection + " to " + faceOption);
             this.toggleFaceSelection = faceOption;
 
             // CRITICAL FIX: Immediately apply with current menu state
             if (blockEntity != null && !isInitializing) {
+                System.out.println("DEBUG Menu: Applying toggle face change immediately");
                 ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
                 ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
@@ -333,20 +401,33 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                 forceBlockUpdate();
 
                 System.out.println("DEBUG Menu: CRITICAL FIX - Toggle face selection applied with menu state protection");
+            } else {
+                System.out.println("DEBUG Menu: Skipping immediate application - " +
+                        (blockEntity == null ? "no BlockEntity" : "initializing"));
             }
+        } else {
+            System.out.println("DEBUG Menu: Toggle face selection unchanged - no action needed");
         }
+
+        System.out.println("DEBUG Menu: === TOGGLE FACE SELECTION SET COMPLETE ===");
     }
 
     /**
-     * CRITICAL FIX: Set inversion state with menu state protection
+     * ENHANCED DEBUG: Set inversion state with comprehensive tracking
      */
     public void setInverted(boolean inverted) {
+        System.out.println("DEBUG Menu: === SETTING INVERTED STATE ===");
+        System.out.println("DEBUG Menu: Menu instance: " + menuInstanceId);
+        System.out.println("DEBUG Menu: Current inverted: " + this.inverted);
+        System.out.println("DEBUG Menu: New inverted: " + inverted);
+
         if (this.inverted != inverted) {
             System.out.println("DEBUG Menu: CRITICAL FIX - Inverted state changed from " + this.inverted + " to " + inverted);
             this.inverted = inverted;
 
             // CRITICAL FIX: Immediately apply with current menu state
             if (blockEntity != null && !isInitializing) {
+                System.out.println("DEBUG Menu: Applying inverted change immediately");
                 ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
                 ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
 
@@ -355,8 +436,15 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                 forceBlockUpdate();
 
                 System.out.println("DEBUG Menu: CRITICAL FIX - Inversion state applied with menu state protection");
+            } else {
+                System.out.println("DEBUG Menu: Skipping immediate application - " +
+                        (blockEntity == null ? "no BlockEntity" : "initializing"));
             }
+        } else {
+            System.out.println("DEBUG Menu: Inverted state unchanged - no action needed");
         }
+
+        System.out.println("DEBUG Menu: === INVERTED STATE SET COMPLETE ===");
     }
 
     /**
@@ -468,15 +556,30 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * CRITICAL FIX: Save menu face selections to BlockEntity when GUI closes
+     * ENHANCED DEBUG: Save menu face selections to BlockEntity when GUI closes
      */
     @Override
     public void removed(@Nonnull Player player) {
+        System.out.println("DEBUG Menu: === ENHANCED DEBUG - GUI CLOSING ===");
+        System.out.println("DEBUG Menu: Menu instance: " + menuInstanceId);
+        System.out.println("DEBUG Menu: Player: " + player.getName().getString());
+
         super.removed(player);
 
         System.out.println("DEBUG Menu: CRITICAL FIX - GUI closing, saving menu face selections to BlockEntity");
 
         if (blockEntity != null) {
+            String blockEntityId = Integer.toHexString(System.identityHashCode(blockEntity));
+            System.out.println("DEBUG Menu: Target BlockEntity ID: " + blockEntityId);
+
+            // ENHANCED DEBUG: Show current menu state before save
+            System.out.println("DEBUG Menu: Current menu state before save - Base: " + baseFaceSelection +
+                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+
+            // ENHANCED DEBUG: Show current BlockEntity state before save
+            System.out.println("DEBUG Menu: Current BlockEntity state before save - Base: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+
             // CRITICAL FIX: Save menu's current face selections to BlockEntity permanently
             boolean baseFaceChanged = blockEntity.setBaseFaceSelection(baseFaceSelection);
             boolean toggleFaceChanged = blockEntity.setToggleFaceSelection(toggleFaceSelection);
@@ -486,15 +589,19 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             System.out.println("DEBUG Menu: Final save - Toggle: " + toggleFaceSelection + " (changed: " + toggleFaceChanged + ")");
             System.out.println("DEBUG Menu: Final save - Inverted: " + inverted + " (changed: " + invertedChanged + ")");
 
+            // ENHANCED DEBUG: Show final BlockEntity state after save
+            System.out.println("DEBUG Menu: Final BlockEntity state after save - Base: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+
             // Force immediate save to NBT
             blockEntity.setChanged();
 
             System.out.println("DEBUG Menu: CRITICAL FIX - Menu face selections permanently saved to BlockEntity");
         } else {
-            System.out.println("DEBUG Menu: WARNING - No BlockEntity available for final face selection save");
+            System.out.println("DEBUG Menu: ⚠️ WARNING - No BlockEntity available for final face selection save");
         }
 
-        System.out.println("DEBUG Menu: CRITICAL FIX - GUI closed with face selections preserved in BlockEntity");
+        System.out.println("DEBUG Menu: === ENHANCED DEBUG - GUI CLOSED ===");
     }
 
     @Override
@@ -551,7 +658,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         }
 
         // AUTO-APPLY: Shift-click operations are handled by slot change events
-        System.out.println("DEBUG Menu: Shift-click operation completed - auto-apply handled updates");
+        System.out.println("DEBUG Menu: Shift-click operation completed - auto-apply handled updates (instance: " + menuInstanceId + ")");
 
         return itemStack;
     }

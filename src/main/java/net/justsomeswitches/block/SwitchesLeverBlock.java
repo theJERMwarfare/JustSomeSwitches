@@ -29,9 +29,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: Enhanced Switches Lever Block with CRITICAL NBT Preservation Fix
+ * ENHANCED DEBUG: Switches Lever Block with Comprehensive Face Selection Preservation Tracking
  * ---
- * CRITICAL FIX: Saves NBT data BEFORE block state change to prevent data loss
+ * CRITICAL DEBUG: Added detailed tracing to identify where face selection data is lost
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -55,7 +55,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
     public SwitchesLeverBlock(Properties properties) {
         super(properties);
-        System.out.println("DEBUG Block: SwitchesLeverBlock created with correct direction-aware bounding box");
+        System.out.println("DEBUG Block: SwitchesLeverBlock created with comprehensive debug tracking");
     }
 
     // ========================================
@@ -96,7 +96,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Override
     @Nullable
     public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
-        System.out.println("DEBUG Block: Switch placed at " + pos + " - initialized with default textures");
+        System.out.println("DEBUG Block: ENHANCED DEBUG - newBlockEntity called at " + pos);
         return new SwitchesLeverBlockEntity(pos, state);
     }
 
@@ -113,7 +113,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // CRITICAL FIX: LEVER INTERACTION WITH NBT PRESERVATION
+    // ENHANCED DEBUG: LEVER INTERACTION WITH COMPREHENSIVE TRACKING
     // ========================================
 
     @Override
@@ -125,53 +125,129 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
+        System.out.println("DEBUG Block: ===== ENHANCED DEBUG - LEVER TOGGLE SEQUENCE START =====");
         System.out.println("DEBUG Block: Switch lever used at " + pos + " by player " + player.getName().getString());
 
-        // CRITICAL FIX: Save NBT data BEFORE any state changes
+        // ENHANCED DEBUG: Get current powered state
+        boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
+        boolean newPoweredState = !currentlyPowered;
+        System.out.println("DEBUG Block: State change - Current: " + currentlyPowered + " → New: " + newPoweredState);
+
+        // ENHANCED DEBUG: Detailed BlockEntity inspection BEFORE any changes
+        SwitchesLeverBlockEntity originalBlockEntity = null;
         CompoundTag preservedNBT = null;
+        String originalInstanceId = null;
+
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: CRITICAL FIX - Saving NBT data BEFORE state change");
+            originalBlockEntity = blockEntity;
+            originalInstanceId = Integer.toHexString(System.identityHashCode(blockEntity));
 
-            // Create NBT backup using public method
+            System.out.println("DEBUG Block: BEFORE - BlockEntity instance ID: " + originalInstanceId);
+            System.out.println("DEBUG Block: BEFORE - Face selections - Base: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+            System.out.println("DEBUG Block: BEFORE - Textures - Base: " + blockEntity.getBaseTexture() +
+                    ", Toggle: " + blockEntity.getToggleTexture());
+
+            // CRITICAL: Save complete NBT data
             preservedNBT = blockEntity.saveToNBT();
+            System.out.println("DEBUG Block: NBT BACKUP - Created backup with " + preservedNBT.getAllKeys().size() + " keys");
 
-            System.out.println("DEBUG Block: NBT preserved with face selections - Base: " +
-                    preservedNBT.getString("base_face_selection") + ", Toggle: " +
-                    preservedNBT.getString("toggle_face_selection"));
+            // ENHANCED DEBUG: Verify NBT contains face selection data
+            if (preservedNBT.contains("base_face_selection")) {
+                System.out.println("DEBUG Block: NBT BACKUP - Base face: '" + preservedNBT.getString("base_face_selection") + "'");
+            } else {
+                System.out.println("DEBUG Block: ⚠️ NBT BACKUP - Missing base_face_selection key!");
+            }
+
+            if (preservedNBT.contains("toggle_face_selection")) {
+                System.out.println("DEBUG Block: NBT BACKUP - Toggle face: '" + preservedNBT.getString("toggle_face_selection") + "'");
+            } else {
+                System.out.println("DEBUG Block: ⚠️ NBT BACKUP - Missing toggle_face_selection key!");
+            }
+
+            System.out.println("DEBUG Block: NBT BACKUP - Complete NBT keys: " + preservedNBT.getAllKeys());
+        } else {
+            System.out.println("DEBUG Block: ⚠️ ERROR - No BlockEntity found before state change!");
         }
 
-        // Toggle the powered state (unchanged lever behavior)
-        boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
-        BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
+        // CRITICAL: Change block state
+        BlockState newState = state.setValue(BlockStateProperties.POWERED, newPoweredState);
+        System.out.println("DEBUG Block: Calling setBlock() - This may recreate BlockEntity");
 
-        // CRITICAL FIX: Set block state with preserved NBT restoration
         level.setBlock(pos, newState, Block.UPDATE_ALL);
 
-        System.out.println("DEBUG Block: Lever state changed from " + currentlyPowered + " to " + !currentlyPowered);
+        System.out.println("DEBUG Block: setBlock() completed");
 
-        // CRITICAL FIX: Restore NBT data AFTER state change
-        if (preservedNBT != null && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity newBlockEntity) {
-            System.out.println("DEBUG Block: CRITICAL FIX - Restoring NBT data AFTER state change");
+        // ENHANCED DEBUG: Detailed BlockEntity inspection AFTER state change
+        SwitchesLeverBlockEntity newBlockEntity = null;
+        String newInstanceId = null;
 
-            // Restore preserved data using public method
-            newBlockEntity.loadFromNBT(preservedNBT);
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            newBlockEntity = blockEntity;
+            newInstanceId = Integer.toHexString(System.identityHashCode(blockEntity));
 
-            System.out.println("DEBUG Block: NBT restored with face selections - Base: " +
-                    newBlockEntity.getBaseFaceSelection() + ", Toggle: " +
-                    newBlockEntity.getToggleFaceSelection());
+            System.out.println("DEBUG Block: AFTER - BlockEntity instance ID: " + newInstanceId);
 
-            // Force immediate block update to refresh model rendering
-            level.sendBlockUpdated(pos, newState, newState, Block.UPDATE_CLIENTS);
+            // ENHANCED DEBUG: Check if BlockEntity was recreated
+            if (originalInstanceId != null && !originalInstanceId.equals(newInstanceId)) {
+                System.out.println("DEBUG Block: ⚠️ BLOCKENTITY RECREATED - Old ID: " + originalInstanceId + " → New ID: " + newInstanceId);
+            } else if (originalInstanceId != null) {
+                System.out.println("DEBUG Block: ✅ BLOCKENTITY PRESERVED - Same instance: " + newInstanceId);
+            }
 
-            // Force ModelData refresh
-            newBlockEntity.requestModelDataUpdate();
+            System.out.println("DEBUG Block: AFTER (before restore) - Face selections - Base: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
 
-            System.out.println("DEBUG Block: CRITICAL FIX - Face selection preservation completed successfully");
+            // CRITICAL: Restore NBT data if we have it
+            if (preservedNBT != null) {
+                System.out.println("DEBUG Block: NBT RESTORE - Attempting to restore from backup");
+
+                // Enhanced debug: Show what we're about to restore
+                System.out.println("DEBUG Block: NBT RESTORE - Restoring Base face: '" +
+                        preservedNBT.getString("base_face_selection") + "'");
+                System.out.println("DEBUG Block: NBT RESTORE - Restoring Toggle face: '" +
+                        preservedNBT.getString("toggle_face_selection") + "'");
+
+                blockEntity.loadFromNBT(preservedNBT);
+
+                System.out.println("DEBUG Block: NBT RESTORE - Completed");
+                System.out.println("DEBUG Block: AFTER (after restore) - Face selections - Base: " + blockEntity.getBaseFaceSelection() +
+                        ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+
+                // ENHANCED DEBUG: Verify restore was successful
+                if (originalBlockEntity != null) {
+                    boolean baseFaceMatch = blockEntity.getBaseFaceSelection() == originalBlockEntity.getBaseFaceSelection();
+                    boolean toggleFaceMatch = blockEntity.getToggleFaceSelection() == originalBlockEntity.getToggleFaceSelection();
+                    boolean invertedMatch = blockEntity.isInverted() == originalBlockEntity.isInverted();
+
+                    System.out.println("DEBUG Block: RESTORE VERIFICATION - Base face match: " + baseFaceMatch);
+                    System.out.println("DEBUG Block: RESTORE VERIFICATION - Toggle face match: " + toggleFaceMatch);
+                    System.out.println("DEBUG Block: RESTORE VERIFICATION - Inverted match: " + invertedMatch);
+
+                    if (baseFaceMatch && toggleFaceMatch && invertedMatch) {
+                        System.out.println("DEBUG Block: ✅ NBT RESTORE SUCCESSFUL - All face selections preserved");
+                    } else {
+                        System.out.println("DEBUG Block: ❌ NBT RESTORE FAILED - Face selections not preserved");
+                    }
+                }
+
+                // Force immediate block update and model data refresh
+                level.sendBlockUpdated(pos, newState, newState, Block.UPDATE_CLIENTS);
+                blockEntity.requestModelDataUpdate();
+
+                System.out.println("DEBUG Block: Visual update triggered");
+            } else {
+                System.out.println("DEBUG Block: ⚠️ No NBT backup available for restore");
+            }
+        } else {
+            System.out.println("DEBUG Block: ⚠️ ERROR - No BlockEntity found after state change!");
         }
 
-        // Play standard lever click sound with pitch variation
+        // Play standard lever click sound
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
+
+        System.out.println("DEBUG Block: ===== ENHANCED DEBUG - LEVER TOGGLE SEQUENCE END =====");
 
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
@@ -194,15 +270,13 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
                 System.out.println("DEBUG Block: Neighbor changed, updating custom texture model with face preservation");
-
-                // Use UPDATE_CLIENTS to preserve face selections
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         }
     }
 
     /**
-     * CRITICAL FIX: Enhanced setPlacedBy to prevent BlockEntity recreation during operations
+     * ENHANCED DEBUG: Enhanced setPlacedBy with detailed tracking
      */
     @Override
     public void setPlacedBy(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state,
@@ -212,21 +286,19 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         // Check if this is initial block placement vs lever state change
         boolean isInitialPlacement = placer != null && level.getBlockEntity(pos) == null;
 
-        if (isInitialPlacement) {
-            System.out.println("DEBUG Block: Switch placed at " + pos + " - initialized with default textures");
+        System.out.println("DEBUG Block: setPlacedBy called - Initial placement: " + isInitialPlacement +
+                ", Placer: " + (placer != null ? placer.getName().getString() : "null"));
 
+        if (isInitialPlacement) {
+            System.out.println("DEBUG Block: Processing initial block placement");
             super.setPlacedBy(level, pos, state, placer, stack);
 
-            // Initialize BlockEntity for new placement only
             if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-                System.out.println("DEBUG Block: CRITICAL FIX - Initializing new BlockEntity with default state");
-
-                // Use UPDATE_CLIENTS for initial setup
+                System.out.println("DEBUG Block: Initializing new BlockEntity with default state");
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         } else {
-            System.out.println("DEBUG Block: CRITICAL FIX - Skipping setPlacedBy for state change to preserve BlockEntity");
-            // Don't call super.setPlacedBy() for state changes - this prevents BlockEntity recreation
+            System.out.println("DEBUG Block: Skipping setPlacedBy for state change to preserve BlockEntity");
         }
     }
 
@@ -251,17 +323,23 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     /**
-     * Debug method to check current texture state (for development use)
+     * ENHANCED DEBUG: Check current texture state with comprehensive output
      */
     public void debugTextureState(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: Switch at " + pos +
-                    " - Base: " + blockEntity.getBaseTexture() +
-                    ", Toggle: " + blockEntity.getToggleTexture() +
-                    ", BaseFace: " + blockEntity.getBaseFaceSelection() +
-                    ", ToggleFace: " + blockEntity.getToggleFaceSelection() +
-                    ", Inverted: " + blockEntity.isInverted() +
-                    ", HasCustom: " + blockEntity.hasCustomTextures());
+            String instanceId = Integer.toHexString(System.identityHashCode(blockEntity));
+            System.out.println("DEBUG Block: === TEXTURE STATE DEBUG ===");
+            System.out.println("DEBUG Block: Position: " + pos);
+            System.out.println("DEBUG Block: BlockEntity ID: " + instanceId);
+            System.out.println("DEBUG Block: Base texture: " + blockEntity.getBaseTexture());
+            System.out.println("DEBUG Block: Toggle texture: " + blockEntity.getToggleTexture());
+            System.out.println("DEBUG Block: Base face: " + blockEntity.getBaseFaceSelection());
+            System.out.println("DEBUG Block: Toggle face: " + blockEntity.getToggleFaceSelection());
+            System.out.println("DEBUG Block: Inverted: " + blockEntity.isInverted());
+            System.out.println("DEBUG Block: Has custom: " + blockEntity.hasCustomTextures());
+            System.out.println("DEBUG Block: ========================");
+        } else {
+            System.out.println("DEBUG Block: No BlockEntity found at " + pos);
         }
     }
 }
