@@ -4,6 +4,7 @@ import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -28,9 +29,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * CRITICAL FIX: Enhanced Switches Lever Block with Proper Preservation Timing
+ * FIXED: Enhanced Switches Lever Block with CRITICAL NBT Preservation Fix
  * ---
- * SOLUTION: Ensure face selections are preserved BEFORE block state changes occur
+ * CRITICAL FIX: Saves NBT data BEFORE block state change to prevent data loss
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -112,7 +113,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // CRITICAL FIX: ENHANCED LEVER INTERACTION WITH PROPER PRESERVATION TIMING
+    // CRITICAL FIX: LEVER INTERACTION WITH NBT PRESERVATION
     // ========================================
 
     @Override
@@ -126,59 +127,51 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
         System.out.println("DEBUG Block: Switch lever used at " + pos + " by player " + player.getName().getString());
 
-        // CRITICAL FIX: Get BlockEntity BEFORE any state changes
-        SwitchesLeverBlockEntity blockEntity = null;
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity entity) {
-            blockEntity = entity;
-        }
+        // CRITICAL FIX: Save NBT data BEFORE any state changes
+        CompoundTag preservedNBT = null;
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("DEBUG Block: CRITICAL FIX - Saving NBT data BEFORE state change");
 
-        // CRITICAL FIX: If we have a BlockEntity, preserve face selections BEFORE state change
-        if (blockEntity != null) {
-            System.out.println("DEBUG Block: CRITICAL FIX - Preserving face selections before state change");
-            System.out.println("DEBUG Block: Current state before preservation - Base: " + blockEntity.getBaseFaceSelection() +
-                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+            // Create NBT backup using public method
+            preservedNBT = blockEntity.saveToNBT();
 
-            // CRITICAL FIX: Force immediate preservation
-            blockEntity.preserveFaceSelectionsForStateChange();
-
-            // Wait a moment to ensure NBT save completes
-            try {
-                Thread.sleep(1); // Minimal delay to ensure NBT persistence
-            } catch (InterruptedException e) {
-                // Continue if interrupted
-            }
+            System.out.println("DEBUG Block: NBT preserved with face selections - Base: " +
+                    preservedNBT.getString("base_face_selection") + ", Toggle: " +
+                    preservedNBT.getString("toggle_face_selection"));
         }
 
         // Toggle the powered state (unchanged lever behavior)
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
 
-        System.out.println("DEBUG Block: CRITICAL FIX - Applying state change with preservation active");
-        System.out.println("DEBUG Block: State changing from powered=" + currentlyPowered + " to powered=" + !currentlyPowered);
-
-        // CRITICAL FIX: Use Block.UPDATE_ALL for proper BlockEntity preservation
+        // CRITICAL FIX: Set block state with preserved NBT restoration
         level.setBlock(pos, newState, Block.UPDATE_ALL);
 
         System.out.println("DEBUG Block: Lever state changed from " + currentlyPowered + " to " + !currentlyPowered);
 
+        // CRITICAL FIX: Restore NBT data AFTER state change
+        if (preservedNBT != null && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity newBlockEntity) {
+            System.out.println("DEBUG Block: CRITICAL FIX - Restoring NBT data AFTER state change");
+
+            // Restore preserved data using public method
+            newBlockEntity.loadFromNBT(preservedNBT);
+
+            System.out.println("DEBUG Block: NBT restored with face selections - Base: " +
+                    newBlockEntity.getBaseFaceSelection() + ", Toggle: " +
+                    newBlockEntity.getToggleFaceSelection());
+
+            // Force immediate block update to refresh model rendering
+            level.sendBlockUpdated(pos, newState, newState, Block.UPDATE_CLIENTS);
+
+            // Force ModelData refresh
+            newBlockEntity.requestModelDataUpdate();
+
+            System.out.println("DEBUG Block: CRITICAL FIX - Face selection preservation completed successfully");
+        }
+
         // Play standard lever click sound with pitch variation
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
-
-        // CRITICAL FIX: Verify preservation worked and force visual update
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity updatedEntity) {
-            System.out.println("DEBUG Block: CRITICAL FIX - Verifying preservation after state change");
-            System.out.println("DEBUG Block: State after preservation - Base: " + updatedEntity.getBaseFaceSelection() +
-                    ", Toggle: " + updatedEntity.getToggleFaceSelection() + ", Inverted: " + updatedEntity.isInverted());
-
-            // Force immediate visual refresh
-            level.sendBlockUpdated(pos, newState, newState, Block.UPDATE_CLIENTS);
-            updatedEntity.requestModelDataUpdate();
-
-            System.out.println("DEBUG Block: Face selection preservation verification completed");
-        } else {
-            System.out.println("DEBUG Block: ERROR - BlockEntity not found after state change!");
-        }
 
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

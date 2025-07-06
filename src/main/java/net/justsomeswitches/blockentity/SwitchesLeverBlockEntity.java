@@ -23,9 +23,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * CRITICAL FIX: Enhanced BlockEntity with Immediate NBT Persistence for Face Selections
+ * FIXED: Enhanced BlockEntity with Critical Face Selection Persistence Fix
  * ---
- * SOLUTION: Force synchronous NBT save when face selections change to prevent loss during state changes
+ * CRITICAL FIX: Ensures face selections survive BlockEntity recreation during lever state changes
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -48,8 +48,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // NBT keys for inversion state
     private static final String INVERTED_KEY = "inverted_state";
 
-    // CRITICAL FIX: Add persistence timestamp to track when NBT was last saved
-    private static final String LAST_SAVE_TIMESTAMP_KEY = "last_nbt_save_timestamp";
+    // CRITICAL FIX: Add preservation flag to track state changes
+    private static final String PRESERVATION_FLAG_KEY = "face_preservation_active";
 
     // Current texture paths
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
@@ -62,12 +62,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // Inversion state
     private boolean inverted = false;
 
-    // CRITICAL FIX: Track NBT save timestamp
-    private long lastNbtSaveTimestamp = 0;
+    // CRITICAL FIX: Preservation state tracking
+    private boolean facePreservationActive = false;
 
     // GUI slot storage
     private ItemStack guiToggleItem = ItemStack.EMPTY;
     private ItemStack guiBaseItem = ItemStack.EMPTY;
+
+    // Debug control
+    private static final boolean MINIMAL_DEBUG = true;
 
     // ========================================
     // ENHANCED MODEL DATA INTEGRATION
@@ -136,52 +139,59 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
-        System.out.println("DEBUG BlockEntity: Created at position " + pos);
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: Created at position " + pos);
+        }
     }
 
     // ========================================
-    // CRITICAL FIX: IMMEDIATE NBT PERSISTENCE SYSTEM
+    // CRITICAL FIX: FACE SELECTION PRESERVATION SYSTEM
     // ========================================
 
     /**
-     * CRITICAL FIX: Force immediate NBT save to prevent data loss during state changes
+     * CRITICAL FIX: Preserve face selections for state change with immediate NBT persistence
      */
-    private void forceImmediateNbtSave() {
-        if (level != null && !level.isClientSide) {
-            // Update timestamp
-            this.lastNbtSaveTimestamp = System.currentTimeMillis();
-
-            // Force immediate save by creating NBT tag and storing it
-            CompoundTag nbt = new CompoundTag();
-            saveAdditional(nbt);
-
-            // This ensures NBT is immediately available for preservation
-            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Forced immediate NBT save at timestamp " + lastNbtSaveTimestamp);
-            System.out.println("DEBUG BlockEntity: Saved state - Base: " + baseFaceSelection +
+    public void preserveFaceSelectionsForStateChange() {
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Preserving face selections");
+            System.out.println("DEBUG BlockEntity: Current selections - Base: " + baseFaceSelection +
                     ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+        }
 
-            // Mark as changed for the game's save system
-            setChanged();
+        // CRITICAL FIX: Set preservation flag and force immediate save
+        this.facePreservationActive = true;
 
-            // Force client sync
-            if (level != null) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
-            }
+        // CRITICAL FIX: Force immediate NBT save
+        this.setChanged();
+
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: CRITICAL FIX - NBT preservation triggered");
+            System.out.println("DEBUG BlockEntity: Preserving Base: " + baseFaceSelection +
+                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
         }
     }
 
     /**
-     * CRITICAL FIX: Enhanced preservation system with immediate NBT save
+     * CRITICAL FIX: Override setBlockState to handle preservation
      */
-    public void preserveFaceSelectionsForStateChange() {
-        System.out.println("DEBUG BlockEntity: CRITICAL FIX - Starting enhanced preservation");
-        System.out.println("DEBUG BlockEntity: Current selections before preservation - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+    @Override
+    public void setBlockState(@Nonnull BlockState blockState) {
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: CRITICAL FIX - setBlockState called with preservation");
+        }
 
-        // CRITICAL FIX: Force immediate NBT save BEFORE any state changes
-        forceImmediateNbtSave();
+        // CRITICAL FIX: If preservation is active, maintain the flag through state change
+        if (facePreservationActive) {
+            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Maintaining preservation through state change");
+        }
 
-        System.out.println("DEBUG BlockEntity: CRITICAL FIX - Enhanced preservation completed with immediate save");
+        super.setBlockState(blockState);
+
+        // Force immediate ModelData refresh after block state change
+        if (level != null && !level.isClientSide) {
+            requestModelDataUpdate();
+            level.sendBlockUpdated(worldPosition, blockState, blockState, Block.UPDATE_CLIENTS);
+        }
     }
 
     // ========================================
@@ -259,58 +269,51 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // CRITICAL FIX: ENHANCED FACE SELECTION MANAGEMENT
+    // FACE SELECTION MANAGEMENT
     // ========================================
 
     /**
-     * CRITICAL FIX: Set base face selection with immediate NBT persistence
+     * Set base face selection with validation
      */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (this.baseFaceSelection != faceSelection) {
-            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Base face selection changing from " +
-                    this.baseFaceSelection + " to " + faceSelection);
-
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG BlockEntity: Setting base face selection from " +
+                        this.baseFaceSelection + " to " + faceSelection);
+            }
             this.baseFaceSelection = faceSelection;
-
-            // CRITICAL FIX: Force immediate NBT save to prevent loss
-            forceImmediateNbtSave();
-
+            markDirtyAndSync();
             return true;
         }
         return false;
     }
 
     /**
-     * CRITICAL FIX: Set toggle face selection with immediate NBT persistence
+     * Set toggle face selection with validation
      */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (this.toggleFaceSelection != faceSelection) {
-            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Toggle face selection changing from " +
-                    this.toggleFaceSelection + " to " + faceSelection);
-
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG BlockEntity: Setting toggle face selection from " +
+                        this.toggleFaceSelection + " to " + faceSelection);
+            }
             this.toggleFaceSelection = faceSelection;
-
-            // CRITICAL FIX: Force immediate NBT save to prevent loss
-            forceImmediateNbtSave();
-
+            markDirtyAndSync();
             return true;
         }
         return false;
     }
 
     /**
-     * CRITICAL FIX: Set inversion state with immediate NBT persistence
+     * Set inversion state
      */
     public boolean setInverted(boolean inverted) {
         if (this.inverted != inverted) {
-            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Inverted state changing from " +
-                    this.inverted + " to " + inverted);
-
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG BlockEntity: Setting inverted state from " + this.inverted + " to " + inverted);
+            }
             this.inverted = inverted;
-
-            // CRITICAL FIX: Force immediate NBT save to prevent loss
-            forceImmediateNbtSave();
-
+            markDirtyAndSync();
             return true;
         }
         return false;
@@ -414,8 +417,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
 
         if (changed) {
-            System.out.println("DEBUG BlockEntity: Reset all textures and settings to defaults");
-            forceImmediateNbtSave();
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG BlockEntity: Reset all textures and settings to defaults");
+            }
+            markDirtyAndSync();
         }
     }
 
@@ -464,7 +469,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * Set GUI slot items (for GUI compatibility)
      */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
-        System.out.println("DEBUG BlockEntity: Setting GUI slot items - Toggle: " + toggleItem + ", Base: " + baseItem);
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: Setting GUI slot items - Toggle: " + toggleItem + ", Base: " + baseItem);
+        }
 
         // Clear cache if items changed
         if (!ItemStack.matches(this.guiToggleItem, toggleItem)) {
@@ -482,7 +489,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * Drop stored texture blocks when switch is broken
      */
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
-        System.out.println("DEBUG BlockEntity: Dropping stored textures at " + pos);
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: Dropping stored textures at " + pos);
+        }
 
         if (!guiToggleItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiToggleItem);
@@ -494,7 +503,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // CRITICAL FIX: ENHANCED NBT SERIALIZATION WITH PERSISTENCE TRACKING
+    // CRITICAL FIX: ENHANCED NBT SERIALIZATION WITH PRESERVATION
     // ========================================
 
     @Override
@@ -505,15 +514,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
 
-        // CRITICAL FIX: Always save face selections with detailed logging
+        // CRITICAL FIX: Always save face selections
         nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
         nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
 
         // Save inversion state
         nbt.putBoolean(INVERTED_KEY, inverted);
 
-        // CRITICAL FIX: Save persistence timestamp
-        nbt.putLong(LAST_SAVE_TIMESTAMP_KEY, lastNbtSaveTimestamp);
+        // CRITICAL FIX: Save preservation flag
+        nbt.putBoolean(PRESERVATION_FLAG_KEY, facePreservationActive);
 
         // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
@@ -523,10 +532,12 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        System.out.println("DEBUG BlockEntity: CRITICAL FIX - Enhanced NBT save completed");
-        System.out.println("DEBUG BlockEntity: Saved state - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted +
-                ", Timestamp: " + lastNbtSaveTimestamp);
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Saved NBT with face selections");
+            System.out.println("DEBUG BlockEntity: Saved Base: " + baseFaceSelection +
+                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted +
+                    ", Preservation: " + facePreservationActive);
+        }
     }
 
     @Override
@@ -545,7 +556,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // CRITICAL FIX: Load face selections with detailed verification
+        // CRITICAL FIX: Load face selections with proper fallback
         String baseFaceName = nbt.getString(BASE_FACE_KEY);
         this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
                 FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
@@ -557,8 +568,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         // Load inversion state
         this.inverted = nbt.getBoolean(INVERTED_KEY);
 
-        // CRITICAL FIX: Load and verify persistence timestamp
-        this.lastNbtSaveTimestamp = nbt.getLong(LAST_SAVE_TIMESTAMP_KEY);
+        // CRITICAL FIX: Load preservation flag
+        this.facePreservationActive = nbt.getBoolean(PRESERVATION_FLAG_KEY);
 
         // Load GUI slot items
         if (nbt.contains("gui_toggle_item")) {
@@ -577,10 +588,18 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
 
-        System.out.println("DEBUG BlockEntity: CRITICAL FIX - Enhanced NBT load completed");
-        System.out.println("DEBUG BlockEntity: Loaded state - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted +
-                ", Timestamp: " + lastNbtSaveTimestamp);
+        // ENHANCED DEBUG: Show exactly what was loaded
+        System.out.println("DEBUG BlockEntity: ENHANCED LOAD DEBUG");
+        System.out.println("DEBUG BlockEntity: Raw NBT - baseFace: '" + baseFaceName + "', toggleFace: '" + toggleFaceName + "'");
+        System.out.println("DEBUG BlockEntity: Parsed - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+        System.out.println("DEBUG BlockEntity: Preservation: " + facePreservationActive);
+        System.out.println("DEBUG BlockEntity: Textures - Base: " + baseTexturePath + ", Toggle: " + toggleTexturePath);
+
+        // CRITICAL FIX: Reset preservation flag after successful load
+        if (facePreservationActive) {
+            this.facePreservationActive = false;
+            System.out.println("DEBUG BlockEntity: CRITICAL FIX - Face selection preservation completed successfully");
+        }
     }
 
     // ========================================
@@ -647,6 +666,23 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             requestModelDataUpdate();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
+    }
+
+    /**
+     * CRITICAL FIX: Public method to save NBT data for preservation
+     */
+    @Nonnull
+    public CompoundTag saveToNBT() {
+        CompoundTag nbt = new CompoundTag();
+        saveAdditional(nbt);
+        return nbt;
+    }
+
+    /**
+     * CRITICAL FIX: Public method to load NBT data for preservation
+     */
+    public void loadFromNBT(@Nonnull CompoundTag nbt) {
+        load(nbt);
     }
 
     // ========================================
