@@ -1,7 +1,6 @@
 package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
-import net.justsomeswitches.util.BlockTextureAnalyzer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
@@ -16,13 +15,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * SIMPLIFIED FIX: Direct BlockEntity loading instead of delayed system
+ * REDESIGNED: Stateless Menu - Pure BlockEntity State Management
  * ---
- * FIXED: Loads face selections immediately from BlockEntity
+ * ARCHITECTURE: Menu acts as view/controller only, BlockEntity holds ALL state
+ * ELIMINATES: State duplication, preservation logic, synchronization issues
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
-    // GUI Layout Constants
     private static final int TEXTURE_SLOT_COUNT = 2;
     private static final int TOGGLE_TEXTURE_SLOT = 0;
     private static final int BASE_TEXTURE_SLOT = 1;
@@ -32,66 +31,43 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private static final int TOGGLE_SLOT_Y = 28;
     private static final int BASE_SLOT_X = 132;
     private static final int BASE_SLOT_Y = 28;
-
-    // Player inventory positioning
     private static final int PLAYER_INV_Y = 98;
     private static final int HOTBAR_Y = 156;
 
-    // Instance data
+    // REDESIGNED: Only essential references - NO STATE STORAGE
     private final SimpleContainer textureContainer;
     private final BlockPos blockPos;
     private final Level level;
-    private SwitchesLeverBlockEntity blockEntity;
 
-    // Instance tracking
-    private final String menuInstanceId;
-
-    // SIMPLIFIED: Direct face selection storage
-    private FaceSelectionData.FaceOption baseFaceSelection = FaceSelectionData.FaceOption.ALL;
-    private FaceSelectionData.FaceOption toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
-    private boolean inverted = false;
-
-    // Initialization control
-    private boolean isInitializing = true;
+    // REMOVED: All local face selection state variables
+    // BlockEntity is the single source of truth
 
     /**
-     * SIMPLIFIED: Constructor with direct BlockEntity loading
+     * REDESIGNED: Constructor with pure BlockEntity dependency
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
 
         this.blockPos = blockPos;
         this.level = playerInventory.player.level();
-        this.menuInstanceId = Integer.toHexString(System.identityHashCode(this));
 
-        System.out.println("DEBUG Menu: ===== SIMPLIFIED FIX - DIRECT LOADING MENU =====");
-        System.out.println("DEBUG Menu: Menu instance ID: " + menuInstanceId);
+        System.out.println("DEBUG Menu: REDESIGNED - Stateless Menu Created");
 
-        // Get BlockEntity reference
-        this.blockEntity = getBlockEntity();
-
-        if (blockEntity != null) {
-            System.out.println("DEBUG Menu: Found BlockEntity, loading face selections directly");
-            loadBlockEntityDataDirectly();
-        } else {
-            System.out.println("DEBUG Menu: ⚠️ No BlockEntity found");
-        }
-
-        // AUTO-APPLY container
+        // REDESIGNED: Auto-apply container with immediate BlockEntity updates
         this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT) {
             @Override
             public void setChanged() {
                 super.setChanged();
-                onSlotChangedAutoApply();
+                onSlotChangedImmediate();
             }
         };
 
-        // Load GUI slot items
-        loadGuiSlotItems();
+        // Load initial slot items from BlockEntity
+        loadSlotItemsFromBlockEntity();
 
         // Add texture slots
-        addSlot(new EnhancedTextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
-        addSlot(new EnhancedTextureSlot(textureContainer, BASE_TEXTURE_SLOT, BASE_SLOT_X, BASE_SLOT_Y));
+        addSlot(new TextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
+        addSlot(new TextureSlot(textureContainer, BASE_TEXTURE_SLOT, BASE_SLOT_X, BASE_SLOT_Y));
 
         // Add player inventory slots
         for (int row = 0; row < 3; row++) {
@@ -105,28 +81,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
 
-        this.isInitializing = false;
-        System.out.println("DEBUG Menu: ===== SIMPLIFIED MENU CREATED =====");
-    }
-
-    /**
-     * Enhanced texture slot for auto-apply functionality
-     */
-    private class EnhancedTextureSlot extends TextureSlot {
-        public EnhancedTextureSlot(@Nonnull net.minecraft.world.Container container, int slot, int x, int y) {
-            super(container, slot, x, y);
-        }
-
-        @Override
-        public void set(@Nonnull ItemStack stack) {
-            super.set(stack);
-        }
-
-        @Override
-        @Nonnull
-        public ItemStack remove(int amount) {
-            return super.remove(amount);
-        }
+        System.out.println("DEBUG Menu: REDESIGNED - Stateless menu initialization complete");
     }
 
     /**
@@ -137,27 +92,109 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * SIMPLIFIED: Direct BlockEntity data loading
+     * REDESIGNED: Immediate slot change handling with direct BlockEntity updates
      */
-    private void loadBlockEntityDataDirectly() {
-        if (blockEntity == null) {
-            System.out.println("DEBUG Menu: No BlockEntity for direct loading");
-            return;
+    private void onSlotChangedImmediate() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
+            ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+
+            // REDESIGNED: Immediate update to BlockEntity (single source of truth)
+            blockEntity.setGuiSlotItems(toggleItem, baseItem);
+            blockEntity.applyCurrentTextureSettings();
+
+            System.out.println("DEBUG Menu: REDESIGNED - Immediate slot update applied to BlockEntity");
         }
-
-        System.out.println("DEBUG Menu: SIMPLIFIED - Loading face selections directly from BlockEntity");
-
-        // Load face selections directly - no delayed loading
-        this.baseFaceSelection = blockEntity.getBaseFaceSelection();
-        this.toggleFaceSelection = blockEntity.getToggleFaceSelection();
-        this.inverted = blockEntity.isInverted();
-
-        System.out.println("DEBUG Menu: SIMPLIFIED - Loaded directly - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
     }
 
     /**
-     * Get BlockEntity for this menu's position
+     * Load slot items from BlockEntity (stateless approach)
+     */
+    private void loadSlotItemsFromBlockEntity() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            textureContainer.setItem(TOGGLE_TEXTURE_SLOT, blockEntity.getGuiToggleItem());
+            textureContainer.setItem(BASE_TEXTURE_SLOT, blockEntity.getGuiBaseItem());
+            System.out.println("DEBUG Menu: REDESIGNED - Loaded slot items from BlockEntity");
+        }
+    }
+
+    // ========================================
+    // REDESIGNED: Stateless Face Selection Methods
+    // ========================================
+
+    /**
+     * REDESIGNED: Direct BlockEntity face selection setter
+     */
+    public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            System.out.println("DEBUG Menu: REDESIGNED - Setting base face selection to " + faceOption);
+            blockEntity.setBaseFaceSelection(faceOption);
+            blockEntity.applyCurrentTextureSettings();
+        }
+    }
+
+    /**
+     * REDESIGNED: Direct BlockEntity face selection setter
+     */
+    public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            System.out.println("DEBUG Menu: REDESIGNED - Setting toggle face selection to " + faceOption);
+            blockEntity.setToggleFaceSelection(faceOption);
+            blockEntity.applyCurrentTextureSettings();
+        }
+    }
+
+    /**
+     * REDESIGNED: Direct BlockEntity inversion setter
+     */
+    public void setInverted(boolean inverted) {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            System.out.println("DEBUG Menu: REDESIGNED - Setting inverted to " + inverted);
+            blockEntity.setInverted(inverted);
+            blockEntity.applyCurrentTextureSettings();
+        }
+    }
+
+    // ========================================
+    // REDESIGNED: Stateless Getters (Read from BlockEntity)
+    // ========================================
+
+    @Nonnull
+    public FaceSelectionData.FaceOption getBaseFaceSelection() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        return blockEntity != null ? blockEntity.getBaseFaceSelection() : FaceSelectionData.FaceOption.ALL;
+    }
+
+    @Nonnull
+    public FaceSelectionData.FaceOption getToggleFaceSelection() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        return blockEntity != null ? blockEntity.getToggleFaceSelection() : FaceSelectionData.FaceOption.ALL;
+    }
+
+    public boolean isInverted() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        return blockEntity != null && blockEntity.isInverted();
+    }
+
+    @Nonnull
+    public FaceSelectionData.DropdownState getBaseDropdownState() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        return blockEntity != null ? blockEntity.getBaseDropdownState() : FaceSelectionData.createDisabledState();
+    }
+
+    @Nonnull
+    public FaceSelectionData.DropdownState getToggleDropdownState() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        return blockEntity != null ? blockEntity.getToggleDropdownState() : FaceSelectionData.createDisabledState();
+    }
+
+    /**
+     * Get BlockEntity reference
      */
     @Nullable
     private SwitchesLeverBlockEntity getBlockEntity() {
@@ -170,235 +207,20 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         return null;
     }
 
-    /**
-     * Load GUI slot items
-     */
-    private void loadGuiSlotItems() {
-        System.out.println("DEBUG Menu: Loading GUI slot items");
-
-        if (blockEntity != null) {
-            ItemStack toggleItem = blockEntity.getGuiToggleItem();
-            ItemStack baseItem = blockEntity.getGuiBaseItem();
-
-            textureContainer.setItem(TOGGLE_TEXTURE_SLOT, toggleItem);
-            textureContainer.setItem(BASE_TEXTURE_SLOT, baseItem);
-
-            System.out.println("DEBUG Menu: Loaded toggle item: " + toggleItem);
-            System.out.println("DEBUG Menu: Loaded base item: " + baseItem);
-        }
-    }
-
-    /**
-     * AUTO-APPLY: Slot changed handler
-     */
-    private void onSlotChangedAutoApply() {
-        if (isInitializing) {
-            System.out.println("DEBUG Menu: Skipping auto-apply during initialization");
-            return;
-        }
-
-        if (blockEntity != null) {
-            System.out.println("DEBUG Menu: AUTO-APPLY triggered by slot change");
-
-            ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-            ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-
-            // Store GUI slot items
-            blockEntity.setGuiSlotItems(toggleItem, baseItem);
-
-            // Apply textures with current face selections
-            applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
-
-            // Force visual update
-            forceBlockUpdate();
-            System.out.println("DEBUG Menu: Auto-apply completed");
-        }
-    }
-
-    /**
-     * Apply textures using Menu's current face selections
-     */
-    private void applyTexturesWithCurrentFaceSelections(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
-        if (blockEntity == null) return;
-
-        System.out.println("DEBUG Menu: Applying textures with menu face selections");
-        System.out.println("DEBUG Menu: Menu selections - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-
-        // Sync face selections to BlockEntity
-        blockEntity.setBaseFaceSelection(baseFaceSelection);
-        blockEntity.setToggleFaceSelection(toggleFaceSelection);
-        blockEntity.setInverted(inverted);
-
-        // Apply textures
-        if (!toggleItem.isEmpty()) {
-            String effectiveTexturePath = getEffectiveTexturePathForItem(toggleItem, toggleFaceSelection);
-            blockEntity.setToggleTexture(effectiveTexturePath);
-        } else {
-            blockEntity.resetToggleTexture();
-        }
-
-        if (!baseItem.isEmpty()) {
-            String effectiveTexturePath = getEffectiveTexturePathForItem(baseItem, baseFaceSelection);
-            blockEntity.setBaseTexture(effectiveTexturePath);
-        } else {
-            blockEntity.resetBaseTexture();
-        }
-
-        blockEntity.setChanged();
-    }
-
     // ========================================
-    // FACE SELECTION METHODS
+    // REDESIGNED: Simplified Cleanup
     // ========================================
 
-    public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
-        System.out.println("DEBUG Menu: Setting base face selection to " + faceOption);
-
-        if (this.baseFaceSelection != faceOption) {
-            this.baseFaceSelection = faceOption;
-
-            if (blockEntity != null && !isInitializing) {
-                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-                applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
-                forceBlockUpdate();
-            }
-        }
-    }
-
-    public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
-        System.out.println("DEBUG Menu: Setting toggle face selection to " + faceOption);
-
-        if (this.toggleFaceSelection != faceOption) {
-            this.toggleFaceSelection = faceOption;
-
-            if (blockEntity != null && !isInitializing) {
-                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-                applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
-                forceBlockUpdate();
-            }
-        }
-    }
-
-    public void setInverted(boolean inverted) {
-        System.out.println("DEBUG Menu: Setting inverted state to " + inverted);
-
-        if (this.inverted != inverted) {
-            this.inverted = inverted;
-
-            if (blockEntity != null && !isInitializing) {
-                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-                applyTexturesWithCurrentFaceSelections(toggleItem, baseItem);
-                forceBlockUpdate();
-            }
-        }
-    }
-
-    /**
-     * Get dropdown state for base texture slot
-     */
-    @Nonnull
-    public FaceSelectionData.DropdownState getBaseDropdownState() {
-        if (blockEntity != null) {
-            BlockTextureAnalyzer.BlockTextureInfo blockInfo = blockEntity.getBaseBlockAnalysis();
-            return FaceSelectionData.createDropdownState(blockInfo, baseFaceSelection);
-        }
-        return FaceSelectionData.createDisabledState();
-    }
-
-    /**
-     * Get dropdown state for toggle texture slot
-     */
-    @Nonnull
-    public FaceSelectionData.DropdownState getToggleDropdownState() {
-        if (blockEntity != null) {
-            BlockTextureAnalyzer.BlockTextureInfo blockInfo = blockEntity.getToggleBlockAnalysis();
-            return FaceSelectionData.createDropdownState(blockInfo, toggleFaceSelection);
-        }
-        return FaceSelectionData.createDisabledState();
-    }
-
-    // Getters
-    @Nonnull public FaceSelectionData.FaceOption getBaseFaceSelection() { return baseFaceSelection; }
-    @Nonnull public FaceSelectionData.FaceOption getToggleFaceSelection() { return toggleFaceSelection; }
-    public boolean isInverted() { return inverted; }
-
-    /**
-     * Get effective texture path for item based on face selection
-     */
-    @Nonnull
-    private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull FaceSelectionData.FaceOption faceSelection) {
-        if (item.isEmpty()) {
-            return "minecraft:block/stone";
-        }
-
-        BlockTextureAnalyzer.BlockTextureInfo blockInfo = BlockTextureAnalyzer.analyzeBlock(item);
-        String faceTexturePath = FaceSelectionData.getTextureForSelection(blockInfo, faceSelection);
-
-        if (faceTexturePath != null && BlockTextureAnalyzer.isValidTexture(faceTexturePath)) {
-            return faceTexturePath;
-        }
-
-        String fallbackPath = blockInfo.getUniformTexture();
-        if (fallbackPath != null) {
-            return fallbackPath;
-        }
-
-        return "minecraft:block/stone";
-    }
-
-    /**
-     * Force block update for visual changes
-     */
-    private void forceBlockUpdate() {
-        if (blockEntity != null && level != null && blockPos != null) {
-            blockEntity.setChanged();
-            blockEntity.requestModelDataUpdate();
-            level.sendBlockUpdated(blockPos, level.getBlockState(blockPos), level.getBlockState(blockPos), 3);
-        }
-    }
-
-    /**
-     * Block analysis methods for GUI
-     */
-    @Nonnull
-    public BlockTextureAnalyzer.BlockTextureInfo getToggleBlockAnalysis() {
-        ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-        return BlockTextureAnalyzer.analyzeBlock(toggleItem);
-    }
-
-    @Nonnull
-    public BlockTextureAnalyzer.BlockTextureInfo getBaseBlockAnalysis() {
-        ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-        return BlockTextureAnalyzer.analyzeBlock(baseItem);
-    }
-
-    /**
-     * Save menu face selections to BlockEntity when GUI closes
-     */
     @Override
     public void removed(@Nonnull Player player) {
-        System.out.println("DEBUG Menu: ===== GUI CLOSING =====");
-        System.out.println("DEBUG Menu: Current menu state - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-
         super.removed(player);
-
-        if (blockEntity != null) {
-            // Save menu's current face selections to BlockEntity
-            blockEntity.setBaseFaceSelection(baseFaceSelection);
-            blockEntity.setToggleFaceSelection(toggleFaceSelection);
-            blockEntity.setInverted(inverted);
-            blockEntity.setChanged();
-
-            System.out.println("DEBUG Menu: Face selections saved to BlockEntity");
-        }
-
-        System.out.println("DEBUG Menu: ===== GUI CLOSED =====");
+        // REDESIGNED: No state to save - BlockEntity already has current state
+        System.out.println("DEBUG Menu: REDESIGNED - Stateless menu closed, no cleanup needed");
     }
+
+    // ========================================
+    // Standard Container Methods
+    // ========================================
 
     @Override
     @Nonnull

@@ -23,9 +23,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FINAL FIX: BlockEntity with load() protection against chunk sync overwrites
+ * REDESIGNED: Simplified BlockEntity - Single Source of Truth
  * ---
- * CRITICAL: Prevents automatic NBT loading from overwriting preserved face selections
+ * ARCHITECTURE: Removed complex preservation logic, standard NBT handling only
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -48,10 +48,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // NBT keys for inversion state
     private static final String INVERTED_KEY = "inverted_state";
 
-    // FINAL FIX: Preservation tracking keys
-    private static final String PRESERVATION_FLAG_KEY = "face_preservation_active";
-    private static final String RESTORATION_COMPLETE_KEY = "restoration_complete";
-
     // Current texture paths
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
     private String toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
@@ -62,11 +58,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     // Inversion state
     private boolean inverted = false;
-
-    // FINAL FIX: Enhanced preservation tracking
-    private boolean facePreservationActive = false;
-    private boolean restorationComplete = false;
-    private int preservationTimeout = 0;
 
     // GUI slot storage
     private ItemStack guiToggleItem = ItemStack.EMPTY;
@@ -137,34 +128,73 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
         if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Created at position " + pos);
+            System.out.println("DEBUG BlockEntity: REDESIGNED - Created at position " + pos);
         }
     }
 
     // ========================================
-    // FINAL FIX: PRESERVATION SYSTEM
+    // REDESIGNED: IMMEDIATE TEXTURE APPLICATION
     // ========================================
 
-    public void preserveFaceSelectionsForStateChange() {
+    /**
+     * REDESIGNED: Apply current texture settings immediately
+     * ---
+     * Called by Menu when face selections or items change
+     */
+    public void applyCurrentTextureSettings() {
         if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Preservation activation");
-            System.out.println("DEBUG BlockEntity: Current selections - Base: " + baseFaceSelection +
+            System.out.println("DEBUG BlockEntity: REDESIGNED - Applying current texture settings");
+            System.out.println("DEBUG BlockEntity: Current face selections - Base: " + baseFaceSelection +
                     ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
         }
 
-        this.facePreservationActive = true;
-        this.restorationComplete = false;
-        this.preservationTimeout = 60; // 3 second timeout
-
-        this.setChanged();
-
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Preservation activated");
+        // Apply toggle texture with current face selection
+        if (!guiToggleItem.isEmpty()) {
+            String effectiveTexturePath = getEffectiveTexturePathForItem(guiToggleItem, toggleFaceSelection);
+            setToggleTexture(effectiveTexturePath);
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG BlockEntity: Applied toggle texture: " + effectiveTexturePath);
+            }
+        } else {
+            resetToggleTexture();
         }
+
+        // Apply base texture with current face selection
+        if (!guiBaseItem.isEmpty()) {
+            String effectiveTexturePath = getEffectiveTexturePathForItem(guiBaseItem, baseFaceSelection);
+            setBaseTexture(effectiveTexturePath);
+            if (MINIMAL_DEBUG) {
+                System.out.println("DEBUG BlockEntity: Applied base texture: " + effectiveTexturePath);
+            }
+        } else {
+            resetBaseTexture();
+        }
+
+        markDirtyAndSync();
     }
 
-    public boolean isFacePreservationActive() {
-        return facePreservationActive && preservationTimeout > 0;
+    /**
+     * REDESIGNED: Get effective texture path for item based on face selection
+     */
+    @Nonnull
+    private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull FaceSelectionData.FaceOption faceSelection) {
+        if (item.isEmpty()) {
+            return "minecraft:block/stone";
+        }
+
+        BlockTextureAnalyzer.BlockTextureInfo blockInfo = BlockTextureAnalyzer.analyzeBlock(item);
+        String faceTexturePath = FaceSelectionData.getTextureForSelection(blockInfo, faceSelection);
+
+        if (faceTexturePath != null && BlockTextureAnalyzer.isValidTexture(faceTexturePath)) {
+            return faceTexturePath;
+        }
+
+        String fallbackPath = blockInfo.getUniformTexture();
+        if (fallbackPath != null) {
+            return fallbackPath;
+        }
+
+        return "minecraft:block/stone";
     }
 
     // ========================================
@@ -413,7 +443,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FINAL FIX: NBT WITH LOAD PROTECTION
+    // REDESIGNED: SIMPLIFIED NBT HANDLING
     // ========================================
 
     @Override
@@ -424,16 +454,12 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
 
-        // FINAL FIX: Always save face selections
+        // Save face selections
         nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
         nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
 
         // Save inversion state
         nbt.putBoolean(INVERTED_KEY, inverted);
-
-        // FINAL FIX: Save preservation state
-        nbt.putBoolean(PRESERVATION_FLAG_KEY, facePreservationActive);
-        nbt.putBoolean(RESTORATION_COMPLETE_KEY, restorationComplete);
 
         // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
@@ -444,31 +470,23 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
 
         if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Saved NBT - Base: " + baseFaceSelection +
-                    ", Toggle: " + toggleFaceSelection + ", Preservation: " + facePreservationActive);
+            System.out.println("DEBUG BlockEntity: REDESIGNED - Saved NBT - Base: " + baseFaceSelection +
+                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
         }
     }
 
     /**
-     * FINAL FIX: Load with protection against overwriting preserved face selections
+     * REDESIGNED: Simplified load without complex preservation logic
      */
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
 
-        // FINAL FIX: Load preservation state FIRST
-        boolean incomingPreservationFlag = nbt.getBoolean(PRESERVATION_FLAG_KEY);
-        boolean incomingRestorationComplete = nbt.getBoolean(RESTORATION_COMPLETE_KEY);
-
         if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Loading NBT");
-            System.out.println("DEBUG BlockEntity: Current preservation: " + facePreservationActive);
-            System.out.println("DEBUG BlockEntity: Incoming preservation: " + incomingPreservationFlag);
-            System.out.println("DEBUG BlockEntity: Current face selections - Base: " + baseFaceSelection +
-                    ", Toggle: " + toggleFaceSelection);
+            System.out.println("DEBUG BlockEntity: REDESIGNED - Loading NBT with simplified approach");
         }
 
-        // Load texture paths (always safe)
+        // Load texture paths
         this.baseTexturePath = nbt.getString(BASE_TEXTURE_KEY);
         this.toggleTexturePath = nbt.getString(TOGGLE_TEXTURE_KEY);
 
@@ -479,31 +497,16 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // FINAL FIX: Only load face selections if NOT currently preserving
-        if (!facePreservationActive) {
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Safe to load face selections");
+        // Load face selections
+        String baseFaceName = nbt.getString(BASE_FACE_KEY);
+        this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
+                FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
 
-            String baseFaceName = nbt.getString(BASE_FACE_KEY);
-            this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                    FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
+        String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
+        this.toggleFaceSelection = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
+                FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
 
-            String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
-            this.toggleFaceSelection = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                    FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
-
-            this.inverted = nbt.getBoolean(INVERTED_KEY);
-
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Loaded face selections - Base: " +
-                    baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-        } else {
-            System.out.println("DEBUG BlockEntity: FINAL FIX - PROTECTION ACTIVE - Skipping face selection load");
-            System.out.println("DEBUG BlockEntity: FINAL FIX - Preserved face selections - Base: " +
-                    baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-        }
-
-        // Update preservation state
-        this.facePreservationActive = incomingPreservationFlag;
-        this.restorationComplete = incomingRestorationComplete;
+        this.inverted = nbt.getBoolean(INVERTED_KEY);
 
         // Load GUI slot items
         if (nbt.contains("gui_toggle_item")) {
@@ -522,8 +525,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
 
-        System.out.println("DEBUG BlockEntity: FINAL FIX - Load completed - Final state - Base: " +
-                baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Preservation: " + facePreservationActive);
+        if (MINIMAL_DEBUG) {
+            System.out.println("DEBUG BlockEntity: REDESIGNED - Loaded NBT - Base: " + baseFaceSelection +
+                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+        }
     }
 
     // ========================================
@@ -590,7 +595,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // TICK METHODS WITH PRESERVATION TIMEOUT
+    // TICK METHODS
     // ========================================
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
@@ -598,18 +603,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
-        // FINAL FIX: Handle preservation timeout
-        if (blockEntity.isFacePreservationActive()) {
-            blockEntity.preservationTimeout--;
-
-            if (blockEntity.preservationTimeout <= 0) {
-                if (MINIMAL_DEBUG) {
-                    System.out.println("DEBUG BlockEntity: FINAL FIX - Preservation timeout, deactivating");
-                }
-                blockEntity.facePreservationActive = false;
-                blockEntity.restorationComplete = false;
-                blockEntity.setChanged();
-            }
-        }
+        // Server-side logic can be added here if needed
     }
 }
