@@ -12,9 +12,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import javax.annotation.Nonnull;
 
 /**
- * Custom slot for texture blocks that only accepts solid, full-cube blocks
- * ---
- * Phase 4B Enhancement: Comprehensive block validation with silent operation
+ * SILENT: Custom slot for texture blocks with comprehensive validation
  */
 public class TextureSlot extends Slot {
 
@@ -103,20 +101,20 @@ public class TextureSlot extends Slot {
     @Override
     public void setChanged() {
         super.setChanged();
-        // Silent operation - no debug output
+        // SILENT: No debug output
     }
 
     @Override
     @Nonnull
     public ItemStack remove(int amount) {
         ItemStack result = super.remove(amount);
-        // Silent operation - no debug output
+        // SILENT: No debug output
         return result;
     }
 
     @Override
     public void set(@Nonnull ItemStack stack) {
         super.set(stack);
-        // Silent operation - no debug output
+        // SILENT: No debug output
     }
 }

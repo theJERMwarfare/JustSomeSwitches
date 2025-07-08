@@ -16,7 +16,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * DIAGNOSTIC: Menu with MINIMAL logging for root cause analysis
+ * SILENT: Menu with minimal logging and proper face selection persistence
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -41,7 +41,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private ItemStack lastBaseItem = ItemStack.EMPTY;
 
     /**
-     * DIAGNOSTIC: Constructor with minimal logging
+     * SILENT: Constructor without debug output
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
@@ -49,9 +49,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         this.blockPos = blockPos;
         this.level = playerInventory.player.level();
 
-        DebugConfig.logCritical("Menu created for position " + blockPos);
-
-        // Container with smart change detection for auto-apply
+        // Container with auto-apply on slot changes
         this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT) {
             @Override
             public void setChanged() {
@@ -88,7 +86,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * DIAGNOSTIC: Smart slot change handling with minimal logging
+     * SILENT: Smart slot change handling without debug output
      */
     private void onSlotChangedWithAutoApply() {
         ItemStack currentToggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
@@ -99,8 +97,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         boolean baseChanged = !ItemStack.matches(lastBaseItem, currentBaseItem);
 
         if (toggleChanged || baseChanged) {
-            DebugConfig.logStateChange("SLOT-CHANGE", "Items changed - calling setGuiSlotItems");
-
             // Update last known state
             lastToggleItem = currentToggleItem.copy();
             lastBaseItem = currentBaseItem.copy();
@@ -114,7 +110,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * DIAGNOSTIC: Load slot items from BlockEntity with minimal logging
+     * SILENT: Load slot items from BlockEntity without debug output
      */
     private void loadSlotItemsFromBlockEntity() {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
@@ -128,45 +124,42 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // Track initial state to prevent false change detection
             lastToggleItem = toggleItem.copy();
             lastBaseItem = baseItem.copy();
-
-            DebugConfig.logStateChange("MENU-LOAD", "Loaded items - Base face:" + blockEntity.getBaseFaceSelection() +
-                    " Toggle face:" + blockEntity.getToggleFaceSelection());
         }
     }
 
     // ========================================
-    // DIAGNOSTIC: Face Selection Methods with MINIMAL logging
+    // SILENT: Face Selection Methods
     // ========================================
 
     /**
-     * DIAGNOSTIC: Set base face selection with tracking
+     * SILENT: Set base face selection without debug output
      */
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logStateChange("MENU-FACE-BASE", "User selected: " + faceOption);
+            DebugConfig.logUserAction("Base face selected: " + faceOption);
             blockEntity.setBaseFaceSelection(faceOption);
         }
     }
 
     /**
-     * DIAGNOSTIC: Set toggle face selection with tracking
+     * SILENT: Set toggle face selection without debug output
      */
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logStateChange("MENU-FACE-TOGGLE", "User selected: " + faceOption);
+            DebugConfig.logUserAction("Toggle face selected: " + faceOption);
             blockEntity.setToggleFaceSelection(faceOption);
         }
     }
 
     /**
-     * DIAGNOSTIC: Set inversion with tracking
+     * SILENT: Set inversion without debug output
      */
     public void setInverted(boolean inverted) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logStateChange("MENU-INVERTED", "User selected: " + inverted);
+            DebugConfig.logUserAction("Inverted: " + inverted);
             blockEntity.setInverted(inverted);
         }
     }
@@ -219,19 +212,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // DIAGNOSTIC: Enhanced Cleanup
+    // SILENT: Enhanced Cleanup
     // ========================================
 
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
-
-        DebugConfig.logStateChange("MENU-CLOSE", "GUI closed");
-        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
-        if (blockEntity != null) {
-            DebugConfig.logStateChange("MENU-CLOSE", "Final state - Base:" + blockEntity.getBaseFaceSelection() +
-                    " Toggle:" + blockEntity.getToggleFaceSelection());
-        }
+        // SILENT: No debug output on GUI close
     }
 
     // ========================================

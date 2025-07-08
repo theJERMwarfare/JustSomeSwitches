@@ -1,6 +1,5 @@
 package net.justsomeswitches.blockentity;
 
-import net.justsomeswitches.config.DebugConfig;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.util.BlockTextureAnalyzer;
@@ -24,7 +23,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * DIAGNOSTIC: BlockEntity with MINIMAL logging to identify root cause
+ * FIXED: BlockEntity with proper model update pipeline matching lever toggle behavior
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -102,25 +101,21 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
-        DebugConfig.logCritical("BlockEntity created at " + pos);
     }
 
     // ========================================
-    // DIAGNOSTIC: AUTO-APPLY SYSTEM
+    // FIXED: AUTO-APPLY WITH PROPER MODEL UPDATES
     // ========================================
 
     /**
-     * DIAGNOSTIC: Apply textures with minimal logging
+     * FIXED: Apply textures using exact same update sequence as lever toggle
      */
     public void applyCurrentTextureSettings() {
-        DebugConfig.logStateChange("AUTO-APPLY", "Starting - Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection);
-
         suppressChangeNotifications = true;
 
         if (!guiToggleItem.isEmpty()) {
             String effectiveTexturePath = getEffectiveTexturePathForItem(guiToggleItem, toggleFaceSelection);
             setToggleTextureInternal(effectiveTexturePath);
-            DebugConfig.logStateChange("AUTO-APPLY", "Toggle texture applied: " + effectiveTexturePath);
         } else {
             resetToggleTextureInternal();
         }
@@ -128,15 +123,36 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!guiBaseItem.isEmpty()) {
             String effectiveTexturePath = getEffectiveTexturePathForItem(guiBaseItem, baseFaceSelection);
             setBaseTextureInternal(effectiveTexturePath);
-            DebugConfig.logStateChange("AUTO-APPLY", "Base texture applied: " + effectiveTexturePath);
         } else {
             resetBaseTextureInternal();
         }
 
         suppressChangeNotifications = false;
-        markDirtyAndSync();
 
-        DebugConfig.logStateChange("AUTO-APPLY", "Complete");
+        // FIXED: Use exact same update sequence as lever toggle
+        triggerFullModelUpdate();
+    }
+
+    /**
+     * FIXED: Trigger full model update using same sequence as lever toggle
+     */
+    private void triggerFullModelUpdate() {
+        if (level != null && !level.isClientSide) {
+            // Get current block state
+            BlockState currentState = getBlockState();
+
+            // CRITICAL: Use Block.UPDATE_ALL like lever toggle does
+            level.setBlock(worldPosition, currentState, Block.UPDATE_ALL);
+
+            // Request model data update
+            requestModelDataUpdate();
+
+            // Send block update to clients
+            level.sendBlockUpdated(worldPosition, currentState, currentState, Block.UPDATE_CLIENTS);
+
+            // Mark dirty for persistence
+            setChanged();
+        }
     }
 
     @Nonnull
@@ -212,7 +228,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public boolean setBaseTexture(@Nonnull String texturePath) {
         if (setBaseTextureInternal(texturePath)) {
             if (!suppressChangeNotifications) {
-                markDirtyAndSync();
+                triggerFullModelUpdate();
             }
             return true;
         }
@@ -230,7 +246,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public boolean setToggleTexture(@Nonnull String texturePath) {
         if (setToggleTextureInternal(texturePath)) {
             if (!suppressChangeNotifications) {
-                markDirtyAndSync();
+                triggerFullModelUpdate();
             }
             return true;
         }
@@ -246,20 +262,18 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // DIAGNOSTIC: FACE SELECTION MANAGEMENT
+    // FIXED: FACE SELECTION WITH PROPER PERSISTENCE
     // ========================================
 
     /**
-     * DIAGNOSTIC: Set base face selection with tracking
+     * FIXED: Set base face selection with immediate model update
      */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (this.baseFaceSelection != faceSelection) {
-            DebugConfig.logStateChange("FACE-BASE", "Changing from " + this.baseFaceSelection + " to " + faceSelection);
             this.baseFaceSelection = faceSelection;
 
             if (!suppressChangeNotifications) {
-                markDirtyAndSync();
-                DebugConfig.logStateChange("FACE-BASE", "Calling auto-apply");
+                // Apply textures with new face selection and trigger full model update
                 applyCurrentTextureSettings();
             }
             return true;
@@ -268,16 +282,14 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * DIAGNOSTIC: Set toggle face selection with tracking
+     * FIXED: Set toggle face selection with immediate model update
      */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (this.toggleFaceSelection != faceSelection) {
-            DebugConfig.logStateChange("FACE-TOGGLE", "Changing from " + this.toggleFaceSelection + " to " + faceSelection);
             this.toggleFaceSelection = faceSelection;
 
             if (!suppressChangeNotifications) {
-                markDirtyAndSync();
-                DebugConfig.logStateChange("FACE-TOGGLE", "Calling auto-apply");
+                // Apply textures with new face selection and trigger full model update
                 applyCurrentTextureSettings();
             }
             return true;
@@ -287,11 +299,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public boolean setInverted(boolean inverted) {
         if (this.inverted != inverted) {
-            DebugConfig.logStateChange("INVERTED", "Changing from " + this.inverted + " to " + inverted);
             this.inverted = inverted;
 
             if (!suppressChangeNotifications) {
-                markDirtyAndSync();
                 applyCurrentTextureSettings();
             }
             return true;
@@ -383,7 +393,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         suppressChangeNotifications = false;
 
         if (changed) {
-            markDirtyAndSync();
+            triggerFullModelUpdate();
         }
     }
 
@@ -404,7 +414,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // DIAGNOSTIC: GUI SLOT MANAGEMENT
+    // GUI SLOT MANAGEMENT
     // ========================================
 
     @Nonnull
@@ -414,12 +424,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
     /**
-     * DIAGNOSTIC: Set GUI slot items with tracking
+     * FIXED: Set GUI slot items without changing face selections
      */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
-        DebugConfig.logStateChange("SLOT-ITEMS", "Setting items - Toggle:" + (!toggleItem.isEmpty()) + " Base:" + (!baseItem.isEmpty()));
-        DebugConfig.logStateChange("SLOT-ITEMS", "Current faces - Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection);
-
         // Clear analysis cache if items changed
         if (!ItemStack.matches(this.guiToggleItem, toggleItem)) {
             cachedToggleAnalysis = null;
@@ -431,11 +438,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
 
-        // CRITICAL: Apply textures with current face selections (don't change the selections)
+        // Apply textures with current face selections (preserve user's face choices)
         applyCurrentTextureSettings();
-        markDirtyAndSync();
-
-        DebugConfig.logStateChange("SLOT-ITEMS", "After setting - Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection);
     }
 
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
@@ -449,7 +453,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // DIAGNOSTIC: NBT HANDLING
+    // FIXED: NBT PERSISTENCE
     // ========================================
 
     @Override
@@ -468,18 +472,14 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!guiBaseItem.isEmpty()) {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
-
-        DebugConfig.logPersistence("SAVE", "Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection + " Inverted:" + inverted);
     }
 
     /**
-     * DIAGNOSTIC: Load with tracking
+     * FIXED: Load with proper face selection restoration
      */
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
-
-        DebugConfig.logPersistence("LOAD-START", "Beginning load operation");
 
         this.baseTexturePath = nbt.getString(BASE_TEXTURE_KEY);
         this.toggleTexturePath = nbt.getString(TOGGLE_TEXTURE_KEY);
@@ -491,6 +491,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
+        // FIXED: Properly restore face selections
         String baseFaceName = nbt.getString(BASE_FACE_KEY);
         this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
                 FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
@@ -513,10 +514,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.guiBaseItem = ItemStack.EMPTY;
         }
 
+        // Clear analysis cache after loading
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
-
-        DebugConfig.logPersistence("LOAD-END", "Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection + " Inverted:" + inverted);
     }
 
     // ========================================
@@ -562,16 +562,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // ========================================
     // UTILITY METHODS
     // ========================================
-
-    public void markDirtyAndSync() {
-        if (!suppressChangeNotifications) {
-            setChanged();
-            if (level != null && !level.isClientSide) {
-                requestModelDataUpdate();
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
-            }
-        }
-    }
 
     @Nonnull
     public CompoundTag saveToNBT() {

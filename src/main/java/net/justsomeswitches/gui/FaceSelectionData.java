@@ -1,7 +1,5 @@
 package net.justsomeswitches.gui;
 
-import net.justsomeswitches.config.DebugConfig;
-import net.justsomeswitches.util.DynamicBlockModelAnalyzer;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -11,7 +9,7 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * DIAGNOSTIC: Face Selection Data System with MINIMAL logging
+ * SILENT: Face Selection Data System without debug output
  */
 public class FaceSelectionData {
 
@@ -159,7 +157,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * DIAGNOSTIC: Create dropdown state with minimal logging
+     * SILENT: Create dropdown state without debug output
      */
     @Nonnull
     public static DropdownState createDropdownState(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
@@ -192,8 +190,6 @@ public class FaceSelectionData {
 
         // CRITICAL: Preserve user's current selection - NO AUTO-SETTING
         FaceOption validatedSelection = validateSelection(currentSelectedOption, availableOptions);
-
-        DebugConfig.logStateChange("DROPDOWN", "Created - Options:" + availableOptions + " Selected:" + validatedSelection);
 
         // Create dropdown state with user's selection preserved
         String previewTexture = getTextureForSelection(blockInfo, validatedSelection);
@@ -305,7 +301,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * DIAGNOSTIC: Validate face selection - PRESERVE user's choice, no auto-defaults
+     * SILENT: Validate face selection - PRESERVE user's choice, no auto-defaults
      */
     @Nonnull
     public static FaceOption validateSelection(@Nonnull FaceOption selection,
