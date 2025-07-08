@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: BlockEntity with proper model update pipeline matching lever toggle behavior
+ * FIXED: BlockEntity with immediate client-side model refresh and face selection preservation
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -104,54 +104,134 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: AUTO-APPLY WITH PROPER MODEL UPDATES
+    // FIXED: IMMEDIATE CLIENT-SIDE MODEL REFRESH
     // ========================================
 
     /**
-     * FIXED: Apply textures using exact same update sequence as lever toggle
+     * FIXED: Apply textures with immediate client-side refresh
      */
     public void applyCurrentTextureSettings() {
+        System.out.println("FIXED: Auto-apply starting...");
+
         suppressChangeNotifications = true;
+
+        boolean textureChanged = false;
 
         if (!guiToggleItem.isEmpty()) {
             String effectiveTexturePath = getEffectiveTexturePathForItem(guiToggleItem, toggleFaceSelection);
-            setToggleTextureInternal(effectiveTexturePath);
+            if (setToggleTextureInternal(effectiveTexturePath)) {
+                textureChanged = true;
+            }
         } else {
-            resetToggleTextureInternal();
+            if (resetToggleTextureInternal()) {
+                textureChanged = true;
+            }
         }
 
         if (!guiBaseItem.isEmpty()) {
             String effectiveTexturePath = getEffectiveTexturePathForItem(guiBaseItem, baseFaceSelection);
-            setBaseTextureInternal(effectiveTexturePath);
+            if (setBaseTextureInternal(effectiveTexturePath)) {
+                textureChanged = true;
+            }
         } else {
-            resetBaseTextureInternal();
+            if (resetBaseTextureInternal()) {
+                textureChanged = true;
+            }
         }
 
         suppressChangeNotifications = false;
 
-        // FIXED: Use exact same update sequence as lever toggle
-        triggerFullModelUpdate();
+        if (textureChanged) {
+            System.out.println("FIXED: Triggering immediate model refresh...");
+            triggerImmediateModelRefresh();
+        }
     }
 
     /**
-     * FIXED: Trigger full model update using same sequence as lever toggle
+     * FIXED: Trigger immediate client-side model refresh
      */
-    private void triggerFullModelUpdate() {
-        if (level != null && !level.isClientSide) {
-            // Get current block state
-            BlockState currentState = getBlockState();
+    private void triggerImmediateModelRefresh() {
+        if (level != null) {
+            if (!level.isClientSide) {
+                // SERVER-SIDE: Standard update sequence
+                BlockState currentState = getBlockState();
 
-            // CRITICAL: Use Block.UPDATE_ALL like lever toggle does
-            level.setBlock(worldPosition, currentState, Block.UPDATE_ALL);
+                // Force model data update first
+                requestModelDataUpdate();
 
-            // Request model data update
-            requestModelDataUpdate();
+                // Send immediate block update to clients
+                level.sendBlockUpdated(worldPosition, currentState, currentState, Block.UPDATE_CLIENTS);
 
-            // Send block update to clients
-            level.sendBlockUpdated(worldPosition, currentState, currentState, Block.UPDATE_CLIENTS);
+                // Mark dirty for persistence
+                setChanged();
 
-            // Mark dirty for persistence
-            setChanged();
+                System.out.println("FIXED: Server-side updates sent");
+            } else {
+                // CLIENT-SIDE: Force immediate model refresh
+                System.out.println("FIXED: Client-side immediate refresh");
+                requestModelDataUpdate();
+
+                // CRITICAL: Force immediate chunk re-render on client
+                if (level.getChunkSource().hasChunk(worldPosition.getX() >> 4, worldPosition.getZ() >> 4)) {
+                    level.getChunkSource().getLightEngine().checkBlock(worldPosition);
+                }
+            }
+        }
+    }
+
+    // FIXED: Static preservation storage to survive block state changes
+    private static FaceSelectionData.FaceOption preservedBaseFace = null;
+    private static FaceSelectionData.FaceOption preservedToggleFace = null;
+    private static boolean preservedInverted = false;
+    private static BlockPos preservedPosition = null;
+
+    /**
+     * FIXED: Save face selections before lever toggle
+     */
+    public void saveFaceSelectionsForLeverToggle() {
+        System.out.println("FIXED: SAVING face selections for lever toggle");
+        System.out.println("FIXED: Current Base: " + this.baseFaceSelection);
+        System.out.println("FIXED: Current Toggle: " + this.toggleFaceSelection);
+        System.out.println("FIXED: Current Inverted: " + this.inverted);
+
+        // Store in static variables to survive block state changes
+        preservedBaseFace = this.baseFaceSelection;
+        preservedToggleFace = this.toggleFaceSelection;
+        preservedInverted = this.inverted;
+        preservedPosition = this.worldPosition.immutable();
+
+        System.out.println("FIXED: ✅ Face selections saved to static storage");
+    }
+
+    /**
+     * FIXED: Restore face selections after lever toggle
+     */
+    public void restoreFaceSelectionsAfterLeverToggle() {
+        System.out.println("FIXED: RESTORING face selections after lever toggle");
+
+        // Only restore if this is the same position and we have preserved data
+        if (preservedPosition != null && preservedPosition.equals(this.worldPosition) &&
+                preservedBaseFace != null && preservedToggleFace != null) {
+
+            System.out.println("FIXED: Restoring - Base: " + preservedBaseFace + ", Toggle: " + preservedToggleFace + ", Inverted: " + preservedInverted);
+
+            // Restore the preserved selections
+            this.baseFaceSelection = preservedBaseFace;
+            this.toggleFaceSelection = preservedToggleFace;
+            this.inverted = preservedInverted;
+
+            // Clear static storage
+            preservedBaseFace = null;
+            preservedToggleFace = null;
+            preservedInverted = false;
+            preservedPosition = null;
+
+            System.out.println("FIXED: ✅ Face selections restored, reapplying textures...");
+
+            // Reapply textures with restored selections
+            applyCurrentTextureSettings();
+        } else {
+            System.out.println("FIXED: ❌ No preserved data to restore or wrong position");
         }
     }
 
@@ -217,18 +297,18 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return false;
     }
 
-    private void resetBaseTextureInternal() {
-        setBaseTextureInternal(DEFAULT_BASE_TEXTURE);
+    private boolean resetBaseTextureInternal() {
+        return setBaseTextureInternal(DEFAULT_BASE_TEXTURE);
     }
 
-    private void resetToggleTextureInternal() {
-        setToggleTextureInternal(DEFAULT_TOGGLE_TEXTURE);
+    private boolean resetToggleTextureInternal() {
+        return setToggleTextureInternal(DEFAULT_TOGGLE_TEXTURE);
     }
 
     public boolean setBaseTexture(@Nonnull String texturePath) {
         if (setBaseTextureInternal(texturePath)) {
             if (!suppressChangeNotifications) {
-                triggerFullModelUpdate();
+                triggerImmediateModelRefresh();
             }
             return true;
         }
@@ -246,7 +326,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public boolean setToggleTexture(@Nonnull String texturePath) {
         if (setToggleTextureInternal(texturePath)) {
             if (!suppressChangeNotifications) {
-                triggerFullModelUpdate();
+                triggerImmediateModelRefresh();
             }
             return true;
         }
@@ -262,18 +342,20 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: FACE SELECTION WITH PROPER PERSISTENCE
+    // FIXED: FACE SELECTION WITH IMMEDIATE REFRESH
     // ========================================
 
     /**
-     * FIXED: Set base face selection with immediate model update
+     * FIXED: Set base face selection with immediate model refresh
      */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
+        System.out.println("FIXED: setBaseFaceSelection - " + this.baseFaceSelection + " → " + faceSelection);
+
         if (this.baseFaceSelection != faceSelection) {
             this.baseFaceSelection = faceSelection;
 
             if (!suppressChangeNotifications) {
-                // Apply textures with new face selection and trigger full model update
+                // Apply textures with new face selection and immediate refresh
                 applyCurrentTextureSettings();
             }
             return true;
@@ -282,14 +364,16 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * FIXED: Set toggle face selection with immediate model update
+     * FIXED: Set toggle face selection with immediate model refresh
      */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
+        System.out.println("FIXED: setToggleFaceSelection - " + this.toggleFaceSelection + " → " + faceSelection);
+
         if (this.toggleFaceSelection != faceSelection) {
             this.toggleFaceSelection = faceSelection;
 
             if (!suppressChangeNotifications) {
-                // Apply textures with new face selection and trigger full model update
+                // Apply textures with new face selection and immediate refresh
                 applyCurrentTextureSettings();
             }
             return true;
@@ -393,7 +477,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         suppressChangeNotifications = false;
 
         if (changed) {
-            triggerFullModelUpdate();
+            triggerImmediateModelRefresh();
         }
     }
 
@@ -424,7 +508,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
     /**
-     * FIXED: Set GUI slot items without changing face selections
+     * FIXED: Set GUI slot items with immediate refresh
      */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         // Clear analysis cache if items changed
@@ -438,7 +522,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
 
-        // Apply textures with current face selections (preserve user's face choices)
+        // Apply textures with preserved face selections and immediate refresh
         applyCurrentTextureSettings();
     }
 
@@ -453,7 +537,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: NBT PERSISTENCE
+    // NBT PERSISTENCE (UNCHANGED - WORKING)
     // ========================================
 
     @Override
@@ -474,9 +558,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
     }
 
-    /**
-     * FIXED: Load with proper face selection restoration
-     */
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
@@ -491,7 +572,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // FIXED: Properly restore face selections
+        // Restore face selections
         String baseFaceName = nbt.getString(BASE_FACE_KEY);
         this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
                 FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
