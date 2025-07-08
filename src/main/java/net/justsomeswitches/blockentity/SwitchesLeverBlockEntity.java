@@ -1,5 +1,6 @@
 package net.justsomeswitches.blockentity;
 
+import net.justsomeswitches.config.DebugConfig;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.util.BlockTextureAnalyzer;
@@ -23,9 +24,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: BlockEntity with corrected NBT handling and race condition fixes
- * ---
- * ARCHITECTURE: Fixed face selection persistence and item voiding issues
+ * DIAGNOSTIC: BlockEntity with MINIMAL logging to identify root cause
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -33,54 +32,31 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // TEXTURE CONFIGURATION
     // ========================================
 
-    // Default texture paths
     public static final String DEFAULT_BASE_TEXTURE = "minecraft:block/stone";
     public static final String DEFAULT_TOGGLE_TEXTURE = "minecraft:block/oak_planks";
 
-    // NBT keys for texture storage
     private static final String BASE_TEXTURE_KEY = "base_texture_path";
     private static final String TOGGLE_TEXTURE_KEY = "toggle_texture_path";
-
-    // NBT keys for face selection storage
     private static final String BASE_FACE_KEY = "base_face_selection";
     private static final String TOGGLE_FACE_KEY = "toggle_face_selection";
-
-    // NBT keys for inversion state
     private static final String INVERTED_KEY = "inverted_state";
 
-    // Current texture paths
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
     private String toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
-
-    // Face selections with proper initialization
     private FaceSelectionData.FaceOption baseFaceSelection = FaceSelectionData.FaceOption.ALL;
     private FaceSelectionData.FaceOption toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
-
-    // Inversion state
     private boolean inverted = false;
 
-    // GUI slot storage
     private ItemStack guiToggleItem = ItemStack.EMPTY;
     private ItemStack guiBaseItem = ItemStack.EMPTY;
-
-    // FIXED: Prevent excessive setChanged() calls
     private boolean suppressChangeNotifications = false;
 
-    // Debug control
-    private static final boolean MINIMAL_DEBUG = true;
-
     // ========================================
-    // ENHANCED MODEL DATA INTEGRATION
+    // MODEL DATA INTEGRATION
     // ========================================
 
-    /**
-     * ModelProperty for passing enhanced texture data to custom models
-     */
     public static final ModelProperty<SwitchTextureData> TEXTURE_PROPERTY = new ModelProperty<>();
 
-    /**
-     * Enhanced data class for passing comprehensive texture information to custom models
-     */
     public static class SwitchTextureData {
         private final String baseTexture;
         private final String toggleTexture;
@@ -124,63 +100,45 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
                 .build();
     }
 
-    // ========================================
-    // CONSTRUCTOR AND BASIC SETUP
-    // ========================================
-
     public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FIXED - Created at position " + pos);
-        }
+        DebugConfig.logCritical("BlockEntity created at " + pos);
     }
 
     // ========================================
-    // FIXED: BATCHED TEXTURE APPLICATION
+    // DIAGNOSTIC: AUTO-APPLY SYSTEM
     // ========================================
 
     /**
-     * FIXED: Apply current texture settings with batched changes
+     * DIAGNOSTIC: Apply textures with minimal logging
      */
     public void applyCurrentTextureSettings() {
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FIXED - Applying texture settings - Base: " + baseFaceSelection +
-                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-        }
+        DebugConfig.logStateChange("AUTO-APPLY", "Starting - Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection);
 
-        // FIXED: Suppress change notifications during batch update
         suppressChangeNotifications = true;
 
-        // Apply toggle texture with current face selection
         if (!guiToggleItem.isEmpty()) {
             String effectiveTexturePath = getEffectiveTexturePathForItem(guiToggleItem, toggleFaceSelection);
             setToggleTextureInternal(effectiveTexturePath);
-            if (MINIMAL_DEBUG) {
-                System.out.println("DEBUG BlockEntity: Applied toggle texture: " + effectiveTexturePath);
-            }
+            DebugConfig.logStateChange("AUTO-APPLY", "Toggle texture applied: " + effectiveTexturePath);
         } else {
             resetToggleTextureInternal();
         }
 
-        // Apply base texture with current face selection
         if (!guiBaseItem.isEmpty()) {
             String effectiveTexturePath = getEffectiveTexturePathForItem(guiBaseItem, baseFaceSelection);
             setBaseTextureInternal(effectiveTexturePath);
-            if (MINIMAL_DEBUG) {
-                System.out.println("DEBUG BlockEntity: Applied base texture: " + effectiveTexturePath);
-            }
+            DebugConfig.logStateChange("AUTO-APPLY", "Base texture applied: " + effectiveTexturePath);
         } else {
             resetBaseTextureInternal();
         }
 
-        // FIXED: Re-enable change notifications and trigger single update
         suppressChangeNotifications = false;
         markDirtyAndSync();
+
+        DebugConfig.logStateChange("AUTO-APPLY", "Complete");
     }
 
-    /**
-     * FIXED: Get effective texture path for item based on face selection
-     */
     @Nonnull
     private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (item.isEmpty()) {
@@ -191,10 +149,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         String faceTexturePath = FaceSelectionData.getTextureForSelection(blockInfo, faceSelection);
 
         if (faceTexturePath != null && BlockTextureAnalyzer.isValidTexture(faceTexturePath)) {
-            if (MINIMAL_DEBUG) {
-                System.out.println("DEBUG BlockEntity: FIXED - Face selection " + faceSelection +
-                        " resolved to texture: " + faceTexturePath);
-            }
             return faceTexturePath;
         }
 
@@ -231,7 +185,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return "";
     }
 
-    // FIXED: Internal methods that don't trigger setChanged()
     private boolean setBaseTextureInternal(@Nonnull String texturePath) {
         if (!this.baseTexturePath.equals(texturePath)) {
             this.baseTexturePath = texturePath;
@@ -256,7 +209,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         setToggleTextureInternal(DEFAULT_TOGGLE_TEXTURE);
     }
 
-    // Public methods that trigger setChanged()
     public boolean setBaseTexture(@Nonnull String texturePath) {
         if (setBaseTextureInternal(texturePath)) {
             if (!suppressChangeNotifications) {
@@ -294,37 +246,39 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: FACE SELECTION MANAGEMENT
+    // DIAGNOSTIC: FACE SELECTION MANAGEMENT
     // ========================================
 
+    /**
+     * DIAGNOSTIC: Set base face selection with tracking
+     */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (this.baseFaceSelection != faceSelection) {
-            if (MINIMAL_DEBUG) {
-                System.out.println("DEBUG BlockEntity: FIXED - Setting base face selection from " +
-                        this.baseFaceSelection + " to " + faceSelection);
-            }
+            DebugConfig.logStateChange("FACE-BASE", "Changing from " + this.baseFaceSelection + " to " + faceSelection);
             this.baseFaceSelection = faceSelection;
 
-            // FIXED: Ensure the change is committed before triggering save
             if (!suppressChangeNotifications) {
                 markDirtyAndSync();
+                DebugConfig.logStateChange("FACE-BASE", "Calling auto-apply");
+                applyCurrentTextureSettings();
             }
             return true;
         }
         return false;
     }
 
+    /**
+     * DIAGNOSTIC: Set toggle face selection with tracking
+     */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (this.toggleFaceSelection != faceSelection) {
-            if (MINIMAL_DEBUG) {
-                System.out.println("DEBUG BlockEntity: FIXED - Setting toggle face selection from " +
-                        this.toggleFaceSelection + " to " + faceSelection);
-            }
+            DebugConfig.logStateChange("FACE-TOGGLE", "Changing from " + this.toggleFaceSelection + " to " + faceSelection);
             this.toggleFaceSelection = faceSelection;
 
-            // FIXED: Ensure the change is committed before triggering save
             if (!suppressChangeNotifications) {
                 markDirtyAndSync();
+                DebugConfig.logStateChange("FACE-TOGGLE", "Calling auto-apply");
+                applyCurrentTextureSettings();
             }
             return true;
         }
@@ -333,14 +287,12 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public boolean setInverted(boolean inverted) {
         if (this.inverted != inverted) {
-            if (MINIMAL_DEBUG) {
-                System.out.println("DEBUG BlockEntity: FIXED - Setting inverted state from " + this.inverted + " to " + inverted);
-            }
+            DebugConfig.logStateChange("INVERTED", "Changing from " + this.inverted + " to " + inverted);
             this.inverted = inverted;
 
-            // FIXED: Ensure the change is committed before triggering save
             if (!suppressChangeNotifications) {
                 markDirtyAndSync();
+                applyCurrentTextureSettings();
             }
             return true;
         }
@@ -351,7 +303,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // BLOCK ANALYSIS INTEGRATION
     // ========================================
 
-    // Cache analysis results to prevent repeated processing
     private BlockTextureAnalyzer.BlockTextureInfo cachedBaseAnalysis = null;
     private BlockTextureAnalyzer.BlockTextureInfo cachedToggleAnalysis = null;
     private ItemStack lastAnalyzedBase = ItemStack.EMPTY;
@@ -396,7 +347,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // GETTERS FOR GUI AND MODEL INTEGRATION
+    // GETTERS
     // ========================================
 
     @Nonnull public String getBaseTexture() { return baseTexturePath; }
@@ -406,7 +357,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public boolean isInverted() { return inverted; }
 
     public void resetTextures() {
-        // FIXED: Batch all changes
         suppressChangeNotifications = true;
 
         boolean changed = false;
@@ -433,9 +383,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         suppressChangeNotifications = false;
 
         if (changed) {
-            if (MINIMAL_DEBUG) {
-                System.out.println("DEBUG BlockEntity: FIXED - Reset all textures and settings to defaults");
-            }
             markDirtyAndSync();
         }
     }
@@ -457,7 +404,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: GUI SLOT MANAGEMENT
+    // DIAGNOSTIC: GUI SLOT MANAGEMENT
     // ========================================
 
     @Nonnull
@@ -466,10 +413,12 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     @Nonnull
     public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
+    /**
+     * DIAGNOSTIC: Set GUI slot items with tracking
+     */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FIXED - Setting GUI slot items - Toggle: " + toggleItem + ", Base: " + baseItem);
-        }
+        DebugConfig.logStateChange("SLOT-ITEMS", "Setting items - Toggle:" + (!toggleItem.isEmpty()) + " Base:" + (!baseItem.isEmpty()));
+        DebugConfig.logStateChange("SLOT-ITEMS", "Current faces - Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection);
 
         // Clear analysis cache if items changed
         if (!ItemStack.matches(this.guiToggleItem, toggleItem)) {
@@ -482,31 +431,14 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
 
-        // FIXED: For new items placed, auto-set face selection to appropriate default
-        if (!baseItem.isEmpty() && baseFaceSelection == FaceSelectionData.FaceOption.ALL) {
-            BlockTextureAnalyzer.BlockTextureInfo blockInfo = BlockTextureAnalyzer.analyzeBlock(baseItem);
-            if (blockInfo.hasMultipleFaceTextures()) {
-                // For oak logs and similar, default to SIDE
-                FaceSelectionData.DropdownState dropdownState = FaceSelectionData.createDropdownState(blockInfo, baseFaceSelection);
-                if (dropdownState.isEnabled() && !dropdownState.getAvailableOptions().isEmpty()) {
-                    FaceSelectionData.FaceOption defaultOption = dropdownState.getAvailableOptions().get(0);
-                    if (MINIMAL_DEBUG) {
-                        System.out.println("DEBUG BlockEntity: FIXED - Auto-setting base face to: " + defaultOption);
-                    }
-                    setBaseFaceSelection(defaultOption);
-                }
-            }
-        }
-
-        // Save to NBT (this will trigger markDirtyAndSync)
+        // CRITICAL: Apply textures with current face selections (don't change the selections)
+        applyCurrentTextureSettings();
         markDirtyAndSync();
+
+        DebugConfig.logStateChange("SLOT-ITEMS", "After setting - Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection);
     }
 
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FIXED - Dropping stored textures at " + pos);
-        }
-
         if (!guiToggleItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiToggleItem);
         }
@@ -517,25 +449,19 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FIXED: NBT HANDLING
+    // DIAGNOSTIC: NBT HANDLING
     // ========================================
 
     @Override
     protected void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
 
-        // Save texture paths
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
-
-        // FIXED: Save face selections with current values
         nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
         nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
-
-        // Save inversion state
         nbt.putBoolean(INVERTED_KEY, inverted);
 
-        // FIXED: Always save GUI slot items
         if (!guiToggleItem.isEmpty()) {
             nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
         }
@@ -543,25 +469,18 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FIXED - Saved NBT - Base: " + baseFaceSelection +
-                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted +
-                    ", Has base item: " + !guiBaseItem.isEmpty() + ", Has toggle item: " + !guiToggleItem.isEmpty());
-        }
+        DebugConfig.logPersistence("SAVE", "Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection + " Inverted:" + inverted);
     }
 
     /**
-     * FIXED: Load with proper error handling
+     * DIAGNOSTIC: Load with tracking
      */
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
 
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FIXED - Loading NBT");
-        }
+        DebugConfig.logPersistence("LOAD-START", "Beginning load operation");
 
-        // Load texture paths
         this.baseTexturePath = nbt.getString(BASE_TEXTURE_KEY);
         this.toggleTexturePath = nbt.getString(TOGGLE_TEXTURE_KEY);
 
@@ -572,7 +491,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // FIXED: Load face selections with validation
         String baseFaceName = nbt.getString(BASE_FACE_KEY);
         this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
                 FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
@@ -583,7 +501,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         this.inverted = nbt.getBoolean(INVERTED_KEY);
 
-        // FIXED: Load GUI slot items with proper handling
         if (nbt.contains("gui_toggle_item")) {
             this.guiToggleItem = ItemStack.of(nbt.getCompound("gui_toggle_item"));
         } else {
@@ -596,15 +513,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.guiBaseItem = ItemStack.EMPTY;
         }
 
-        // Clear analysis cache on load
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
 
-        if (MINIMAL_DEBUG) {
-            System.out.println("DEBUG BlockEntity: FIXED - Loaded NBT - Base: " + baseFaceSelection +
-                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted +
-                    ", Loaded base item: " + !guiBaseItem.isEmpty() + ", Loaded toggle item: " + !guiToggleItem.isEmpty());
-        }
+        DebugConfig.logPersistence("LOAD-END", "Base:" + baseFaceSelection + " Toggle:" + toggleFaceSelection + " Inverted:" + inverted);
     }
 
     // ========================================
@@ -671,10 +583,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void loadFromNBT(@Nonnull CompoundTag nbt) {
         load(nbt);
     }
-
-    // ========================================
-    // TICK METHODS
-    // ========================================
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
         // Client-side logic can be added here if needed

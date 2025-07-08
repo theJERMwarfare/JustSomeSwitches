@@ -1,46 +1,48 @@
 package net.justsomeswitches.config;
 
 /**
- * Global debug configuration for Just Some Switches mod
- * ---
- * USAGE: Set DEBUG_ENABLED = true for testing the face selection fix
+ * MINIMAL Debug configuration - only critical state changes
  */
 public class DebugConfig {
 
     /**
-     * Master debug switch - set to true for testing face selection fix
+     * Master debug switch - MINIMAL logging only
      */
-    public static final boolean DEBUG_ENABLED = true;  // ← Set to true for testing
+    public static final boolean DEBUG_ENABLED = true;
 
     /**
-     * Specific debug categories
+     * MINIMAL debug categories - only the most critical information
      */
-    public static final boolean DEBUG_BLOCKENTITY = DEBUG_ENABLED && true;
-    public static final boolean DEBUG_MENU = DEBUG_ENABLED && true;
-    public static final boolean DEBUG_FACE_SELECTION = false;  // ← Always off due to spam
-    public static final boolean DEBUG_MODEL = DEBUG_ENABLED && true;
-    public static final boolean DEBUG_CLIENT_SETUP = DEBUG_ENABLED && true;
+    public static final boolean DEBUG_BLOCKENTITY = false;     // ← OFF - too much spam
+    public static final boolean DEBUG_MENU = false;           // ← OFF - too much spam
+    public static final boolean DEBUG_FACE_SELECTION = false; // ← OFF - too much spam
+    public static final boolean DEBUG_MODEL = false;          // ← OFF - too much spam
+    public static final boolean DEBUG_CLIENT_SETUP = false;   // ← OFF - too much spam
 
     /**
-     * Helper method for conditional debug logging
+     * CRITICAL ONLY - only log state changes and failures
      */
-    public static void log(String category, String message) {
+    public static void logCritical(String message) {
         if (DEBUG_ENABLED) {
-            System.out.println("DEBUG " + category + ": " + message);
+            System.out.println("CRITICAL: " + message);
         }
     }
 
     /**
-     * Critical messages that should always be shown
+     * STATE CHANGE - only log when important state changes
      */
-    public static void critical(String message) {
-        System.out.println("CRITICAL: " + message);
+    public static void logStateChange(String component, String change) {
+        if (DEBUG_ENABLED) {
+            System.out.println("STATE " + component + ": " + change);
+        }
     }
 
     /**
-     * Warning messages
+     * PERSISTENCE - only log save/load operations
      */
-    public static void warn(String message) {
-        System.out.println("WARNING: " + message);
+    public static void logPersistence(String operation, String data) {
+        if (DEBUG_ENABLED) {
+            System.out.println("PERSIST " + operation + ": " + data);
+        }
     }
 }

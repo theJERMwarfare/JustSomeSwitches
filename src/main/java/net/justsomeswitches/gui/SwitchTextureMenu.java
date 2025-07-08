@@ -1,6 +1,7 @@
 package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.config.DebugConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
@@ -15,10 +16,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: Stateless Menu with reduced setChanged() calls and proper auto-apply
- * ---
- * ARCHITECTURE: Menu acts as view/controller only, BlockEntity holds ALL state
- * FIXES: Eliminated excessive setChanged() calls causing race conditions
+ * DIAGNOSTIC: Menu with MINIMAL logging for root cause analysis
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -34,20 +32,16 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private static final int PLAYER_INV_Y = 98;
     private static final int HOTBAR_Y = 156;
 
-    // FIXED: Only essential references - NO STATE STORAGE
     private final SimpleContainer textureContainer;
     private final BlockPos blockPos;
     private final Level level;
 
-    // FIXED: Track last slot state to prevent unnecessary updates
+    // Track last slot state to prevent unnecessary updates
     private ItemStack lastToggleItem = ItemStack.EMPTY;
     private ItemStack lastBaseItem = ItemStack.EMPTY;
 
-    // REMOVED: All local face selection state variables
-    // BlockEntity is the single source of truth
-
     /**
-     * FIXED: Constructor with reduced change notification system
+     * DIAGNOSTIC: Constructor with minimal logging
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
@@ -55,14 +49,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         this.blockPos = blockPos;
         this.level = playerInventory.player.level();
 
-        System.out.println("DEBUG Menu: FIXED - Stateless Menu Created");
+        DebugConfig.logCritical("Menu created for position " + blockPos);
 
-        // FIXED: Container with smart change detection
+        // Container with smart change detection for auto-apply
         this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT) {
             @Override
             public void setChanged() {
                 super.setChanged();
-                onSlotChangedSmart();
+                onSlotChangedWithAutoApply();
             }
         };
 
@@ -84,8 +78,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
-
-        System.out.println("DEBUG Menu: FIXED - Stateless menu initialization complete");
     }
 
     /**
@@ -96,19 +88,18 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * FIXED: Smart slot change handling that only updates when items actually change
+     * DIAGNOSTIC: Smart slot change handling with minimal logging
      */
-    private void onSlotChangedSmart() {
+    private void onSlotChangedWithAutoApply() {
         ItemStack currentToggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
         ItemStack currentBaseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
 
-        // FIXED: Only trigger update if items actually changed
+        // Only trigger update if items actually changed
         boolean toggleChanged = !ItemStack.matches(lastToggleItem, currentToggleItem);
         boolean baseChanged = !ItemStack.matches(lastBaseItem, currentBaseItem);
 
         if (toggleChanged || baseChanged) {
-            System.out.println("DEBUG Menu: FIXED - Smart change detected - Toggle changed: " + toggleChanged +
-                    ", Base changed: " + baseChanged);
+            DebugConfig.logStateChange("SLOT-CHANGE", "Items changed - calling setGuiSlotItems");
 
             // Update last known state
             lastToggleItem = currentToggleItem.copy();
@@ -116,17 +107,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
             SwitchesLeverBlockEntity blockEntity = getBlockEntity();
             if (blockEntity != null) {
-                // FIXED: Single update call instead of multiple
+                // Single update call with immediate auto-apply
                 blockEntity.setGuiSlotItems(currentToggleItem, currentBaseItem);
-                blockEntity.applyCurrentTextureSettings();
-
-                System.out.println("DEBUG Menu: FIXED - Single slot update applied to BlockEntity");
             }
         }
     }
 
     /**
-     * FIXED: Load slot items from BlockEntity with state tracking
+     * DIAGNOSTIC: Load slot items from BlockEntity with minimal logging
      */
     private void loadSlotItemsFromBlockEntity() {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
@@ -137,57 +125,54 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             textureContainer.setItem(TOGGLE_TEXTURE_SLOT, toggleItem);
             textureContainer.setItem(BASE_TEXTURE_SLOT, baseItem);
 
-            // FIXED: Track initial state to prevent false change detection
+            // Track initial state to prevent false change detection
             lastToggleItem = toggleItem.copy();
             lastBaseItem = baseItem.copy();
 
-            System.out.println("DEBUG Menu: FIXED - Loaded slot items from BlockEntity - Toggle: " +
-                    !toggleItem.isEmpty() + ", Base: " + !baseItem.isEmpty());
+            DebugConfig.logStateChange("MENU-LOAD", "Loaded items - Base face:" + blockEntity.getBaseFaceSelection() +
+                    " Toggle face:" + blockEntity.getToggleFaceSelection());
         }
     }
 
     // ========================================
-    // FIXED: Stateless Face Selection Methods with immediate application
+    // DIAGNOSTIC: Face Selection Methods with MINIMAL logging
     // ========================================
 
     /**
-     * FIXED: Direct BlockEntity face selection setter with immediate texture update
+     * DIAGNOSTIC: Set base face selection with tracking
      */
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            System.out.println("DEBUG Menu: FIXED - Setting base face selection to " + faceOption);
+            DebugConfig.logStateChange("MENU-FACE-BASE", "User selected: " + faceOption);
             blockEntity.setBaseFaceSelection(faceOption);
-            // Face selection change will trigger applyCurrentTextureSettings automatically
         }
     }
 
     /**
-     * FIXED: Direct BlockEntity face selection setter with immediate texture update
+     * DIAGNOSTIC: Set toggle face selection with tracking
      */
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            System.out.println("DEBUG Menu: FIXED - Setting toggle face selection to " + faceOption);
+            DebugConfig.logStateChange("MENU-FACE-TOGGLE", "User selected: " + faceOption);
             blockEntity.setToggleFaceSelection(faceOption);
-            // Face selection change will trigger applyCurrentTextureSettings automatically
         }
     }
 
     /**
-     * FIXED: Direct BlockEntity inversion setter with immediate texture update
+     * DIAGNOSTIC: Set inversion with tracking
      */
     public void setInverted(boolean inverted) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            System.out.println("DEBUG Menu: FIXED - Setting inverted to " + inverted);
+            DebugConfig.logStateChange("MENU-INVERTED", "User selected: " + inverted);
             blockEntity.setInverted(inverted);
-            // Inversion change will trigger applyCurrentTextureSettings automatically
         }
     }
 
     // ========================================
-    // FIXED: Stateless Getters (Read from BlockEntity)
+    // Getters (Read from BlockEntity)
     // ========================================
 
     @Nonnull
@@ -234,14 +219,19 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // FIXED: Simplified Cleanup
+    // DIAGNOSTIC: Enhanced Cleanup
     // ========================================
 
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
-        // FIXED: No state to save - BlockEntity already has current state
-        System.out.println("DEBUG Menu: FIXED - Stateless menu closed, no cleanup needed");
+
+        DebugConfig.logStateChange("MENU-CLOSE", "GUI closed");
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            DebugConfig.logStateChange("MENU-CLOSE", "Final state - Base:" + blockEntity.getBaseFaceSelection() +
+                    " Toggle:" + blockEntity.getToggleFaceSelection());
+        }
     }
 
     // ========================================
