@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FINAL FIX: BlockEntity with immediate face selection restoration methods
+ * FINAL FIX: BlockEntity with corrected face selection preservation timing
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -49,6 +49,47 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private ItemStack guiToggleItem = ItemStack.EMPTY;
     private ItemStack guiBaseItem = ItemStack.EMPTY;
     private boolean suppressChangeNotifications = false;
+
+    // ========================================
+    // FINAL FIX: PRESERVATION DATA CLASS
+    // ========================================
+
+    /**
+     * FINAL FIX: Data class for preserving BlockEntity state during lever toggle
+     */
+    public static class PreservationData {
+        private final FaceSelectionData.FaceOption baseFaceSelection;
+        private final FaceSelectionData.FaceOption toggleFaceSelection;
+        private final boolean inverted;
+        private final ItemStack guiToggleItem;
+        private final ItemStack guiBaseItem;
+        private final String baseTexturePath;
+        private final String toggleTexturePath;
+
+        public PreservationData(FaceSelectionData.FaceOption baseFaceSelection,
+                                FaceSelectionData.FaceOption toggleFaceSelection,
+                                boolean inverted,
+                                ItemStack guiToggleItem,
+                                ItemStack guiBaseItem,
+                                String baseTexturePath,
+                                String toggleTexturePath) {
+            this.baseFaceSelection = baseFaceSelection;
+            this.toggleFaceSelection = toggleFaceSelection;
+            this.inverted = inverted;
+            this.guiToggleItem = guiToggleItem.copy();
+            this.guiBaseItem = guiBaseItem.copy();
+            this.baseTexturePath = baseTexturePath;
+            this.toggleTexturePath = toggleTexturePath;
+        }
+
+        public FaceSelectionData.FaceOption getBaseFaceSelection() { return baseFaceSelection; }
+        public FaceSelectionData.FaceOption getToggleFaceSelection() { return toggleFaceSelection; }
+        public boolean isInverted() { return inverted; }
+        public ItemStack getGuiToggleItem() { return guiToggleItem.copy(); }
+        public ItemStack getGuiBaseItem() { return guiBaseItem.copy(); }
+        public String getBaseTexturePath() { return baseTexturePath; }
+        public String getToggleTexturePath() { return toggleTexturePath; }
+    }
 
     // ========================================
     // MODEL DATA INTEGRATION
@@ -104,68 +145,84 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FINAL FIX: IMMEDIATE RESTORATION METHODS
+    // FINAL FIX: CORRECTED CAPTURE AND RESTORE METHODS
     // ========================================
 
     /**
-     * FINAL FIX: Force set face selections without triggering change notifications
-     * Used for immediate restoration during lever toggle
+     * FINAL FIX: Force fresh NBT save to ensure all current changes are persisted
      */
-    public void forceSetFaceSelectionsWithoutNotification(@Nonnull FaceSelectionData.FaceOption baseFace,
-                                                          @Nonnull FaceSelectionData.FaceOption toggleFace,
-                                                          boolean inverted) {
-        System.out.println("FINAL FIX: Force setting face selections - Base: " + baseFace +
-                ", Toggle: " + toggleFace + ", Inverted: " + inverted);
+    public void forceFreshNBTSave() {
+        System.out.println("FINAL FIX: Forcing fresh NBT save to capture latest state");
 
-        // Set suppressChangeNotifications to prevent automatic updates during restoration
-        boolean previousSuppress = this.suppressChangeNotifications;
-        this.suppressChangeNotifications = true;
-
-        // Direct assignment without notifications
-        this.baseFaceSelection = baseFace;
-        this.toggleFaceSelection = toggleFace;
-        this.inverted = inverted;
-
-        // Restore previous suppression state
-        this.suppressChangeNotifications = previousSuppress;
-
-        // Force NBT persistence immediately
+        // Force immediate NBT save
         setChanged();
 
-        System.out.println("FINAL FIX: Face selections force-set successfully");
+        // Create a fresh NBT tag and save current state
+        CompoundTag freshTag = new CompoundTag();
+        saveAdditional(freshTag);
+
+        // Immediately reload from the fresh NBT to ensure consistency
+        load(freshTag);
+
+        System.out.println("FINAL FIX: Fresh NBT save/reload complete - Base: " + baseFaceSelection +
+                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
     }
 
     /**
-     * FINAL FIX: Force set slot items without triggering change notifications
-     * Used for immediate restoration during lever toggle
+     * FINAL FIX: Capture current state after ensuring fresh NBT data
      */
-    public void forceSetSlotItemsWithoutNotification(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
-        System.out.println("FINAL FIX: Force setting slot items - Toggle: " + (!toggleItem.isEmpty()) +
-                ", Base: " + (!baseItem.isEmpty()));
+    @Nonnull
+    public PreservationData captureCurrentState() {
+        System.out.println("FINAL FIX: Capturing current state with fresh data");
 
-        // Set suppressChangeNotifications to prevent automatic updates during restoration
-        boolean previousSuppress = this.suppressChangeNotifications;
-        this.suppressChangeNotifications = true;
+        PreservationData data = new PreservationData(
+                this.baseFaceSelection,
+                this.toggleFaceSelection,
+                this.inverted,
+                this.guiToggleItem,
+                this.guiBaseItem,
+                this.baseTexturePath,
+                this.toggleTexturePath
+        );
 
-        // Clear analysis cache if items changed
-        if (!ItemStack.matches(this.guiToggleItem, toggleItem)) {
-            cachedToggleAnalysis = null;
-        }
-        if (!ItemStack.matches(this.guiBaseItem, baseItem)) {
-            cachedBaseAnalysis = null;
-        }
+        System.out.println("FINAL FIX: CAPTURED - Base: " + data.getBaseFaceSelection() +
+                ", Toggle: " + data.getToggleFaceSelection() + ", Inverted: " + data.isInverted());
 
-        // Direct assignment without notifications
-        this.guiToggleItem = toggleItem.copy();
-        this.guiBaseItem = baseItem.copy();
+        return data;
+    }
 
-        // Restore previous suppression state
-        this.suppressChangeNotifications = previousSuppress;
+    /**
+     * FINAL FIX: Restore from preservation data
+     */
+    public void restoreFromPreservationData(@Nonnull PreservationData data) {
+        System.out.println("FINAL FIX: Restoring from preservation data...");
 
-        // Force NBT persistence immediately
+        suppressChangeNotifications = true;
+
+        // Restore face selections
+        this.baseFaceSelection = data.getBaseFaceSelection();
+        this.toggleFaceSelection = data.getToggleFaceSelection();
+        this.inverted = data.isInverted();
+
+        // Restore GUI items
+        this.guiToggleItem = data.getGuiToggleItem();
+        this.guiBaseItem = data.getGuiBaseItem();
+
+        // Restore texture paths
+        this.baseTexturePath = data.getBaseTexturePath();
+        this.toggleTexturePath = data.getToggleTexturePath();
+
+        // Clear analysis cache
+        cachedBaseAnalysis = null;
+        cachedToggleAnalysis = null;
+
+        suppressChangeNotifications = false;
+
+        // Force NBT persistence of restored state
         setChanged();
 
-        System.out.println("FINAL FIX: Slot items force-set successfully");
+        System.out.println("FINAL FIX: Restoration complete - Base: " + this.baseFaceSelection +
+                ", Toggle: " + this.toggleFaceSelection + ", Inverted: " + this.inverted);
     }
 
     // ========================================
@@ -176,8 +233,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * Apply textures with immediate client-side refresh
      */
     public void applyCurrentTextureSettings() {
-        System.out.println("FINAL FIX: Auto-apply starting with current face selections - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection);
+        System.out.println("FINAL FIX: Auto-apply starting with current face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
 
         suppressChangeNotifications = true;
 
@@ -567,7 +623,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // ROBUST NBT PERSISTENCE
+    // ROBUST NBT PERSISTENCE FOR LEVER TOGGLE PRESERVATION
     // ========================================
 
     @Override
@@ -684,27 +740,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             load(nbt);
             requestModelDataUpdate();
         }
-    }
-
-    // ========================================
-    // UTILITY METHODS
-    // ========================================
-
-    /**
-     * Save complete BlockEntity state to NBT for preservation
-     */
-    @Nonnull
-    public CompoundTag saveToNBT() {
-        CompoundTag nbt = new CompoundTag();
-        saveAdditional(nbt);
-        return nbt;
-    }
-
-    /**
-     * Load complete BlockEntity state from NBT for restoration
-     */
-    public void loadFromNBT(@Nonnull CompoundTag nbt) {
-        load(nbt);
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {

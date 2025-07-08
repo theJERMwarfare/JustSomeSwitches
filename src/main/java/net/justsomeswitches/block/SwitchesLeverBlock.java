@@ -4,7 +4,6 @@ import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -29,7 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FINAL FIX: Switches Lever Block with immediate face selection capture before any state changes
+ * FINAL FIX: Switches Lever Block with corrected capture timing for face selection preservation
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -109,7 +108,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // FINAL FIX: IMMEDIATE FACE SELECTION CAPTURE
+    // FINAL FIX: CORRECTED TIMING FOR FACE SELECTION PRESERVATION
     // ========================================
 
     @Override
@@ -121,73 +120,48 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        System.out.println("FINAL FIX: Immediate face selection capture before any state changes");
+        System.out.println("FINAL FIX: Enhanced lever toggle with corrected capture timing");
 
-        // CRITICAL: Capture face selections IMMEDIATELY before any operations
-        net.justsomeswitches.gui.FaceSelectionData.FaceOption capturedBaseFace = null;
-        net.justsomeswitches.gui.FaceSelectionData.FaceOption capturedToggleFace = null;
-        boolean capturedInverted = false;
-        CompoundTag capturedSlotData = null;
-
-        // Get BlockEntity and capture its current state IMMEDIATELY
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            // IMMEDIATE CAPTURE - no delays, no other operations first
-            capturedBaseFace = blockEntity.getBaseFaceSelection();
-            capturedToggleFace = blockEntity.getToggleFaceSelection();
-            capturedInverted = blockEntity.isInverted();
-
-            // Also capture slot items immediately
-            capturedSlotData = new CompoundTag();
-            if (!blockEntity.getGuiToggleItem().isEmpty()) {
-                capturedSlotData.put("gui_toggle_item", blockEntity.getGuiToggleItem().save(new CompoundTag()));
-            }
-            if (!blockEntity.getGuiBaseItem().isEmpty()) {
-                capturedSlotData.put("gui_base_item", blockEntity.getGuiBaseItem().save(new CompoundTag()));
-            }
-
-            System.out.println("FINAL FIX: IMMEDIATE CAPTURE COMPLETE - Base: " + capturedBaseFace +
-                    ", Toggle: " + capturedToggleFace + ", Inverted: " + capturedInverted);
-        }
-
-        // Get current powered state for sound and lever operation
+        // Get current powered state
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         boolean newPoweredState = !currentlyPowered;
 
         System.out.println("FINAL FIX: Lever state change - Current: " + currentlyPowered + " → New: " + newPoweredState);
 
-        // Change the block state using minimal update flags to prevent BlockEntity destruction
+        // CRITICAL FIX: Proper capture with fresh NBT data
+        SwitchesLeverBlockEntity.PreservationData preservedData = null;
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("FINAL FIX: CORRECTED - Force fresh NBT save before capture");
+
+            // CRITICAL: Force immediate NBT persistence to ensure all changes are saved
+            blockEntity.setChanged();
+
+            // Force a fresh NBT save to capture the absolute latest state
+            blockEntity.forceFreshNBTSave();
+
+            // NOW capture the current state (should have latest face selections)
+            preservedData = blockEntity.captureCurrentState();
+
+            System.out.println("FINAL FIX: CORRECTED CAPTURE - Base: " + preservedData.getBaseFaceSelection() +
+                    ", Toggle: " + preservedData.getToggleFaceSelection() + ", Inverted: " + preservedData.isInverted());
+        }
+
+        // Change the block state with minimal updates to avoid BlockEntity recreation
         BlockState newState = state.setValue(BlockStateProperties.POWERED, newPoweredState);
+        level.setBlock(pos, newState, Block.UPDATE_NEIGHBORS | Block.UPDATE_CLIENTS);
 
-        // Use minimal update flags - avoid BLOCK_UPDATE which can trigger BlockEntity recreation
-        int updateFlags = Block.UPDATE_NEIGHBORS | Block.UPDATE_CLIENTS;
-        level.setBlock(pos, newState, updateFlags);
+        // CRITICAL: Restore preserved data immediately after block state change
+        if (preservedData != null && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("FINAL FIX: Restoring preserved face selections...");
 
-        // IMMEDIATE RESTORATION: Apply captured data to BlockEntity after state change
-        if (capturedBaseFace != null && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("FINAL FIX: Restoring captured face selections...");
+            // Restore all preserved data including face selections
+            blockEntity.restoreFromPreservationData(preservedData);
 
-            // Force immediate restoration without triggering change notifications
-            blockEntity.forceSetFaceSelectionsWithoutNotification(capturedBaseFace, capturedToggleFace, capturedInverted);
-
-            // Restore slot items if captured
-            if (capturedSlotData != null) {
-                net.minecraft.world.item.ItemStack toggleItem = capturedSlotData.contains("gui_toggle_item") ?
-                        net.minecraft.world.item.ItemStack.of(capturedSlotData.getCompound("gui_toggle_item")) :
-                        net.minecraft.world.item.ItemStack.EMPTY;
-
-                net.minecraft.world.item.ItemStack baseItem = capturedSlotData.contains("gui_base_item") ?
-                        net.minecraft.world.item.ItemStack.of(capturedSlotData.getCompound("gui_base_item")) :
-                        net.minecraft.world.item.ItemStack.EMPTY;
-
-                blockEntity.forceSetSlotItemsWithoutNotification(toggleItem, baseItem);
-            }
-
-            // Apply textures with restored face selections
-            blockEntity.applyCurrentTextureSettings();
-
-            // Verify restoration
             System.out.println("FINAL FIX: VERIFICATION - Restored Base: " + blockEntity.getBaseFaceSelection() +
                     ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+
+            // Trigger immediate visual update with restored data
+            blockEntity.applyCurrentTextureSettings();
 
             System.out.println("FINAL FIX: ✅ Face selection preservation through lever toggle COMPLETE");
         }
