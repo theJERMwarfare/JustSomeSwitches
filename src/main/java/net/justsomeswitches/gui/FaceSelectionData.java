@@ -53,15 +53,18 @@ public class FaceSelectionData {
         public boolean isAll() { return this == ALL; }
 
         /**
-         * Convert from serialized name (for NBT loading)
+         * Convert from serialized name (for NBT loading) - FIXED: Enhanced debug output
          */
         @Nonnull
         public static FaceOption fromSerializedName(@Nonnull String name) {
+            System.out.println("FIXED: Converting serialized name: '" + name + "'");
             for (FaceOption option : values()) {
                 if (option.serializedName.equals(name)) {
+                    System.out.println("FIXED: Found matching option: " + option);
                     return option;
                 }
             }
+            System.out.println("FIXED: No match found, defaulting to ALL");
             return ALL; // Fallback to ALL for invalid names
         }
 

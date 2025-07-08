@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: BlockEntity with immediate client-side model refresh and face selection preservation
+ * FIXED: BlockEntity with NBT-based preservation and immediate client-side model refresh
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -179,62 +179,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
     }
 
-    // FIXED: Static preservation storage to survive block state changes
-    private static FaceSelectionData.FaceOption preservedBaseFace = null;
-    private static FaceSelectionData.FaceOption preservedToggleFace = null;
-    private static boolean preservedInverted = false;
-    private static BlockPos preservedPosition = null;
-
-    /**
-     * FIXED: Save face selections before lever toggle
-     */
-    public void saveFaceSelectionsForLeverToggle() {
-        System.out.println("FIXED: SAVING face selections for lever toggle");
-        System.out.println("FIXED: Current Base: " + this.baseFaceSelection);
-        System.out.println("FIXED: Current Toggle: " + this.toggleFaceSelection);
-        System.out.println("FIXED: Current Inverted: " + this.inverted);
-
-        // Store in static variables to survive block state changes
-        preservedBaseFace = this.baseFaceSelection;
-        preservedToggleFace = this.toggleFaceSelection;
-        preservedInverted = this.inverted;
-        preservedPosition = this.worldPosition.immutable();
-
-        System.out.println("FIXED: ✅ Face selections saved to static storage");
-    }
-
-    /**
-     * FIXED: Restore face selections after lever toggle
-     */
-    public void restoreFaceSelectionsAfterLeverToggle() {
-        System.out.println("FIXED: RESTORING face selections after lever toggle");
-
-        // Only restore if this is the same position and we have preserved data
-        if (preservedPosition != null && preservedPosition.equals(this.worldPosition) &&
-                preservedBaseFace != null && preservedToggleFace != null) {
-
-            System.out.println("FIXED: Restoring - Base: " + preservedBaseFace + ", Toggle: " + preservedToggleFace + ", Inverted: " + preservedInverted);
-
-            // Restore the preserved selections
-            this.baseFaceSelection = preservedBaseFace;
-            this.toggleFaceSelection = preservedToggleFace;
-            this.inverted = preservedInverted;
-
-            // Clear static storage
-            preservedBaseFace = null;
-            preservedToggleFace = null;
-            preservedInverted = false;
-            preservedPosition = null;
-
-            System.out.println("FIXED: ✅ Face selections restored, reapplying textures...");
-
-            // Reapply textures with restored selections
-            applyCurrentTextureSettings();
-        } else {
-            System.out.println("FIXED: ❌ No preserved data to restore or wrong position");
-        }
-    }
-
     @Nonnull
     private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull FaceSelectionData.FaceOption faceSelection) {
         if (item.isEmpty()) {
@@ -346,7 +290,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // ========================================
 
     /**
-     * FIXED: Set base face selection with immediate model refresh
+     * FIXED: Set base face selection with immediate model refresh AND NBT persistence
      */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         System.out.println("FIXED: setBaseFaceSelection - " + this.baseFaceSelection + " → " + faceSelection);
@@ -357,6 +301,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             if (!suppressChangeNotifications) {
                 // Apply textures with new face selection and immediate refresh
                 applyCurrentTextureSettings();
+
+                // CRITICAL: Force NBT persistence immediately after face selection change
+                setChanged();
+
+                System.out.println("FIXED: Face selection change persisted to NBT - Base: " + this.baseFaceSelection);
             }
             return true;
         }
@@ -364,7 +313,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * FIXED: Set toggle face selection with immediate model refresh
+     * FIXED: Set toggle face selection with immediate model refresh AND NBT persistence
      */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
         System.out.println("FIXED: setToggleFaceSelection - " + this.toggleFaceSelection + " → " + faceSelection);
@@ -375,6 +324,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             if (!suppressChangeNotifications) {
                 // Apply textures with new face selection and immediate refresh
                 applyCurrentTextureSettings();
+
+                // CRITICAL: Force NBT persistence immediately after face selection change
+                setChanged();
+
+                System.out.println("FIXED: Face selection change persisted to NBT - Toggle: " + this.toggleFaceSelection);
             }
             return true;
         }
@@ -387,6 +341,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
             if (!suppressChangeNotifications) {
                 applyCurrentTextureSettings();
+
+                // CRITICAL: Force NBT persistence immediately after inversion change
+                setChanged();
+
+                System.out.println("FIXED: Inversion change persisted to NBT - Inverted: " + this.inverted);
             }
             return true;
         }
@@ -508,7 +467,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
     /**
-     * FIXED: Set GUI slot items with immediate refresh
+     * FIXED: Set GUI slot items with immediate refresh AND NBT persistence
      */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         // Clear analysis cache if items changed
@@ -521,6 +480,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
+
+        // CRITICAL: Force NBT persistence immediately after slot item change
+        setChanged();
+
+        System.out.println("FIXED: GUI slot items persisted to NBT - Toggle: " + (!toggleItem.isEmpty()) + ", Base: " + (!baseItem.isEmpty()));
 
         // Apply textures with preserved face selections and immediate refresh
         applyCurrentTextureSettings();
@@ -537,31 +501,37 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // NBT PERSISTENCE (UNCHANGED - WORKING)
+    // FIXED: ROBUST NBT PERSISTENCE FOR LEVER TOGGLE PRESERVATION
     // ========================================
 
     @Override
     protected void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
 
+        // Save all texture and face selection data
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
         nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
         nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
         nbt.putBoolean(INVERTED_KEY, inverted);
 
+        // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
             nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
         }
         if (!guiBaseItem.isEmpty()) {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
+
+        System.out.println("FIXED: NBT SAVED - Base face: " + baseFaceSelection + ", Toggle face: " + toggleFaceSelection +
+                ", Base texture: " + baseTexturePath + ", Toggle texture: " + toggleTexturePath);
     }
 
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
 
+        // Load texture paths
         this.baseTexturePath = nbt.getString(BASE_TEXTURE_KEY);
         this.toggleTexturePath = nbt.getString(TOGGLE_TEXTURE_KEY);
 
@@ -572,7 +542,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // Restore face selections
+        // Load face selections
         String baseFaceName = nbt.getString(BASE_FACE_KEY);
         this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
                 FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
@@ -583,6 +553,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         this.inverted = nbt.getBoolean(INVERTED_KEY);
 
+        // Load GUI slot items
         if (nbt.contains("gui_toggle_item")) {
             this.guiToggleItem = ItemStack.of(nbt.getCompound("gui_toggle_item"));
         } else {
@@ -598,23 +569,20 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         // Clear analysis cache after loading
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
+
+        System.out.println("FIXED: NBT LOADED - Base face: " + baseFaceSelection + ", Toggle face: " + toggleFaceSelection +
+                ", Base texture: " + baseTexturePath + ", Toggle texture: " + toggleTexturePath);
     }
 
-    // ========================================
-    // CLIENT-SERVER SYNCHRONIZATION
-    // ========================================
-
-    @Override
-    @Nullable
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
-
+    /**
+     * FIXED: Enhanced update tag for complete client synchronization
+     */
     @Override
     @Nonnull
     public CompoundTag getUpdateTag() {
         CompoundTag nbt = super.getUpdateTag();
 
+        // Include all current data for client synchronization
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
         nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
@@ -628,7 +596,19 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
+        System.out.println("FIXED: Update tag created - Base face: " + baseFaceSelection + ", Toggle face: " + toggleFaceSelection);
+
         return nbt;
+    }
+
+    // ========================================
+    // CLIENT-SERVER SYNCHRONIZATION
+    // ========================================
+
+    @Override
+    @Nullable
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override
@@ -641,9 +621,12 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // UTILITY METHODS
+    // UTILITY METHODS FOR NBT-BASED PRESERVATION
     // ========================================
 
+    /**
+     * FIXED: Save complete BlockEntity state to NBT for preservation
+     */
     @Nonnull
     public CompoundTag saveToNBT() {
         CompoundTag nbt = new CompoundTag();
@@ -651,6 +634,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return nbt;
     }
 
+    /**
+     * FIXED: Load complete BlockEntity state from NBT for restoration
+     */
     public void loadFromNBT(@Nonnull CompoundTag nbt) {
         load(nbt);
     }

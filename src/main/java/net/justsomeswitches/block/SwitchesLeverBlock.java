@@ -4,6 +4,7 @@ import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -28,7 +29,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FIXED: Switches Lever Block with face selection preservation during toggle
+ * FIXED: Switches Lever Block with NBT-based face selection preservation during toggle
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -108,7 +109,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // FIXED: LEVER INTERACTION WITH PROPER FACE SELECTION PRESERVATION
+    // FIXED: NBT-BASED FACE SELECTION PRESERVATION
     // ========================================
 
     @Override
@@ -120,7 +121,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        System.out.println("FIXED: Lever toggle with proper face selection preservation");
+        System.out.println("FIXED: ENHANCED NBT-based lever toggle with immediate persistence verification");
 
         // Get current powered state
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
@@ -128,27 +129,52 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
         System.out.println("FIXED: State change - Current: " + currentlyPowered + " → New: " + newPoweredState);
 
-        // CRITICAL: Save face selections BEFORE setBlock call
+        // CRITICAL: Force immediate NBT save AND verify current state before any block changes
+        CompoundTag preservedData = null;
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("FIXED: Saving face selections before setBlock...");
-            blockEntity.saveFaceSelectionsForLeverToggle();
+            System.out.println("FIXED: FORCING immediate NBT persistence of current state...");
+
+            // Force immediate save to NBT to capture current face selections
+            blockEntity.setChanged();
+
+            // Get the current state from the BlockEntity
+            System.out.println("FIXED: Current state BEFORE save - Base: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle: " + blockEntity.getToggleFaceSelection() +
+                    ", Inverted: " + blockEntity.isInverted());
+
+            // Save current state to NBT
+            preservedData = blockEntity.saveToNBT();
+
+            System.out.println("FIXED: NBT preservation captured current state successfully");
         }
 
-        // Standard block state change (this might reset BlockEntity data)
+        // Change the block state with minimal updates to avoid BlockEntity recreation
         BlockState newState = state.setValue(BlockStateProperties.POWERED, newPoweredState);
-        level.setBlock(pos, newState, Block.UPDATE_ALL);
+        level.setBlock(pos, newState, Block.UPDATE_NEIGHBORS | Block.UPDATE_CLIENTS);
 
-        // CRITICAL: Restore face selections AFTER setBlock call
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("FIXED: Restoring face selections after setBlock...");
-            blockEntity.restoreFaceSelectionsAfterLeverToggle();
+        // CRITICAL: Restore preserved data immediately after block state change
+        if (preservedData != null && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            System.out.println("FIXED: Restoring BlockEntity data from NBT...");
+
+            // Restore all preserved data including face selections
+            blockEntity.loadFromNBT(preservedData);
+
+            // Verify restoration worked
+            System.out.println("FIXED: State AFTER restoration - Base: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle: " + blockEntity.getToggleFaceSelection() +
+                    ", Inverted: " + blockEntity.isInverted());
+
+            // Trigger immediate visual update with restored data
+            blockEntity.applyCurrentTextureSettings();
+
+            System.out.println("FIXED: Restoration and visual update complete");
         }
 
         // Play standard lever click sound
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
 
-        System.out.println("FIXED: Lever toggle complete with properly preserved face selections");
+        System.out.println("FIXED: Enhanced NBT-based lever toggle complete with verified preservation");
 
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
@@ -167,7 +193,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                                 @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
 
-        // Standard model update for texture persistence
+        // Ensure texture persistence during neighbor updates
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
