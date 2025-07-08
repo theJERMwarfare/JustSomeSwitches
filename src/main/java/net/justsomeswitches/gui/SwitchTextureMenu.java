@@ -16,7 +16,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * SILENT: Menu with minimal logging only for user actions
+ * FIXED: Enhanced GUI state synchronization with BlockEntity
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -36,12 +36,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private final BlockPos blockPos;
     private final Level level;
 
-    // Track last slot state to prevent unnecessary updates
+    // Enhanced state tracking for proper sync
     private ItemStack lastToggleItem = ItemStack.EMPTY;
     private ItemStack lastBaseItem = ItemStack.EMPTY;
+    private boolean initialLoadComplete = false;
 
     /**
-     * SILENT: Constructor without debug output
+     * FIXED: Enhanced constructor with proper BlockEntity state loading
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
@@ -49,17 +50,20 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         this.blockPos = blockPos;
         this.level = playerInventory.player.level();
 
-        // Container with auto-apply on slot changes
+        // Enhanced container with smart change detection
         this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT) {
             @Override
             public void setChanged() {
                 super.setChanged();
-                onSlotChangedWithAutoApply();
+                // Only trigger auto-apply after initial load is complete
+                if (initialLoadComplete) {
+                    onSlotChangedWithAutoApply();
+                }
             }
         };
 
-        // Load initial slot items from BlockEntity
-        loadSlotItemsFromBlockEntity();
+        // CRITICAL: Load initial state from BlockEntity BEFORE creating slots
+        loadInitialStateFromBlockEntity();
 
         // Add texture slots
         addSlot(new TextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
@@ -76,6 +80,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
+
+        // Mark initial load as complete
+        initialLoadComplete = true;
+
+        DebugConfig.logSuccess("GUI initialized with preserved state");
     }
 
     /**
@@ -86,7 +95,53 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * SILENT: Smart slot change handling without debug output
+     * CRITICAL FIX: Load complete initial state from BlockEntity
+     */
+    private void loadInitialStateFromBlockEntity() {
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            // Load slot items
+            ItemStack toggleItem = blockEntity.getGuiToggleItem();
+            ItemStack baseItem = blockEntity.getGuiBaseItem();
+
+            // Set container items WITHOUT triggering change notifications
+            textureContainer.setItem(TOGGLE_TEXTURE_SLOT, toggleItem);
+            textureContainer.setItem(BASE_TEXTURE_SLOT, baseItem);
+
+            // Track initial state to prevent false change detection
+            lastToggleItem = toggleItem.copy();
+            lastBaseItem = baseItem.copy();
+
+            // Log current state for validation
+            DebugConfig.logPersistence("GUI loaded - Base face: " + blockEntity.getBaseFaceSelection() +
+                    ", Toggle face: " + blockEntity.getToggleFaceSelection());
+
+            // Validate that face selections are correctly loaded
+            FaceSelectionData.FaceOption baseFace = blockEntity.getBaseFaceSelection();
+            FaceSelectionData.FaceOption toggleFace = blockEntity.getToggleFaceSelection();
+
+            if (baseFace == null || toggleFace == null) {
+                DebugConfig.logCritical("NULL face selections detected in BlockEntity!");
+            }
+
+            // Validate dropdown states
+            FaceSelectionData.DropdownState baseDropdown = blockEntity.getBaseDropdownState();
+            FaceSelectionData.DropdownState toggleDropdown = blockEntity.getToggleDropdownState();
+
+            if (baseDropdown.getSelectedOption() != baseFace) {
+                DebugConfig.logValidationFailure("Base dropdown sync", baseFace.toString(), baseDropdown.getSelectedOption().toString());
+            }
+
+            if (toggleDropdown.getSelectedOption() != toggleFace) {
+                DebugConfig.logValidationFailure("Toggle dropdown sync", toggleFace.toString(), toggleDropdown.getSelectedOption().toString());
+            }
+        } else {
+            DebugConfig.logCritical("BlockEntity not found during GUI initialization!");
+        }
+    }
+
+    /**
+     * Enhanced slot change handling with validation
      */
     private void onSlotChangedWithAutoApply() {
         ItemStack currentToggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
@@ -97,132 +152,192 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         boolean baseChanged = !ItemStack.matches(lastBaseItem, currentBaseItem);
 
         if (toggleChanged || baseChanged) {
-            // Update last known state
+            // Update tracking
             lastToggleItem = currentToggleItem.copy();
             lastBaseItem = currentBaseItem.copy();
 
             SwitchesLeverBlockEntity blockEntity = getBlockEntity();
             if (blockEntity != null) {
-                // Single update call with immediate auto-apply
+                DebugConfig.logUserAction("GUI slot change - applying to BlockEntity");
                 blockEntity.setGuiSlotItems(currentToggleItem, currentBaseItem);
+            } else {
+                DebugConfig.logCritical("BlockEntity missing during slot change!");
             }
         }
     }
 
-    /**
-     * SILENT: Load slot items from BlockEntity without debug output
-     */
-    private void loadSlotItemsFromBlockEntity() {
-        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
-        if (blockEntity != null) {
-            ItemStack toggleItem = blockEntity.getGuiToggleItem();
-            ItemStack baseItem = blockEntity.getGuiBaseItem();
-
-            textureContainer.setItem(TOGGLE_TEXTURE_SLOT, toggleItem);
-            textureContainer.setItem(BASE_TEXTURE_SLOT, baseItem);
-
-            // Track initial state to prevent false change detection
-            lastToggleItem = toggleItem.copy();
-            lastBaseItem = baseItem.copy();
-        }
-    }
-
     // ========================================
-    // SILENT: Face Selection Methods
+    // ENHANCED FACE SELECTION WITH VALIDATION
     // ========================================
 
     /**
-     * SILENT: Set base face selection without debug output
+     * FIXED: Enhanced base face selection with validation
      */
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logUserAction("GUI: Base face selected: " + faceOption);
-            blockEntity.setBaseFaceSelection(faceOption);
+            FaceSelectionData.FaceOption oldSelection = blockEntity.getBaseFaceSelection();
+
+            DebugConfig.logUserAction("GUI: Base face " + oldSelection + " → " + faceOption);
+
+            if (blockEntity.setBaseFaceSelection(faceOption)) {
+                // Verify the change took effect
+                FaceSelectionData.FaceOption newSelection = blockEntity.getBaseFaceSelection();
+                if (newSelection != faceOption) {
+                    DebugConfig.logValidationFailure("Base face set", faceOption.toString(), newSelection.toString());
+                }
+            }
+        } else {
+            DebugConfig.logCritical("BlockEntity missing during base face selection!");
         }
     }
 
     /**
-     * SILENT: Set toggle face selection without debug output
+     * FIXED: Enhanced toggle face selection with validation
      */
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logUserAction("GUI: Toggle face selected: " + faceOption);
-            blockEntity.setToggleFaceSelection(faceOption);
+            FaceSelectionData.FaceOption oldSelection = blockEntity.getToggleFaceSelection();
+
+            DebugConfig.logUserAction("GUI: Toggle face " + oldSelection + " → " + faceOption);
+
+            if (blockEntity.setToggleFaceSelection(faceOption)) {
+                // Verify the change took effect
+                FaceSelectionData.FaceOption newSelection = blockEntity.getToggleFaceSelection();
+                if (newSelection != faceOption) {
+                    DebugConfig.logValidationFailure("Toggle face set", faceOption.toString(), newSelection.toString());
+                }
+            }
+        } else {
+            DebugConfig.logCritical("BlockEntity missing during toggle face selection!");
         }
     }
 
     /**
-     * SILENT: Set inversion without debug output
+     * Enhanced inversion setting with validation
      */
     public void setInverted(boolean inverted) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logUserAction("GUI: Inverted: " + inverted);
-            blockEntity.setInverted(inverted);
+            boolean oldInverted = blockEntity.isInverted();
+
+            DebugConfig.logUserAction("GUI: Inverted " + oldInverted + " → " + inverted);
+
+            if (blockEntity.setInverted(inverted)) {
+                // Verify the change took effect
+                boolean newInverted = blockEntity.isInverted();
+                if (newInverted != inverted) {
+                    DebugConfig.logValidationFailure("Inversion set", Boolean.toString(inverted), Boolean.toString(newInverted));
+                }
+            }
+        } else {
+            DebugConfig.logCritical("BlockEntity missing during inversion setting!");
         }
     }
 
     // ========================================
-    // Getters (Read from BlockEntity)
+    // ENHANCED GETTERS WITH NULL SAFETY
     // ========================================
 
     @Nonnull
     public FaceSelectionData.FaceOption getBaseFaceSelection() {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
-        return blockEntity != null ? blockEntity.getBaseFaceSelection() : FaceSelectionData.FaceOption.ALL;
+        if (blockEntity != null) {
+            FaceSelectionData.FaceOption selection = blockEntity.getBaseFaceSelection();
+            return selection != null ? selection : FaceSelectionData.FaceOption.ALL;
+        }
+        DebugConfig.logCritical("BlockEntity missing during base face get!");
+        return FaceSelectionData.FaceOption.ALL;
     }
 
     @Nonnull
     public FaceSelectionData.FaceOption getToggleFaceSelection() {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
-        return blockEntity != null ? blockEntity.getToggleFaceSelection() : FaceSelectionData.FaceOption.ALL;
+        if (blockEntity != null) {
+            FaceSelectionData.FaceOption selection = blockEntity.getToggleFaceSelection();
+            return selection != null ? selection : FaceSelectionData.FaceOption.ALL;
+        }
+        DebugConfig.logCritical("BlockEntity missing during toggle face get!");
+        return FaceSelectionData.FaceOption.ALL;
     }
 
     public boolean isInverted() {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
-        return blockEntity != null && blockEntity.isInverted();
+        if (blockEntity != null) {
+            return blockEntity.isInverted();
+        }
+        DebugConfig.logCritical("BlockEntity missing during inversion get!");
+        return false;
     }
 
     @Nonnull
     public FaceSelectionData.DropdownState getBaseDropdownState() {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
-        return blockEntity != null ? blockEntity.getBaseDropdownState() : FaceSelectionData.createDisabledState();
+        if (blockEntity != null) {
+            return blockEntity.getBaseDropdownState();
+        }
+        DebugConfig.logCritical("BlockEntity missing during base dropdown get!");
+        return FaceSelectionData.createDisabledState();
     }
 
     @Nonnull
     public FaceSelectionData.DropdownState getToggleDropdownState() {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
-        return blockEntity != null ? blockEntity.getToggleDropdownState() : FaceSelectionData.createDisabledState();
+        if (blockEntity != null) {
+            return blockEntity.getToggleDropdownState();
+        }
+        DebugConfig.logCritical("BlockEntity missing during toggle dropdown get!");
+        return FaceSelectionData.createDisabledState();
     }
 
     /**
-     * Get BlockEntity reference
+     * Enhanced BlockEntity getter with validation
      */
     @Nullable
     private SwitchesLeverBlockEntity getBlockEntity() {
-        if (blockPos != null && level != null) {
-            var blockEntity = level.getBlockEntity(blockPos);
-            if (blockEntity instanceof SwitchesLeverBlockEntity switchBlockEntity) {
-                return switchBlockEntity;
-            }
+        if (blockPos == null) {
+            DebugConfig.logCritical("Block position is null!");
+            return null;
         }
+
+        if (level == null) {
+            DebugConfig.logCritical("Level is null!");
+            return null;
+        }
+
+        var blockEntity = level.getBlockEntity(blockPos);
+        if (blockEntity instanceof SwitchesLeverBlockEntity switchBlockEntity) {
+            return switchBlockEntity;
+        }
+
+        if (blockEntity == null) {
+            DebugConfig.logCritical("No BlockEntity found at " + blockPos);
+        } else {
+            DebugConfig.logCritical("Wrong BlockEntity type at " + blockPos + ": " + blockEntity.getClass().getSimpleName());
+        }
+
         return null;
     }
 
     // ========================================
-    // SILENT: Enhanced Cleanup
+    // ENHANCED CLEANUP
     // ========================================
 
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
-        // SILENT: No debug output on GUI close
+
+        // Final state validation on close
+        SwitchesLeverBlockEntity blockEntity = getBlockEntity();
+        if (blockEntity != null) {
+            DebugConfig.logPersistence("GUI closed - Final state: Base=" + blockEntity.getBaseFaceSelection() +
+                    ", Toggle=" + blockEntity.getToggleFaceSelection());
+        }
     }
 
     // ========================================
-    // Standard Container Methods
+    // STANDARD CONTAINER METHODS
     // ========================================
 
     @Override

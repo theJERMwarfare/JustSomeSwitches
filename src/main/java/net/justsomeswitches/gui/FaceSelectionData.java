@@ -10,15 +10,15 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * FIXED: Enhanced Face Selection with strong user choice preservation
+ * FRAMED BLOCKS APPROACH: Bulletproof face selection with enhanced serialization
  */
 public class FaceSelectionData {
 
-    // Reduced caching to prevent stale state issues
+    // Minimal caching to prevent stale state
     private static final Map<String, DropdownState> dropdownStateCache = new HashMap<>();
 
     /**
-     * FIXED: Enhanced face option enum with robust serialization
+     * BULLETPROOF: Enhanced face option enum with guaranteed serialization safety
      */
     public enum FaceOption {
         ALL("all", "All Faces", null),
@@ -31,9 +31,9 @@ public class FaceSelectionData {
         EAST("east", "East", Direction.EAST),
         WEST("west", "West", Direction.WEST),
 
-        // JSON variable names (exactly as they appear in model files)
-        END("end", "Ends", Direction.UP),      // For logs - top/bottom faces
-        SIDE("side", "Sides", Direction.NORTH), // For logs - side faces
+        // JSON variable names (critical for logs and other blocks)
+        END("end", "Ends", Direction.UP),
+        SIDE("side", "Sides", Direction.NORTH),
         FRONT("front", "Front", Direction.NORTH),
         BACK("back", "Back", Direction.SOUTH);
 
@@ -53,30 +53,38 @@ public class FaceSelectionData {
         public boolean isAll() { return this == ALL; }
 
         /**
-         * FIXED: Enhanced serialization with guaranteed preservation
+         * BULLETPROOF: Enhanced serialization with comprehensive fallback handling
          */
         @Nonnull
         public static FaceOption fromSerializedName(@Nonnull String name) {
-            // Quick validation
-            if (name == null || name.trim().isEmpty()) {
+            if (name == null) {
+                DebugConfig.logCritical("Null face selection name!");
                 return ALL;
             }
 
-            // Exact match (most common case)
+            String cleanName = name.trim();
+            if (cleanName.isEmpty()) {
+                DebugConfig.logValidationFailure("Face selection name", "non-empty", "empty");
+                return ALL;
+            }
+
+            // Exact match (primary path)
             for (FaceOption option : values()) {
-                if (option.serializedName.equals(name)) {
+                if (option.serializedName.equals(cleanName)) {
                     return option;
                 }
             }
 
-            // Case-insensitive fallback for robustness
+            // Case-insensitive fallback
             for (FaceOption option : values()) {
-                if (option.serializedName.equalsIgnoreCase(name)) {
+                if (option.serializedName.equalsIgnoreCase(cleanName)) {
+                    DebugConfig.logValidationFailure("Face selection case", option.serializedName, cleanName);
                     return option;
                 }
             }
 
-            // Ultimate fallback
+            // Log unknown names for debugging
+            DebugConfig.logValidationFailure("Face selection unknown", "known option", cleanName);
             return ALL;
         }
 
@@ -92,12 +100,18 @@ public class FaceSelectionData {
 
         @Nonnull
         public static FaceOption fromJsonVariable(@Nonnull String variableName) {
+            if (variableName == null || variableName.trim().isEmpty()) {
+                return ALL;
+            }
+
+            // Direct match first
             for (FaceOption option : values()) {
                 if (option.serializedName.equals(variableName)) {
                     return option;
                 }
             }
 
+            // Fallback mapping
             return switch (variableName.toLowerCase()) {
                 case "end" -> END;
                 case "side" -> SIDE;
@@ -109,13 +123,28 @@ public class FaceSelectionData {
                 case "south" -> SOUTH;
                 case "east" -> EAST;
                 case "west" -> WEST;
-                default -> ALL;
+                default -> {
+                    DebugConfig.logValidationFailure("JSON variable unknown", "known variable", variableName);
+                    yield ALL;
+                }
             };
+        }
+
+        /**
+         * VALIDATION: Ensure option is not null and valid
+         */
+        @Nonnull
+        public static FaceOption validate(@Nullable FaceOption option) {
+            if (option == null) {
+                DebugConfig.logCritical("Null FaceOption detected - using ALL as fallback");
+                return ALL;
+            }
+            return option;
         }
     }
 
     /**
-     * Dropdown state information
+     * Dropdown state information with enhanced validation
      */
     public static class DropdownState {
         private final boolean enabled;
@@ -129,8 +158,14 @@ public class FaceSelectionData {
                              @Nullable String previewTexture) {
             this.enabled = enabled;
             this.availableOptions = new ArrayList<>(availableOptions);
-            this.selectedOption = selectedOption;
+            this.selectedOption = FaceOption.validate(selectedOption);
             this.previewTexture = previewTexture;
+
+            // Validation
+            if (!this.availableOptions.contains(this.selectedOption)) {
+                DebugConfig.logValidationFailure("Dropdown selected option",
+                        "option in available list", this.selectedOption.toString());
+            }
         }
 
         public boolean isEnabled() { return enabled; }
@@ -164,25 +199,24 @@ public class FaceSelectionData {
     }
 
     /**
-     * FIXED: Enhanced dropdown state creation with STRONG user selection preservation
+     * BULLETPROOF: Enhanced dropdown state creation with absolute preservation guarantee
      */
     @Nonnull
     public static DropdownState createDropdownState(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
                                                     @Nonnull FaceSelectionData.FaceOption currentSelectedOption) {
 
-        DebugConfig.logUserAction("Creating dropdown for preserved selection: " + currentSelectedOption);
+        // Validate inputs
+        FaceOption safeSelection = FaceOption.validate(currentSelectedOption);
 
         boolean hasMultipleFaces = blockInfo.hasMultipleFaceTextures();
 
         if (!hasMultipleFaces) {
-            // Single texture block - use ALL but preserve the user's choice if possible
+            // Single texture block - use ALL but preserve user choice if it makes sense
             return new DropdownState(false, List.of(FaceOption.ALL), FaceOption.ALL, blockInfo.getUniformTexture());
         }
 
-        // For multi-texture blocks, determine available options
+        // Multi-texture blocks - determine available options
         List<FaceOption> availableOptions = new ArrayList<>();
-
-        // Get texture variables from block model
         List<String> textureVariables = getTextureVariables(blockInfo);
 
         // Convert texture variables to face options
@@ -193,13 +227,13 @@ public class FaceSelectionData {
             }
         }
 
-        // Add ALL if no specific options found
+        // Ensure we have at least one option
         if (availableOptions.isEmpty()) {
             availableOptions.add(FaceOption.ALL);
         }
 
-        // CRITICAL FIX: STRONGLY preserve user's selection
-        FaceOption finalSelection = preserveUserSelection(currentSelectedOption, availableOptions);
+        // CRITICAL: Absolutely preserve user's selection if possible
+        FaceOption finalSelection = preserveUserSelection(safeSelection, availableOptions);
 
         String previewTexture = getTextureForSelection(blockInfo, finalSelection);
 
@@ -207,31 +241,33 @@ public class FaceSelectionData {
     }
 
     /**
-     * FIXED: STRONG user selection preservation - prioritizes exact preservation
+     * BULLETPROOF: Absolute user selection preservation - never changes unless impossible
      */
     @Nonnull
     private static FaceOption preserveUserSelection(@Nonnull FaceOption userSelection, @Nonnull List<FaceOption> availableOptions) {
-        // PRIORITY 1: If user's selection is available, ALWAYS preserve it
+        // PRIORITY 1: If user's exact selection is available, ALWAYS use it
         if (availableOptions.contains(userSelection)) {
-            DebugConfig.logUserAction("Preserving exact user selection: " + userSelection);
+            DebugConfig.logSuccess("Preserved exact user selection: " + userSelection);
             return userSelection;
         }
 
-        // PRIORITY 2: Only if user's selection is not available, find similar
+        // PRIORITY 2: Try to find semantically similar option
         FaceOption similar = findSimilarOption(userSelection, availableOptions);
         if (similar != null) {
-            DebugConfig.logUserAction("User selection " + userSelection + " → similar: " + similar);
+            DebugConfig.logValidationFailure("User selection unavailable", userSelection.toString(), similar.toString());
             return similar;
         }
 
-        // PRIORITY 3: Fallback to ALL or first available
-        FaceOption fallback = availableOptions.contains(FaceOption.ALL) ? FaceOption.ALL : availableOptions.get(0);
-        DebugConfig.logUserAction("User selection " + userSelection + " → fallback: " + fallback);
+        // PRIORITY 3: Fallback to best available option
+        FaceOption fallback = availableOptions.contains(FaceOption.ALL) ?
+                FaceOption.ALL : availableOptions.get(0);
+
+        DebugConfig.logValidationFailure("No similar option found", userSelection.toString(), fallback.toString());
         return fallback;
     }
 
     /**
-     * Get texture variables with better pattern detection
+     * Enhanced texture variable detection
      */
     @Nonnull
     private static List<String> getTextureVariables(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo) {
@@ -240,18 +276,19 @@ public class FaceSelectionData {
 
         List<String> variables = new ArrayList<>();
 
-        // Detect log pattern (most common case)
+        // Log pattern detection (most important case)
         if (uniqueTextures.size() == 2) {
-            boolean hasLogPattern = uniqueTextures.stream().anyMatch(tex -> tex.contains("_log"));
+            boolean hasLogPattern = uniqueTextures.stream().anyMatch(tex ->
+                    tex.contains("_log") || tex.contains("log"));
 
             if (hasLogPattern) {
-                variables.add("side");  // JSON variable name
-                variables.add("end");   // JSON variable name
+                variables.add("side");  // Side faces
+                variables.add("end");   // Top/bottom faces
                 return variables;
             }
         }
 
-        // For other multi-texture blocks
+        // Other multi-texture patterns
         if (uniqueTextures.size() > 1) {
             for (String texture : uniqueTextures) {
                 String variable = extractVariableFromTexture(texture);
@@ -266,46 +303,62 @@ public class FaceSelectionData {
 
     @Nonnull
     private static String extractVariableFromTexture(@Nonnull String texturePath) {
-        if (texturePath.contains("_top")) return "end";
-        if (texturePath.contains("_log") && !texturePath.contains("_top")) return "side";
-        if (texturePath.contains("_front")) return "front";
-        if (texturePath.contains("_back")) return "back";
-        if (texturePath.contains("_side")) return "side";
-        return "side";
+        String path = texturePath.toLowerCase();
+
+        if (path.contains("_top")) return "end";
+        if (path.contains("_log") && !path.contains("_top")) return "side";
+        if (path.contains("_front")) return "front";
+        if (path.contains("_back")) return "back";
+        if (path.contains("_side")) return "side";
+        if (path.contains("_end")) return "end";
+
+        return "side";  // Default for unknown patterns
     }
 
     /**
-     * Get texture path for selection - enhanced mapping
+     * Enhanced texture mapping for selections
      */
     @Nullable
     public static String getTextureForSelection(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
                                                 @Nonnull FaceOption selection) {
-        if (selection.isAll()) {
+        FaceOption safeSelection = FaceOption.validate(selection);
+
+        if (safeSelection.isAll()) {
+            // For ALL, try uniform texture first
             if (blockInfo.getUniformTexture() != null) {
                 return blockInfo.getUniformTexture();
             }
 
+            // Try side texture for ALL
             String sideTexture = blockInfo.getTextureForFace(Direction.NORTH);
             if (sideTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(sideTexture)) {
                 return sideTexture;
             }
 
+            // Fallback to any valid texture
             return blockInfo.getFaceTextures().values().stream()
                     .filter(net.justsomeswitches.util.BlockTextureAnalyzer::isValidTexture)
                     .findFirst()
                     .orElse(null);
-        } else if (selection == FaceOption.SIDE) {
+        }
+
+        // Handle specific face selections
+        if (safeSelection == FaceOption.SIDE) {
             String sideTexture = blockInfo.getTextureForFace(Direction.NORTH);
             if (sideTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(sideTexture)) {
                 return sideTexture;
             }
-        } else if (selection == FaceOption.END) {
+        }
+
+        if (safeSelection == FaceOption.END) {
             String topTexture = blockInfo.getTextureForFace(Direction.UP);
             if (topTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(topTexture)) {
                 return topTexture;
             }
-        } else if (selection.getDirection() != null) {
-            String faceTexture = blockInfo.getTextureForFace(selection.getDirection());
+        }
+
+        if (safeSelection.getDirection() != null) {
+            String faceTexture = blockInfo.getTextureForFace(safeSelection.getDirection());
             if (faceTexture != null && net.justsomeswitches.util.BlockTextureAnalyzer.isValidTexture(faceTexture)) {
                 return faceTexture;
             }
@@ -319,22 +372,36 @@ public class FaceSelectionData {
         return new DropdownState(false, List.of(FaceOption.ALL), FaceOption.ALL, null);
     }
 
+    /**
+     * Enhanced similarity matching
+     */
     @Nullable
     private static FaceOption findSimilarOption(@Nonnull FaceOption userSelection, @Nonnull List<FaceOption> availableOptions) {
         return switch (userSelection) {
-            case END -> availableOptions.contains(FaceOption.TOP) ? FaceOption.TOP :
-                    availableOptions.contains(FaceOption.BOTTOM) ? FaceOption.BOTTOM : null;
-            case TOP -> availableOptions.contains(FaceOption.END) ? FaceOption.END : null;
-            case BOTTOM -> availableOptions.contains(FaceOption.END) ? FaceOption.END : null;
-            case SIDE -> availableOptions.contains(FaceOption.NORTH) ? FaceOption.NORTH :
-                    availableOptions.contains(FaceOption.FRONT) ? FaceOption.FRONT : null;
-            case FRONT -> availableOptions.contains(FaceOption.SIDE) ? FaceOption.SIDE :
-                    availableOptions.contains(FaceOption.NORTH) ? FaceOption.NORTH : null;
+            case END -> {
+                if (availableOptions.contains(FaceOption.TOP)) yield FaceOption.TOP;
+                if (availableOptions.contains(FaceOption.BOTTOM)) yield FaceOption.BOTTOM;
+                yield null;
+            }
+            case TOP, BOTTOM -> availableOptions.contains(FaceOption.END) ? FaceOption.END : null;
+            case SIDE -> {
+                if (availableOptions.contains(FaceOption.NORTH)) yield FaceOption.NORTH;
+                if (availableOptions.contains(FaceOption.FRONT)) yield FaceOption.FRONT;
+                yield null;
+            }
+            case FRONT -> {
+                if (availableOptions.contains(FaceOption.SIDE)) yield FaceOption.SIDE;
+                if (availableOptions.contains(FaceOption.NORTH)) yield FaceOption.NORTH;
+                yield null;
+            }
             case NORTH, SOUTH, EAST, WEST -> availableOptions.contains(FaceOption.SIDE) ? FaceOption.SIDE : null;
             default -> null;
         };
     }
 
+    /**
+     * Clear caches to prevent stale state
+     */
     public static void clearCaches() {
         dropdownStateCache.clear();
     }

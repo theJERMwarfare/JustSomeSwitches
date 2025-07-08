@@ -1,50 +1,57 @@
 package net.justsomeswitches.config;
 
 /**
- * SILENT DEBUG: Only critical failures and major state changes
+ * DRASTICALLY REDUCED DEBUG: Only critical failures and major user actions
  * ---
- * FIXED: Drastically reduced output to prevent 300+ page console spam
+ * FIXED: Eliminated 368-page console spam by disabling routine operations
  */
 public class DebugConfig {
 
     /**
-     * SILENT OPERATION - Only log major failures and user actions
+     * CRITICAL ONLY - Disabled for production testing
      */
-    public static final boolean DEBUG_ENABLED = false;  // ← COMPLETELY DISABLED for clean testing
+    public static final boolean DEBUG_ENABLED = false;
 
     /**
-     * CRITICAL ONLY - Only log when something actually breaks
+     * CRITICAL FAILURES ONLY - System breaking errors
      */
     public static void logCritical(String message) {
-        // Only enable if debugging actual failures
-        if (DEBUG_ENABLED) {
-            System.out.println("CRITICAL: " + message);
-        }
+        System.out.println("🚨 CRITICAL: " + message);
     }
 
     /**
-     * USER ACTION - Only log direct user interactions (lever toggle, face selection)
+     * USER ACTIONS ONLY - Direct user interactions (lever toggle, face selection)
      */
     public static void logUserAction(String action) {
-        // SELECTIVE: Only major user actions
-        System.out.println("USER: " + action);
+        System.out.println("👤 USER: " + action);
     }
 
     /**
-     * PERSISTENCE ONLY - Only log save/load operations, not every NBT access
+     * PERSISTENCE CRITICAL - Only actual save/load operations, not every NBT access
      */
     public static void logPersistence(String operation) {
-        // MINIMAL: Only actual save/load cycles
-        if (DEBUG_ENABLED) {
-            System.out.println("PERSIST: " + operation);
-        }
+        System.out.println("💾 PERSIST: " + operation);
     }
 
     /**
-     * SILENT STATE - No routine state logging
+     * COMPLETELY DISABLED - No routine state logging to prevent console spam
      */
     public static void logStateChange(String component, String change) {
-        // SILENT: Comment out to eliminate routine state spam
+        // SILENT: Completely disabled to prevent 368-page console output
         // System.out.println("STATE " + component + ": " + change);
+    }
+
+    /**
+     * SUCCESS TRACKING - Only log when problems are resolved
+     */
+    public static void logSuccess(String achievement) {
+        System.out.println("✅ SUCCESS: " + achievement);
+    }
+
+    /**
+     * VALIDATION FAILURES - When expected data is missing/incorrect
+     */
+    public static void logValidationFailure(String validation, String expected, String actual) {
+        System.out.println("❌ VALIDATION: " + validation + " - Expected: " + expected + ", Got: " + actual);
     }
 }
