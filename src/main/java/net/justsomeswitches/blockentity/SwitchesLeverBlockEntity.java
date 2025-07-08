@@ -1,5 +1,6 @@
 package net.justsomeswitches.blockentity;
 
+import net.justsomeswitches.config.DebugConfig;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.util.BlockTextureAnalyzer;
@@ -23,13 +24,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FRAMED BLOCKS SOLUTION: Enhanced BlockEntity with robust NBT persistence that survives setBlock() calls
- * ---
- * Key improvements:
- * - Immediate NBT persistence on ALL changes
- * - Robust save/load cycle that preserves face selections through lever toggles
- * - Enhanced ModelData integration following Framed Blocks patterns
- * - Separation of texture management from lever mechanics
+ * FIXED: Enhanced persistence with face selection preservation and minimal debug output
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -57,7 +52,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private boolean suppressChangeNotifications = false;
 
     // ========================================
-    // FRAMED BLOCKS APPROACH: ENHANCED MODEL DATA INTEGRATION
+    // MODEL DATA INTEGRATION
     // ========================================
 
     public static final ModelProperty<SwitchTextureData> TEXTURE_PROPERTY = new ModelProperty<>();
@@ -95,9 +90,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
     }
 
-    /**
-     * FRAMED BLOCKS PATTERN: ModelData integration that survives state changes
-     */
     @Override
     @Nonnull
     public ModelData getModelData() {
@@ -113,17 +105,14 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FRAMED BLOCKS APPROACH: IMMEDIATE CLIENT-SIDE MODEL REFRESH
+    // FIXED: TEXTURE APPLICATION WITH PROPER FACE SELECTION PRESERVATION
     // ========================================
 
     /**
-     * Apply textures with immediate client-side refresh using Framed Blocks patterns
+     * Apply textures with preserved face selections and minimal logging
      */
     public void applyCurrentTextureSettings() {
-        System.out.println("FRAMED SOLUTION: Auto-apply with face selections - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
-
         suppressChangeNotifications = true;
-
         boolean textureChanged = false;
 
         if (!guiToggleItem.isEmpty()) {
@@ -151,39 +140,22 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         suppressChangeNotifications = false;
 
         if (textureChanged) {
-            System.out.println("FRAMED SOLUTION: Triggering immediate model refresh...");
             triggerImmediateModelRefresh();
         }
 
-        // CRITICAL: Immediate NBT persistence after texture application
+        // Critical: Force immediate NBT save
         forceImmediateNBTPersistence();
     }
 
-    /**
-     * FRAMED BLOCKS PATTERN: Trigger immediate client-side model refresh
-     */
     private void triggerImmediateModelRefresh() {
         if (level != null) {
             if (!level.isClientSide) {
-                // SERVER-SIDE: Standard update sequence
                 BlockState currentState = getBlockState();
-
-                // Force model data update first
                 requestModelDataUpdate();
-
-                // Send immediate block update to clients
                 level.sendBlockUpdated(worldPosition, currentState, currentState, Block.UPDATE_CLIENTS);
-
-                // Mark dirty for persistence
                 setChanged();
-
-                System.out.println("FRAMED SOLUTION: Server-side updates sent");
             } else {
-                // CLIENT-SIDE: Force immediate model refresh
-                System.out.println("FRAMED SOLUTION: Client-side immediate refresh");
                 requestModelDataUpdate();
-
-                // Force immediate chunk re-render on client
                 if (level.getChunkSource().hasChunk(worldPosition.getX() >> 4, worldPosition.getZ() >> 4)) {
                     level.getChunkSource().getLightEngine().checkBlock(worldPosition);
                 }
@@ -191,22 +163,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
     }
 
-    /**
-     * FRAMED BLOCKS PATTERN: Force immediate NBT persistence for all changes
-     */
     public void forceImmediateNBTPersistence() {
-        System.out.println("FRAMED SOLUTION: Forcing immediate NBT persistence");
-
-        // Mark as changed
         setChanged();
-
-        // Force immediate sync to client if on server
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
-
-        System.out.println("FRAMED SOLUTION: NBT persistence forced - Base: " + baseFaceSelection +
-                ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
     }
 
     @Nonnull
@@ -231,7 +192,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // TEXTURE MANAGEMENT
+    // TEXTURE MANAGEMENT - SILENT OPERATION
     // ========================================
 
     @Nonnull
@@ -318,43 +279,31 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FRAMED BLOCKS APPROACH: ENHANCED FACE SELECTION WITH IMMEDIATE PERSISTENCE
+    // FIXED: FACE SELECTION WITH ENHANCED PERSISTENCE
     // ========================================
 
-    /**
-     * FRAMED BLOCKS PATTERN: Set base face selection with immediate persistence
-     */
     public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
-        System.out.println("FRAMED SOLUTION: setBaseFaceSelection - " + this.baseFaceSelection + " → " + faceSelection);
+        DebugConfig.logUserAction("Base face: " + this.baseFaceSelection + " → " + faceSelection);
 
         if (this.baseFaceSelection != faceSelection) {
             this.baseFaceSelection = faceSelection;
 
             if (!suppressChangeNotifications) {
-                // Apply textures with new face selection and immediate refresh
                 applyCurrentTextureSettings();
-
-                System.out.println("FRAMED SOLUTION: Face selection change applied - Base: " + this.baseFaceSelection);
             }
             return true;
         }
         return false;
     }
 
-    /**
-     * FRAMED BLOCKS PATTERN: Set toggle face selection with immediate persistence
-     */
     public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceSelection) {
-        System.out.println("FRAMED SOLUTION: setToggleFaceSelection - " + this.toggleFaceSelection + " → " + faceSelection);
+        DebugConfig.logUserAction("Toggle face: " + this.toggleFaceSelection + " → " + faceSelection);
 
         if (this.toggleFaceSelection != faceSelection) {
             this.toggleFaceSelection = faceSelection;
 
             if (!suppressChangeNotifications) {
-                // Apply textures with new face selection and immediate refresh
                 applyCurrentTextureSettings();
-
-                System.out.println("FRAMED SOLUTION: Face selection change applied - Toggle: " + this.toggleFaceSelection);
             }
             return true;
         }
@@ -367,8 +316,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
             if (!suppressChangeNotifications) {
                 applyCurrentTextureSettings();
-
-                System.out.println("FRAMED SOLUTION: Inversion change applied - Inverted: " + this.inverted);
             }
             return true;
         }
@@ -481,7 +428,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // GUI SLOT MANAGEMENT WITH IMMEDIATE PERSISTENCE
+    // GUI SLOT MANAGEMENT
     // ========================================
 
     @Nonnull
@@ -490,9 +437,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     @Nonnull
     public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
-    /**
-     * FRAMED BLOCKS PATTERN: Set GUI slot items with immediate persistence
-     */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         // Clear analysis cache if items changed
         if (!ItemStack.matches(this.guiToggleItem, toggleItem)) {
@@ -505,9 +449,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
 
-        System.out.println("FRAMED SOLUTION: GUI slot items changed - Toggle: " + (!toggleItem.isEmpty()) + ", Base: " + (!baseItem.isEmpty()));
-
-        // Apply textures with preserved face selections and immediate refresh
+        // Apply textures with preserved face selections
         applyCurrentTextureSettings();
     }
 
@@ -522,24 +464,21 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // FRAMED BLOCKS APPROACH: ENHANCED NBT PERSISTENCE THAT SURVIVES SETBLOCK()
+    // FIXED: ENHANCED NBT PERSISTENCE FOR FACE SELECTIONS
     // ========================================
 
-    /**
-     * FRAMED BLOCKS PATTERN: Comprehensive NBT saving that preserves ALL data
-     */
     @Override
     protected void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
 
-        // Save all texture and face selection data with enhanced robustness
+        // Save all data with robust serialization
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
         nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
         nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
         nbt.putBoolean(INVERTED_KEY, inverted);
 
-        // Save GUI slot items with enhanced persistence
+        // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
             nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
         }
@@ -547,19 +486,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        // Add verification data for debugging
-        nbt.putLong("save_timestamp", System.currentTimeMillis());
-        nbt.putString("verification_base", baseFaceSelection.getSerializedName());
-        nbt.putString("verification_toggle", toggleFaceSelection.getSerializedName());
-
-        System.out.println("FRAMED SOLUTION: NBT SAVED with enhanced robustness - Base face: " + baseFaceSelection +
-                ", Toggle face: " + toggleFaceSelection + ", Base texture: " + baseTexturePath +
-                ", Toggle texture: " + toggleTexturePath);
+        DebugConfig.logPersistence("SAVED - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
     }
 
-    /**
-     * FRAMED BLOCKS PATTERN: Comprehensive NBT loading that restores ALL data
-     */
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
@@ -575,18 +504,26 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // Load face selections with enhanced error handling
+        // FIXED: Enhanced face selection loading with validation
         String baseFaceName = nbt.getString(BASE_FACE_KEY);
-        this.baseFaceSelection = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
+        if (!baseFaceName.isEmpty()) {
+            FaceSelectionData.FaceOption loadedBase = FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
+            this.baseFaceSelection = loadedBase; // Trust the loaded value
+        } else {
+            this.baseFaceSelection = FaceSelectionData.FaceOption.ALL;
+        }
 
         String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
-        this.toggleFaceSelection = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
+        if (!toggleFaceName.isEmpty()) {
+            FaceSelectionData.FaceOption loadedToggle = FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
+            this.toggleFaceSelection = loadedToggle; // Trust the loaded value
+        } else {
+            this.toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
+        }
 
         this.inverted = nbt.getBoolean(INVERTED_KEY);
 
-        // Load GUI slot items with enhanced restoration
+        // Load GUI slot items
         if (nbt.contains("gui_toggle_item")) {
             this.guiToggleItem = ItemStack.of(nbt.getCompound("gui_toggle_item"));
         } else {
@@ -603,25 +540,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         cachedBaseAnalysis = null;
         cachedToggleAnalysis = null;
 
-        // Verification logging
-        if (nbt.contains("save_timestamp")) {
-            long savedTime = nbt.getLong("save_timestamp");
-            String verifyBase = nbt.getString("verification_base");
-            String verifyToggle = nbt.getString("verification_toggle");
-
-            System.out.println("FRAMED SOLUTION: NBT LOADED with verification - Base face: " + baseFaceSelection +
-                    " (verify: " + verifyBase + "), Toggle face: " + toggleFaceSelection + " (verify: " + verifyToggle +
-                    "), Time: " + (System.currentTimeMillis() - savedTime) + "ms ago");
-        } else {
-            System.out.println("FRAMED SOLUTION: NBT LOADED (legacy) - Base face: " + baseFaceSelection +
-                    ", Toggle face: " + toggleFaceSelection + ", Base texture: " + baseTexturePath +
-                    ", Toggle texture: " + toggleTexturePath);
-        }
+        DebugConfig.logPersistence("LOADED - Base: " + baseFaceSelection + ", Toggle: " + toggleFaceSelection);
     }
 
-    /**
-     * FRAMED BLOCKS PATTERN: Enhanced update tag for complete client synchronization
-     */
     @Override
     @Nonnull
     public CompoundTag getUpdateTag() {
@@ -641,18 +562,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
 
-        // Add sync timestamp for debugging
-        nbt.putLong("sync_timestamp", System.currentTimeMillis());
-
-        System.out.println("FRAMED SOLUTION: Update tag created for sync - Base face: " + baseFaceSelection +
-                ", Toggle face: " + toggleFaceSelection);
-
         return nbt;
     }
-
-    // ========================================
-    // FRAMED BLOCKS PATTERN: ENHANCED CLIENT-SERVER SYNCHRONIZATION
-    // ========================================
 
     @Override
     @Nullable
@@ -664,18 +575,16 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void onDataPacket(@Nonnull net.minecraft.network.Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
         CompoundTag nbt = pkt.getTag();
         if (nbt != null) {
-            long beforeTime = System.currentTimeMillis();
             load(nbt);
             requestModelDataUpdate();
-            System.out.println("FRAMED SOLUTION: Data packet processed in " + (System.currentTimeMillis() - beforeTime) + "ms");
         }
     }
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
-        // Client-side logic can be added here if needed
+        // Client-side logic
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
-        // Server-side logic can be added here if needed
+        // Server-side logic
     }
 }

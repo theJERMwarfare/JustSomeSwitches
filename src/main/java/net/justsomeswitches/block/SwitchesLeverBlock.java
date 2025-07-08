@@ -1,6 +1,7 @@
 package net.justsomeswitches.block;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.config.DebugConfig;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -28,13 +29,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FRAMED BLOCKS SOLUTION: Switches Lever Block with simplified lever toggle - relies on robust NBT persistence
- * ---
- * Key changes:
- * - Removed manual preservation approach (save/restore methods)
- * - Simplified lever toggle to rely entirely on enhanced NBT persistence in BlockEntity
- * - Enhanced neighbor change handling for texture persistence
- * - Follows Framed Blocks pattern of separating texture management from lever mechanics
+ * FIXED: Simplified lever block relying entirely on enhanced NBT persistence
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -59,10 +54,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     public SwitchesLeverBlock(Properties properties) {
         super(properties);
     }
-
-    // ========================================
-    // ENHANCED DIRECTION-AWARE BOUNDING BOX
-    // ========================================
 
     @Override
     @Nonnull
@@ -92,7 +83,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // BLOCK ENTITY CREATION AND MANAGEMENT
+    // BLOCK ENTITY MANAGEMENT
     // ========================================
 
     @Override
@@ -114,18 +105,9 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // FRAMED BLOCKS SOLUTION: SIMPLIFIED LEVER TOGGLE RELYING ON ROBUST NBT PERSISTENCE
+    // FIXED: SIMPLIFIED LEVER TOGGLE RELYING ON ENHANCED NBT PERSISTENCE
     // ========================================
 
-    /**
-     * FRAMED BLOCKS APPROACH: Simplified lever toggle that relies entirely on enhanced NBT persistence
-     * ---
-     * Key improvements:
-     * - No manual save/restore - relies on robust NBT persistence in BlockEntity
-     * - Standard setBlock() call with enhanced update flags
-     * - BlockEntity NBT persistence automatically survives the state change
-     * - Enhanced post-toggle validation and refresh
-     */
     @Override
     @Nonnull
     public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player,
@@ -135,41 +117,31 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        System.out.println("FRAMED SOLUTION: Simplified lever toggle relying on robust NBT persistence");
-
-        // Get current powered state
+        // Minimal diagnostic logging
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         boolean newPoweredState = !currentlyPowered;
 
-        System.out.println("FRAMED SOLUTION: Lever state change - Current: " + currentlyPowered + " → New: " + newPoweredState);
+        DebugConfig.logUserAction("LEVER TOGGLE: " + currentlyPowered + " → " + newPoweredState);
 
-        // FRAMED BLOCKS APPROACH: Trust the robust NBT persistence - no manual save/restore needed
-        System.out.println("FRAMED SOLUTION: Relying on enhanced NBT persistence to survive setBlock()");
-
-        // Log pre-toggle state for verification
+        // Log pre-toggle face selections for diagnosis
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("FRAMED SOLUTION: PRE-TOGGLE - Base: " + blockEntity.getBaseFaceSelection() +
-                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
+            DebugConfig.logUserAction("PRE-TOGGLE: Base=" + blockEntity.getBaseFaceSelection() +
+                    ", Toggle=" + blockEntity.getToggleFaceSelection());
         }
 
-        // Change the block state with enhanced update flags for better persistence
+        // Standard lever toggle - rely entirely on enhanced NBT persistence
         BlockState newState = state.setValue(BlockStateProperties.POWERED, newPoweredState);
-        level.setBlock(pos, newState, Block.UPDATE_ALL | Block.UPDATE_NEIGHBORS | Block.UPDATE_CLIENTS);
+        level.setBlock(pos, newState, Block.UPDATE_ALL);
 
-        // FRAMED BLOCKS PATTERN: Post-toggle validation and refresh
+        // Diagnostic verification
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("FRAMED SOLUTION: POST-TOGGLE - Base: " + blockEntity.getBaseFaceSelection() +
-                    ", Toggle: " + blockEntity.getToggleFaceSelection() + ", Inverted: " + blockEntity.isInverted());
-
-            // Force immediate visual update to ensure textures are applied correctly
-            blockEntity.applyCurrentTextureSettings();
-
-            System.out.println("FRAMED SOLUTION: ✅ Lever toggle complete - NBT persistence should have preserved face selections");
+            DebugConfig.logUserAction("POST-TOGGLE: Base=" + blockEntity.getBaseFaceSelection() +
+                    ", Toggle=" + blockEntity.getToggleFaceSelection());
         } else {
-            System.out.println("FRAMED SOLUTION: ⚠️ Warning - BlockEntity not found after lever toggle");
+            DebugConfig.logCritical("BlockEntity missing after toggle at " + pos);
         }
 
-        // Play standard lever click sound
+        // Play lever sound
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
 
@@ -182,34 +154,23 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // FRAMED BLOCKS PATTERN: ENHANCED NEIGHBOR UPDATES FOR TEXTURE PERSISTENCE
+    // ENHANCED NEIGHBOR UPDATES
     // ========================================
 
-    /**
-     * FRAMED BLOCKS PATTERN: Enhanced neighbor change handling to maintain texture persistence
-     */
     @Override
     public void neighborChanged(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
                                 @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
 
-        // Enhanced texture persistence during neighbor updates
+        // Maintain texture persistence during neighbor updates
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
-                System.out.println("FRAMED SOLUTION: Neighbor change - maintaining texture persistence");
-
-                // Force immediate NBT persistence and visual update
                 blockEntity.forceImmediateNBTPersistence();
-
-                // Send update to clients
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         }
     }
 
-    /**
-     * FRAMED BLOCKS PATTERN: Enhanced placement with immediate persistence setup
-     */
     @Override
     public void setPlacedBy(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state,
                             @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer,
@@ -218,19 +179,10 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         super.setPlacedBy(level, pos, state, placer, stack);
 
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("FRAMED SOLUTION: Block placed - setting up persistence");
-
-            // Initialize robust persistence
             blockEntity.forceImmediateNBTPersistence();
-
-            // Send initial update to clients
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
         }
     }
-
-    // ========================================
-    // BLOCK ENTITY CLEANUP
-    // ========================================
 
     @Override
     public void onRemove(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
@@ -238,30 +190,9 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof SwitchesLeverBlockEntity switchEntity) {
-                // Drop any stored texture blocks when switch is broken
                 switchEntity.dropStoredTextures(level, pos);
-                System.out.println("FRAMED SOLUTION: Block removed - texture items dropped");
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
-    }
-
-    /**
-     * Enhanced debug helper for testing persistence
-     */
-    public void debugTextureState(@Nonnull Level level, @Nonnull BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("FRAMED SOLUTION: === TEXTURE STATE DEBUG ===");
-            System.out.println("FRAMED SOLUTION: Position: " + pos);
-            System.out.println("FRAMED SOLUTION: Base texture: " + blockEntity.getBaseTexture());
-            System.out.println("FRAMED SOLUTION: Toggle texture: " + blockEntity.getToggleTexture());
-            System.out.println("FRAMED SOLUTION: Base face: " + blockEntity.getBaseFaceSelection());
-            System.out.println("FRAMED SOLUTION: Toggle face: " + blockEntity.getToggleFaceSelection());
-            System.out.println("FRAMED SOLUTION: Inverted: " + blockEntity.isInverted());
-            System.out.println("FRAMED SOLUTION: Has custom: " + blockEntity.hasCustomTextures());
-            System.out.println("FRAMED SOLUTION: ===============================");
-        } else {
-            System.out.println("FRAMED SOLUTION: No BlockEntity found at " + pos);
-        }
     }
 }

@@ -16,7 +16,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * SILENT: Menu with minimal logging and proper face selection persistence
+ * SILENT: Menu with minimal logging only for user actions
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -137,7 +137,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     public void setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logUserAction("Base face selected: " + faceOption);
+            DebugConfig.logUserAction("GUI: Base face selected: " + faceOption);
             blockEntity.setBaseFaceSelection(faceOption);
         }
     }
@@ -148,7 +148,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     public void setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logUserAction("Toggle face selected: " + faceOption);
+            DebugConfig.logUserAction("GUI: Toggle face selected: " + faceOption);
             blockEntity.setToggleFaceSelection(faceOption);
         }
     }
@@ -159,7 +159,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     public void setInverted(boolean inverted) {
         SwitchesLeverBlockEntity blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            DebugConfig.logUserAction("Inverted: " + inverted);
+            DebugConfig.logUserAction("GUI: Inverted: " + inverted);
             blockEntity.setInverted(inverted);
         }
     }
