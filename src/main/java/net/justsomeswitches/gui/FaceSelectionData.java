@@ -9,7 +9,7 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * SILENT: Face Selection Data System without debug output
+ * FRAMED BLOCKS SOLUTION: Enhanced Face Selection Data System with robust persistence
  */
 public class FaceSelectionData {
 
@@ -18,24 +18,24 @@ public class FaceSelectionData {
     private static final Map<ItemStack, String> blockAnalysisCache = new HashMap<>();
 
     /**
-     * Face option enum with JSON variable names exactly as they appear in model files
+     * FRAMED BLOCKS PATTERN: Enhanced face option enum with robust serialization
      */
     public enum FaceOption {
         ALL("all", "All Faces", null),
 
         // Standard face directions
-        TOP("top", "top", Direction.UP),
-        BOTTOM("bottom", "bottom", Direction.DOWN),
-        NORTH("north", "north", Direction.NORTH),
-        SOUTH("south", "south", Direction.SOUTH),
-        EAST("east", "east", Direction.EAST),
-        WEST("west", "west", Direction.WEST),
+        TOP("top", "Top", Direction.UP),
+        BOTTOM("bottom", "Bottom", Direction.DOWN),
+        NORTH("north", "North", Direction.NORTH),
+        SOUTH("south", "South", Direction.SOUTH),
+        EAST("east", "East", Direction.EAST),
+        WEST("west", "West", Direction.WEST),
 
         // JSON variable names (exactly as they appear in model files)
-        END("end", "end", Direction.UP),      // For logs - top/bottom faces
-        SIDE("side", "side", Direction.NORTH), // For logs - side faces
-        FRONT("front", "front", Direction.NORTH),
-        BACK("back", "back", Direction.SOUTH);
+        END("end", "Ends", Direction.UP),      // For logs - top/bottom faces
+        SIDE("side", "Sides", Direction.NORTH), // For logs - side faces
+        FRONT("front", "Front", Direction.NORTH),
+        BACK("back", "Back", Direction.SOUTH);
 
         private final String serializedName;
         private final String displayName;
@@ -53,19 +53,36 @@ public class FaceSelectionData {
         public boolean isAll() { return this == ALL; }
 
         /**
-         * Convert from serialized name (for NBT loading) - FIXED: Enhanced debug output
+         * FRAMED BLOCKS PATTERN: Enhanced serialization with robust error handling and debugging
          */
         @Nonnull
         public static FaceOption fromSerializedName(@Nonnull String name) {
-            System.out.println("FIXED: Converting serialized name: '" + name + "'");
+            System.out.println("FRAMED SOLUTION: Converting serialized name: '" + name + "'");
+
+            // Enhanced validation for empty/null names
+            if (name == null || name.trim().isEmpty()) {
+                System.out.println("FRAMED SOLUTION: Empty/null name, defaulting to ALL");
+                return ALL;
+            }
+
+            // Enhanced matching with case-insensitive fallback
             for (FaceOption option : values()) {
                 if (option.serializedName.equals(name)) {
-                    System.out.println("FIXED: Found matching option: " + option);
+                    System.out.println("FRAMED SOLUTION: Exact match found: " + option);
                     return option;
                 }
             }
-            System.out.println("FIXED: No match found, defaulting to ALL");
-            return ALL; // Fallback to ALL for invalid names
+
+            // Case-insensitive fallback for robustness
+            for (FaceOption option : values()) {
+                if (option.serializedName.equalsIgnoreCase(name)) {
+                    System.out.println("FRAMED SOLUTION: Case-insensitive match found: " + option + " for '" + name + "'");
+                    return option;
+                }
+            }
+
+            System.out.println("FRAMED SOLUTION: No match found for '" + name + "', defaulting to ALL");
+            return ALL; // Robust fallback to ALL for invalid names
         }
 
         /**
@@ -160,15 +177,18 @@ public class FaceSelectionData {
     }
 
     /**
-     * SILENT: Create dropdown state without debug output
+     * FRAMED BLOCKS PATTERN: Enhanced dropdown state creation with robust user selection preservation
      */
     @Nonnull
     public static DropdownState createDropdownState(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
-                                                    @Nonnull FaceOption currentSelectedOption) {
+                                                    @Nonnull FaceSelectionData.FaceOption currentSelectedOption) {
+
+        System.out.println("FRAMED SOLUTION: Creating dropdown state for selection: " + currentSelectedOption);
 
         boolean hasMultipleFaces = blockInfo.hasMultipleFaceTextures();
 
         if (!hasMultipleFaces) {
+            System.out.println("FRAMED SOLUTION: Single texture block - disabled dropdown");
             return new DropdownState(false, List.of(FaceOption.ALL), FaceOption.ALL, null);
         }
 
@@ -177,25 +197,31 @@ public class FaceSelectionData {
 
         // Get texture variables from block model
         List<String> textureVariables = getTextureVariables(blockInfo);
+        System.out.println("FRAMED SOLUTION: Found texture variables: " + textureVariables);
 
         // Convert texture variables to face options (preserve exact JSON variable names)
         for (String variable : textureVariables) {
             FaceOption faceOption = FaceOption.fromJsonVariable(variable);
             if (!availableOptions.contains(faceOption)) {
                 availableOptions.add(faceOption);
+                System.out.println("FRAMED SOLUTION: Added option: " + faceOption + " from variable: " + variable);
             }
         }
 
         // Only add ALL if no specific face options were found
         if (availableOptions.isEmpty()) {
             availableOptions.add(FaceOption.ALL);
+            System.out.println("FRAMED SOLUTION: No specific options found - added ALL");
         }
 
-        // CRITICAL: Preserve user's current selection - NO AUTO-SETTING
+        // CRITICAL: Preserve user's current selection using robust validation
         FaceOption validatedSelection = validateSelection(currentSelectedOption, availableOptions);
+        System.out.println("FRAMED SOLUTION: Validated selection: " + currentSelectedOption + " → " + validatedSelection);
 
-        // Create dropdown state with user's selection preserved
+        // Create dropdown state with preserved user selection
         String previewTexture = getTextureForSelection(blockInfo, validatedSelection);
+        System.out.println("FRAMED SOLUTION: Preview texture for " + validatedSelection + ": " + previewTexture);
+
         return new DropdownState(true, availableOptions, validatedSelection, previewTexture);
     }
 
@@ -304,22 +330,60 @@ public class FaceSelectionData {
     }
 
     /**
-     * SILENT: Validate face selection - PRESERVE user's choice, no auto-defaults
+     * FRAMED BLOCKS PATTERN: Enhanced validation that strongly preserves user selections
      */
     @Nonnull
     public static FaceOption validateSelection(@Nonnull FaceOption selection,
                                                @Nonnull List<FaceOption> availableOptions) {
+        System.out.println("FRAMED SOLUTION: Validating selection '" + selection + "' against options: " +
+                availableOptions.stream().map(FaceOption::getSerializedName).toList());
+
+        // PRIORITY 1: Preserve user's exact selection if available
         if (availableOptions.contains(selection)) {
+            System.out.println("FRAMED SOLUTION: User selection '" + selection + "' is valid - preserving");
             return selection;
         }
 
-        // Only fallback if the user's selection is truly invalid
+        // PRIORITY 2: If user had a specific face but options changed, try to find similar option
+        if (selection != FaceOption.ALL) {
+            // Try to find a semantically similar option
+            FaceOption similar = findSimilarOption(selection, availableOptions);
+            if (similar != null) {
+                System.out.println("FRAMED SOLUTION: Found similar option '" + similar + "' for user selection '" + selection + "'");
+                return similar;
+            }
+        }
+
+        // PRIORITY 3: Fallback to ALL if available (most common fallback)
         if (availableOptions.contains(FaceOption.ALL)) {
+            System.out.println("FRAMED SOLUTION: Falling back to ALL for invalid selection '" + selection + "'");
             return FaceOption.ALL;
         }
 
-        // Return first available option only as last resort
-        return availableOptions.isEmpty() ? FaceOption.ALL : availableOptions.get(0);
+        // PRIORITY 4: Last resort - return first available option
+        FaceOption fallback = availableOptions.isEmpty() ? FaceOption.ALL : availableOptions.get(0);
+        System.out.println("FRAMED SOLUTION: Last resort fallback to '" + fallback + "' for selection '" + selection + "'");
+        return fallback;
+    }
+
+    /**
+     * FRAMED BLOCKS PATTERN: Find semantically similar face option for better user experience
+     */
+    @Nullable
+    private static FaceOption findSimilarOption(@Nonnull FaceOption userSelection, @Nonnull List<FaceOption> availableOptions) {
+        // Map similar concepts
+        return switch (userSelection) {
+            case END -> availableOptions.contains(FaceOption.TOP) ? FaceOption.TOP :
+                    availableOptions.contains(FaceOption.BOTTOM) ? FaceOption.BOTTOM : null;
+            case TOP -> availableOptions.contains(FaceOption.END) ? FaceOption.END : null;
+            case BOTTOM -> availableOptions.contains(FaceOption.END) ? FaceOption.END : null;
+            case SIDE -> availableOptions.contains(FaceOption.NORTH) ? FaceOption.NORTH :
+                    availableOptions.contains(FaceOption.FRONT) ? FaceOption.FRONT : null;
+            case FRONT -> availableOptions.contains(FaceOption.SIDE) ? FaceOption.SIDE :
+                    availableOptions.contains(FaceOption.NORTH) ? FaceOption.NORTH : null;
+            case NORTH, SOUTH, EAST, WEST -> availableOptions.contains(FaceOption.SIDE) ? FaceOption.SIDE : null;
+            default -> null;
+        };
     }
 
     /**
