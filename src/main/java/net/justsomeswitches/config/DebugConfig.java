@@ -1,57 +1,67 @@
 package net.justsomeswitches.config;
 
 /**
- * DRASTICALLY REDUCED DEBUG: Only critical failures and major user actions
+ * PRODUCTION-READY DEBUG: Completely silent for normal operation
  * ---
- * FIXED: Eliminated 368-page console spam by disabling routine operations
+ * CRITICAL: All logging disabled except for actual system failures
  */
 public class DebugConfig {
 
     /**
-     * CRITICAL ONLY - Disabled for production testing
+     * PRODUCTION MODE - All debug disabled
      */
     public static final boolean DEBUG_ENABLED = false;
+    public static final boolean ENABLE_CRITICAL_LOGGING = false;
 
     /**
-     * CRITICAL FAILURES ONLY - System breaking errors
+     * ONLY for actual system-breaking errors that prevent functionality
      */
     public static void logCritical(String message) {
-        System.out.println("🚨 CRITICAL: " + message);
+        if (ENABLE_CRITICAL_LOGGING) {
+            System.out.println("🚨 CRITICAL: " + message);
+        }
+        // Otherwise completely silent
     }
 
     /**
-     * USER ACTIONS ONLY - Direct user interactions (lever toggle, face selection)
+     * COMPLETELY DISABLED - No user action logging
      */
     public static void logUserAction(String action) {
-        System.out.println("👤 USER: " + action);
+        // SILENT: No output in production
     }
 
     /**
-     * PERSISTENCE CRITICAL - Only actual save/load operations, not every NBT access
+     * COMPLETELY DISABLED - No persistence logging
      */
     public static void logPersistence(String operation) {
-        System.out.println("💾 PERSIST: " + operation);
+        // SILENT: No output in production
     }
 
     /**
-     * COMPLETELY DISABLED - No routine state logging to prevent console spam
+     * COMPLETELY DISABLED - No state change logging
      */
     public static void logStateChange(String component, String change) {
-        // SILENT: Completely disabled to prevent 368-page console output
-        // System.out.println("STATE " + component + ": " + change);
+        // SILENT: No output in production
     }
 
     /**
-     * SUCCESS TRACKING - Only log when problems are resolved
+     * COMPLETELY DISABLED - No success logging
      */
     public static void logSuccess(String achievement) {
-        System.out.println("✅ SUCCESS: " + achievement);
+        // SILENT: No output in production
     }
 
     /**
-     * VALIDATION FAILURES - When expected data is missing/incorrect
+     * COMPLETELY DISABLED - No validation logging
      */
     public static void logValidationFailure(String validation, String expected, String actual) {
-        System.out.println("❌ VALIDATION: " + validation + " - Expected: " + expected + ", Got: " + actual);
+        // SILENT: No output in production
+    }
+
+    /**
+     * Emergency debug method - only use if system completely broken
+     */
+    public static void emergencyLog(String message) {
+        System.err.println("EMERGENCY: " + message);
     }
 }

@@ -1,7 +1,6 @@
 package net.justsomeswitches.block;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
-import net.justsomeswitches.config.DebugConfig;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,7 +28,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * FRAMED BLOCKS APPROACH: Minimal lever block relying entirely on bulletproof NBT persistence
+ * SIMPLIFIED: Minimal lever block focusing on core functionality
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -105,7 +104,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // FRAMED BLOCKS APPROACH: MINIMAL LEVER TOGGLE
+    // SIMPLIFIED LEVER TOGGLE
     // ========================================
 
     @Override
@@ -117,49 +116,12 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        // Current lever state
+        // Simple lever toggle - NBT persistence handles everything else
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         boolean newPoweredState = !currentlyPowered;
 
-        DebugConfig.logUserAction("LEVER TOGGLE: " + currentlyPowered + " → " + newPoweredState);
-
-        // PRE-TOGGLE: Validate BlockEntity state
-        SwitchesLeverBlockEntity blockEntity = getBlockEntitySafe(level, pos);
-        if (blockEntity != null) {
-            DebugConfig.logPersistence("PRE-TOGGLE: Base=" + blockEntity.getBaseFaceSelection() +
-                    ", Toggle=" + blockEntity.getToggleFaceSelection() +
-                    ", Custom=" + blockEntity.hasCustomTextures());
-        } else {
-            DebugConfig.logCritical("No BlockEntity found before lever toggle!");
-            return InteractionResult.FAIL;
-        }
-
-        // FRAMED BLOCKS APPROACH: Simple lever toggle - rely entirely on bulletproof NBT
         BlockState newState = state.setValue(BlockStateProperties.POWERED, newPoweredState);
         level.setBlock(pos, newState, Block.UPDATE_ALL);
-
-        // POST-TOGGLE: Validate BlockEntity persistence
-        SwitchesLeverBlockEntity postToggleEntity = getBlockEntitySafe(level, pos);
-        if (postToggleEntity != null) {
-            DebugConfig.logPersistence("POST-TOGGLE: Base=" + postToggleEntity.getBaseFaceSelection() +
-                    ", Toggle=" + postToggleEntity.getToggleFaceSelection() +
-                    ", Custom=" + postToggleEntity.hasCustomTextures());
-
-            // Verify face selections survived the toggle
-            if (blockEntity != null) {
-                boolean basePersisted = blockEntity.getBaseFaceSelection() == postToggleEntity.getBaseFaceSelection();
-                boolean togglePersisted = blockEntity.getToggleFaceSelection() == postToggleEntity.getToggleFaceSelection();
-
-                if (basePersisted && togglePersisted) {
-                    DebugConfig.logSuccess("Face selections survived lever toggle!");
-                } else {
-                    DebugConfig.logValidationFailure("Face persistence", "preserved",
-                            "Base:" + basePersisted + " Toggle:" + togglePersisted);
-                }
-            }
-        } else {
-            DebugConfig.logCritical("BlockEntity missing after toggle!");
-        }
 
         // Play lever sound
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
@@ -168,64 +130,14 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /**
-     * Safe BlockEntity getter with validation
-     */
-    @Nullable
-    private SwitchesLeverBlockEntity getBlockEntitySafe(@Nonnull Level level, @Nonnull BlockPos pos) {
-        try {
-            BlockEntity entity = level.getBlockEntity(pos);
-            if (entity instanceof SwitchesLeverBlockEntity switchEntity) {
-                return switchEntity;
-            } else if (entity != null) {
-                DebugConfig.logCritical("Wrong BlockEntity type: " + entity.getClass().getSimpleName());
-            }
-        } catch (Exception e) {
-            DebugConfig.logCritical("Exception getting BlockEntity: " + e.getMessage());
-        }
-        return null;
-    }
-
     @Override
     public void animateTick(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource randomSource) {
         // Intentionally empty to suppress particle effects
     }
 
     // ========================================
-    // ENHANCED NEIGHBOR UPDATES
+    // CLEANUP ON REMOVAL
     // ========================================
-
-    @Override
-    public void neighborChanged(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
-                                @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
-        super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
-
-        // Ensure texture persistence during neighbor updates
-        SwitchesLeverBlockEntity blockEntity = getBlockEntitySafe(level, pos);
-        if (blockEntity != null && blockEntity.hasCustomTextures()) {
-            // Force immediate sync to prevent data loss
-            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
-            blockEntity.setChanged();
-        }
-    }
-
-    @Override
-    public void setPlacedBy(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state,
-                            @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer,
-                            @Nonnull net.minecraft.world.item.ItemStack stack) {
-
-        super.setPlacedBy(level, pos, state, placer, stack);
-
-        // Ensure BlockEntity is properly initialized
-        SwitchesLeverBlockEntity blockEntity = getBlockEntitySafe(level, pos);
-        if (blockEntity != null) {
-            blockEntity.setChanged();
-            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
-            DebugConfig.logSuccess("Lever placed with BlockEntity initialized");
-        } else {
-            DebugConfig.logCritical("BlockEntity not found after lever placement!");
-        }
-    }
 
     @Override
     public void onRemove(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
@@ -233,65 +145,12 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
         // Handle texture dropping before removing
         if (!state.is(newState.getBlock())) {
-            SwitchesLeverBlockEntity blockEntity = getBlockEntitySafe(level, pos);
-            if (blockEntity != null) {
-                blockEntity.dropStoredTextures(level, pos);
-                DebugConfig.logPersistence("Lever removed - textures dropped");
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof SwitchesLeverBlockEntity switchEntity) {
+                switchEntity.dropStoredTextures(level, pos);
             }
         }
 
         super.onRemove(state, level, pos, newState, isMoving);
-    }
-
-    // ========================================
-    // ENHANCED STATE CHANGE HANDLING
-    // ========================================
-
-    @Override
-    public void onBlockStateChange(@Nonnull net.minecraft.world.level.LevelReader level, @Nonnull BlockPos pos,
-                                   @Nonnull BlockState oldState, @Nonnull BlockState newState) {
-        super.onBlockStateChange(level, pos, oldState, newState);
-
-        // Ensure BlockEntity persistence during state changes
-        if (level instanceof Level realLevel && !realLevel.isClientSide) {
-            SwitchesLeverBlockEntity blockEntity = getBlockEntitySafe(realLevel, pos);
-            if (blockEntity != null && blockEntity.hasCustomTextures()) {
-                // Force sync to maintain texture data
-                realLevel.sendBlockUpdated(pos, newState, newState, Block.UPDATE_CLIENTS);
-            }
-        }
-    }
-
-    // ========================================
-    // VALIDATION HELPERS
-    // ========================================
-
-    /**
-     * Validate that the BlockEntity is functioning correctly
-     */
-    public boolean validateBlockEntityIntegrity(@Nonnull Level level, @Nonnull BlockPos pos) {
-        SwitchesLeverBlockEntity blockEntity = getBlockEntitySafe(level, pos);
-        if (blockEntity == null) {
-            DebugConfig.logCritical("BlockEntity validation failed - entity is null");
-            return false;
-        }
-
-        try {
-            // Test basic operations
-            var baseFace = blockEntity.getBaseFaceSelection();
-            var toggleFace = blockEntity.getToggleFaceSelection();
-            var hasCustom = blockEntity.hasCustomTextures();
-
-            if (baseFace == null || toggleFace == null) {
-                DebugConfig.logCritical("BlockEntity validation failed - null face selections");
-                return false;
-            }
-
-            DebugConfig.logSuccess("BlockEntity validation passed");
-            return true;
-        } catch (Exception e) {
-            DebugConfig.logCritical("BlockEntity validation failed - exception: " + e.getMessage());
-            return false;
-        }
     }
 }
