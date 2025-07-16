@@ -22,13 +22,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Switches Lever BlockEntity with Raw JSON Variable System - FIXED VERSION
- * REWRITTEN: Uses string-based face selections with universal block compatibility
- * 
- * FIXES APPLIED:
- * - Enhanced face selection preservation during blockstate changes
- * - Improved NBT loading during preservation periods
- * - Better synchronization of face selections
+ * Switches Lever BlockEntity with Raw JSON Variable System - MINIMAL FIX VERSION
+ * CRITICAL FIX: Prevents NBT corruption during blockstate changes without complex preservation
+ *
+ * APPROACH: Protect NBT data during blockstate changes using minimal, targeted intervention
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -67,72 +64,31 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private ItemStack guiBaseItem = ItemStack.EMPTY;
 
     // ========================================
-    // ENHANCED FACE SELECTION PRESERVATION SYSTEM
+    // MINIMAL BLOCKSTATE PROTECTION SYSTEM
     // ========================================
 
-    // Temporary storage for preserving selections during state changes
-    private String preservedBaseVariable = null;
-    private String preservedToggleVariable = null;
-    private boolean preservedInverted = false;
-    private boolean preservationActive = false;
-    
-    // CRITICAL FIX: Track if we're in the middle of a blockstate change
+    // CRITICAL FIX: Track if we're in a blockstate change to prevent NBT corruption
     private boolean isInBlockStateChange = false;
+    private boolean skipNextNBTLoad = false;
 
     /**
-     * FIXED: Preserve face selections before block state changes
-     * Enhanced to handle multiple rapid state changes
+     * MINIMAL FIX: Mark start of blockstate change to protect NBT data
      */
-    public void preserveFaceSelectionsForStateChange() {
-        if (!preservationActive) {
-            this.preservedBaseVariable = this.baseTextureVariable;
-            this.preservedToggleVariable = this.toggleTextureVariable;
-            this.preservedInverted = this.inverted;
-            this.preservationActive = true;
-            this.isInBlockStateChange = true;
-        }
+    public void protectNBTDuringStateChange() {
+        this.isInBlockStateChange = true;
+        this.skipNextNBTLoad = true;
     }
 
     /**
-     * FIXED: Restore preserved face selections after state changes
-     * Enhanced with better state management
+     * MINIMAL FIX: Mark end of blockstate change and restore normal NBT processing
      */
-    private void restorePreservedFaceSelections() {
-        if (preservationActive && preservedBaseVariable != null && preservedToggleVariable != null) {
-            // Restore preserved values
-            this.baseTextureVariable = preservedBaseVariable;
-            this.toggleTextureVariable = preservedToggleVariable;
-            this.inverted = preservedInverted;
-
-            // Clear preservation state
-            this.preservedBaseVariable = null;
-            this.preservedToggleVariable = null;
-            this.preservedInverted = false;
-            this.preservationActive = false;
-            this.isInBlockStateChange = false;
-
-            // Force immediate save and update
-            setChanged();
-            
-            // Update model data on client side
-            if (level != null && level.isClientSide) {
-                requestModelDataUpdate();
-            }
-        }
-    }
-
-    /**
-     * CRITICAL FIX: Force restoration of preserved face selections
-     * Called from the block when state changes are complete
-     */
-    public void forceRestorePreservedSelections() {
-        if (preservationActive) {
-            restorePreservedFaceSelections();
-        }
+    public void endNBTProtection() {
+        this.isInBlockStateChange = false;
+        this.skipNextNBTLoad = false;
     }
 
     // ========================================
-    // ENHANCED MODEL DATA INTEGRATION
+    // MODEL DATA INTEGRATION
     // ========================================
 
     /**
@@ -200,49 +156,48 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // ENHANCED BLOCK STATE MANAGEMENT WITH PRESERVATION
+    // MINIMAL BLOCKSTATE OVERRIDE PROTECTION
     // ========================================
 
     /**
-     * FIXED: Override setBlockState to preserve face selections
-     * Enhanced to handle rapid state changes better
+     * MINIMAL FIX: Override setBlockState to protect NBT data
      */
     @Override
     public void setBlockState(@Nonnull BlockState blockState) {
-        // Preserve current face selections before state change
-        if (!preservationActive && !isInBlockStateChange) {
-            preserveFaceSelectionsForStateChange();
-        }
+        // Mark that we're in a blockstate change
+        protectNBTDuringStateChange();
 
         super.setBlockState(blockState);
 
-        // Restore face selections after a brief delay to ensure state change completes
+        // Schedule NBT protection end after blockstate change completes
         if (level != null && !level.isClientSide) {
             level.scheduleTick(worldPosition, blockState.getBlock(), 1);
         }
 
         // Force model data update
-        if (level != null && !level.isClientSide) {
+        if (level != null) {
             requestModelDataUpdate();
             level.sendBlockUpdated(worldPosition, blockState, blockState, Block.UPDATE_CLIENTS);
         }
     }
 
     // ========================================
-    // CLIENT AND SERVER TICK METHODS
+    // TICK METHODS FOR NBT PROTECTION CLEANUP
     // ========================================
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
-        // Restore preserved selections if needed
-        if (blockEntity.preservationActive && blockEntity.isInBlockStateChange) {
-            blockEntity.restorePreservedFaceSelections();
+        // Clean up NBT protection if active
+        if (blockEntity.isInBlockStateChange) {
+            blockEntity.endNBTProtection();
+            blockEntity.requestModelDataUpdate();
         }
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
-        // Restore preserved selections if needed
-        if (blockEntity.preservationActive && blockEntity.isInBlockStateChange) {
-            blockEntity.restorePreservedFaceSelections();
+        // Clean up NBT protection if active
+        if (blockEntity.isInBlockStateChange) {
+            blockEntity.endNBTProtection();
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
         }
     }
 
@@ -283,8 +238,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private void markDirtyAndSync() {
         if (level != null && !level.isClientSide) {
             setChanged();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
             requestModelDataUpdate();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
     }
 
@@ -308,7 +263,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             return setBaseTexture(DEFAULT_BASE_TEXTURE);
         }
         String texturePath = getTextureFromItem(itemStack);
-        return texturePath.isEmpty() ? false : setBaseTexture(texturePath);
+        return !texturePath.isEmpty() && setBaseTexture(texturePath);
     }
 
     /**
@@ -331,7 +286,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             return setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
         }
         String texturePath = getTextureFromItem(itemStack);
-        return texturePath.isEmpty() ? false : setToggleTexture(texturePath);
+        return !texturePath.isEmpty() && setToggleTexture(texturePath);
     }
 
     // ========================================
@@ -496,7 +451,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // ENHANCED NBT SERIALIZATION (STRING-BASED)
+    // ENHANCED NBT SERIALIZATION WITH PROTECTION
     // ========================================
 
     @Override
@@ -521,23 +476,17 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!guiBaseItem.isEmpty()) {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
-
-        // CRITICAL FIX: Save preservation state
-        if (preservationActive) {
-            nbt.putBoolean("preservation_active", true);
-            if (preservedBaseVariable != null) {
-                nbt.putString("preserved_base_variable", preservedBaseVariable);
-            }
-            if (preservedToggleVariable != null) {
-                nbt.putString("preserved_toggle_variable", preservedToggleVariable);
-            }
-            nbt.putBoolean("preserved_inverted", preservedInverted);
-        }
     }
 
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
+
+        // CRITICAL FIX: Skip NBT loading during blockstate changes to prevent corruption
+        if (skipNextNBTLoad) {
+            skipNextNBTLoad = false;
+            return;
+        }
 
         // Load texture paths with defaults
         this.baseTexturePath = nbt.getString(BASE_TEXTURE_KEY);
@@ -551,43 +500,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // CRITICAL FIX: Enhanced preservation handling during NBT loading
-        boolean hadPreservationData = nbt.getBoolean("preservation_active");
-        
-        if (hadPreservationData) {
-            // Restore preservation state
-            this.preservationActive = true;
-            this.preservedBaseVariable = nbt.getString("preserved_base_variable");
-            this.preservedToggleVariable = nbt.getString("preserved_toggle_variable");
-            this.preservedInverted = nbt.getBoolean("preserved_inverted");
-            
-            // Use preserved values if available
-            if (!preservedBaseVariable.isEmpty()) {
-                this.baseTextureVariable = preservedBaseVariable;
-            } else {
-                this.baseTextureVariable = nbt.getString(BASE_VARIABLE_KEY);
-            }
-            
-            if (!preservedToggleVariable.isEmpty()) {
-                this.toggleTextureVariable = preservedToggleVariable;
-            } else {
-                this.toggleTextureVariable = nbt.getString(TOGGLE_VARIABLE_KEY);
-            }
-            
-            this.inverted = preservedInverted;
-            
-            // Clear preservation after loading
-            this.preservationActive = false;
-            this.preservedBaseVariable = null;
-            this.preservedToggleVariable = null;
-            this.preservedInverted = false;
-            
-        } else {
-            // Normal loading without preservation
-            this.baseTextureVariable = nbt.getString(BASE_VARIABLE_KEY);
-            this.toggleTextureVariable = nbt.getString(TOGGLE_VARIABLE_KEY);
-            this.inverted = nbt.getBoolean(INVERTED_KEY);
-        }
+        // Load raw texture variables
+        this.baseTextureVariable = nbt.getString(BASE_VARIABLE_KEY);
+        this.toggleTextureVariable = nbt.getString(TOGGLE_VARIABLE_KEY);
+        this.inverted = nbt.getBoolean(INVERTED_KEY);
 
         // Validate loaded variables
         if (this.baseTextureVariable.isEmpty()) {

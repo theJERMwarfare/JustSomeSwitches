@@ -9,24 +9,13 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 /**
- * Raw JSON Variable Face Selection System - CLEAN VERSION
- * REWRITTEN: Pure string-based system using exact JSON variable names
+ * Raw JSON Variable Face Selection System - CLEANED VERSION
+ * Pure string-based system using exact JSON variable names
  * Universal compatibility with vanilla and modded blocks
  *
- * FIXES APPLIED:
- * - Auto-apply default texture when blocks placed
- * - EXACT JSON variable extraction (no filtering, no additions, no modifications)
- * - Improved face selection preservation
- * - Removed excessive debug logging
+ * REMOVED: Unused deprecated method createDropdownState() (zero references found)
  */
 public class FaceSelectionData {
-
-    // Non-face texture variables to exclude from face selection
-    private static final Set<String> IGNORED_VARIABLES = Set.of(
-            "particle", "overlay", "animation", "ctm", "connected",
-            "north_overlay", "south_overlay", "east_overlay", "west_overlay",
-            "up_overlay", "down_overlay"
-    );
 
     // Priority order for default selection (side-focused, universal)
     private static final String[] DEFAULT_PRIORITY = {
@@ -110,8 +99,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * Create raw texture selection from ItemStack - FIXED VERSION
-     * FIXES: Auto-apply default texture, exact variable filtering
+     * Create raw texture selection from ItemStack - USED BY SwitchTextureMenu
      */
     @Nonnull
     public static RawTextureSelection createRawTextureSelection(@Nonnull ItemStack itemStack,
@@ -125,13 +113,18 @@ public class FaceSelectionData {
             DynamicBlockModelAnalyzer.DynamicBlockInfo blockInfo =
                     DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack);
 
-            // Get available variables with EXACT filtering
-            List<String> availableVariables = getExactFilteredVariables(blockInfo);
+            // Get available variables
+            List<String> availableVariables = blockInfo.getAvailableVariables();
 
-            // CRITICAL FIX: Determine if dropdown should be enabled based on EXACT variables
+            // If no variables found, provide fallback
+            if (availableVariables.isEmpty()) {
+                availableVariables = List.of("all");
+            }
+
+            // Determine if dropdown should be enabled based on variables
             boolean shouldEnable = availableVariables.size() > 1;
 
-            // FIXED: Always determine best default variable for new blocks
+            // Determine best variable for new blocks
             String selectedVariable;
             if (currentSelection.equals("all") || !availableVariables.contains(currentSelection)) {
                 // Use default selection for new blocks or invalid selections
@@ -153,40 +146,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * CRITICAL FIX: Get EXACT texture variables from block's JSON file
-     * NO filtering, NO additions, NO modifications - only exclude non-face textures like "particle"
-     */
-    @Nonnull
-    private static List<String> getExactFilteredVariables(@Nonnull DynamicBlockModelAnalyzer.DynamicBlockInfo blockInfo) {
-        // SIMPLE: Just use the availableVariables from DynamicBlockModelAnalyzer
-        // It already excludes non-face textures and preserves JSON order
-        List<String> availableVariables = blockInfo.getAvailableVariables();
-
-        // If no variables found, provide fallback
-        if (availableVariables.isEmpty()) {
-            return List.of("all");
-        }
-
-        return availableVariables;
-    }
-
-    /**
-     * Determine selected variable using priority-based logic
-     */
-    @Nonnull
-    private static String determineSelectedVariable(@Nonnull List<String> availableVariables,
-                                                    @Nonnull String currentSelection) {
-        // If current selection is available, use it
-        if (availableVariables.contains(currentSelection)) {
-            return currentSelection;
-        }
-
-        // Use priority-based default selection
-        return getDefaultVariable(availableVariables);
-    }
-
-    /**
-     * Get default variable using priority order (side-focused, universal)
+     * Get default variable using priority order - USED BY SwitchTextureMenu
      */
     @Nonnull
     public static String getDefaultVariable(@Nonnull List<String> availableVariables) {
@@ -206,7 +166,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * Create disabled selection for empty slots
+     * Create disabled selection for empty slots - USED BY SwitchTextureScreen
      */
     @Nonnull
     public static RawTextureSelection createDisabledSelection() {
@@ -226,14 +186,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * Validate raw variable name
-     */
-    public static boolean isValidVariable(@Nonnull String variable) {
-        return !variable.isEmpty() && !IGNORED_VARIABLES.contains(variable.toLowerCase());
-    }
-
-    /**
-     * Get texture path for specific variable from ItemStack
+     * Get texture path for specific variable from ItemStack - USED BY SwitchTextureMenu
      */
     @Nullable
     public static String getTextureForVariable(@Nonnull ItemStack itemStack, @Nonnull String variable) {
@@ -249,7 +202,7 @@ public class FaceSelectionData {
     }
 
     /**
-     * Get all available variables from ItemStack - FIXED VERSION
+     * Get all available variables from ItemStack
      */
     @Nonnull
     public static List<String> getAvailableVariables(@Nonnull ItemStack itemStack) {
@@ -258,14 +211,15 @@ public class FaceSelectionData {
         try {
             DynamicBlockModelAnalyzer.DynamicBlockInfo blockInfo =
                     DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack);
-            return getExactFilteredVariables(blockInfo);
+            List<String> variables = blockInfo.getAvailableVariables();
+            return variables.isEmpty() ? List.of("all") : variables;
         } catch (Exception e) {
             return List.of("all");
         }
     }
 
     // ========================================
-    // LEGACY COMPATIBILITY (DEPRECATED)
+    // LEGACY COMPATIBILITY (DEPRECATED BUT STILL REFERENCED)
     // ========================================
 
     /**
@@ -283,19 +237,6 @@ public class FaceSelectionData {
         @Nonnull public List<Component> getDisplayOptions() { return rawSelection.getDisplayOptions(); }
         @Nullable public String getPreviewTexture() { return rawSelection.getPreviewTexture(); }
         public boolean hasPreview() { return rawSelection.hasPreview(); }
-    }
-
-    /**
-     * @deprecated Use createRawTextureSelection instead
-     */
-    @Deprecated
-    @Nonnull
-    public static DropdownState createDropdownState(@Nonnull net.justsomeswitches.util.BlockTextureAnalyzer.BlockTextureInfo blockInfo,
-                                                    @Nonnull Object currentSelection) {
-        // Convert legacy call to new system
-        String variable = (currentSelection != null) ? currentSelection.toString() : "all";
-        RawTextureSelection rawSelection = createFallbackSelection(ItemStack.EMPTY, variable);
-        return new DropdownState(rawSelection);
     }
 
     /**

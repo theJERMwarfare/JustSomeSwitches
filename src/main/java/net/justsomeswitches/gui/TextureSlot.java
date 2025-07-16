@@ -56,26 +56,22 @@ public class TextureSlot extends Slot {
 
         // Reject blocks that have special behaviors
         String blockName = block.getDescriptionId().toLowerCase();
-        if (blockName.contains("stairs") ||
-                blockName.contains("slab") ||
-                blockName.contains("fence") ||
-                blockName.contains("gate") ||
-                blockName.contains("door") ||
-                blockName.contains("trapdoor") ||
-                blockName.contains("button") ||
-                blockName.contains("lever") ||
-                blockName.contains("pressure") ||
-                blockName.contains("redstone") ||
-                blockName.contains("torch") ||
-                blockName.contains("rail") ||
-                blockName.contains("chest") ||
-                blockName.contains("furnace") ||
-                blockName.contains("dispenser") ||
-                blockName.contains("dropper")) {
-            return false;
-        }
-
-        return true;
+        return !blockName.contains("stairs") &&
+                !blockName.contains("slab") &&
+                !blockName.contains("fence") &&
+                !blockName.contains("gate") &&
+                !blockName.contains("door") &&
+                !blockName.contains("trapdoor") &&
+                !blockName.contains("button") &&
+                !blockName.contains("lever") &&
+                !blockName.contains("pressure") &&
+                !blockName.contains("redstone") &&
+                !blockName.contains("torch") &&
+                !blockName.contains("rail") &&
+                !blockName.contains("chest") &&
+                !blockName.contains("furnace") &&
+                !blockName.contains("dispenser") &&
+                !blockName.contains("dropper");
     }
 
     /**

@@ -21,7 +21,7 @@ import java.util.*;
 /**
  * Dynamic block model analyzer that reads model JSON files at runtime
  *
- * CRITICAL FIX: Only returns EXACT texture variables from block's OWN JSON file
+ * SAFE CLEANUP: Only returns EXACT texture variables from block's OWN JSON file
  * No parent model inheritance, no filtering, no additions - just raw variables
  * Universal compatibility with vanilla and modded blocks
  */
@@ -51,7 +51,7 @@ public class DynamicBlockModelAnalyzer {
             this.textureVariables = new LinkedHashMap<>(textureVariables); // Preserve order
             this.primaryTexture = primaryTexture;
 
-            // CRITICAL FIX: ONLY exclude non-face textures, preserve EXACT JSON variables
+            // CRITICAL: ONLY exclude non-face textures, preserve EXACT JSON variables
             this.availableVariables = new ArrayList<>();
             for (String variable : textureVariables.keySet()) {
                 // ONLY exclude non-face textures like "particle" - include EVERYTHING else from JSON
@@ -73,35 +73,6 @@ public class DynamicBlockModelAnalyzer {
         @Nullable
         public String getTextureForVariable(String variable) {
             return textureVariables.get(variable);
-        }
-
-        /**
-         * Get user-friendly display name for texture variable
-         */
-        @Nonnull
-        public String getDisplayNameForVariable(@Nonnull String variable) {
-            // Convert variable names to user-friendly display names
-            return switch (variable.toLowerCase()) {
-                case "all" -> "All Faces";
-                case "top" -> "Top";
-                case "bottom" -> "Bottom";
-                case "side" -> "Sides";
-                case "front" -> "Front";
-                case "back" -> "Back";
-                case "end" -> "Ends";
-                case "north" -> "North";
-                case "south" -> "South";
-                case "east" -> "East";
-                case "west" -> "West";
-                case "up" -> "Top";
-                case "down" -> "Bottom";
-                default -> capitalizeFirst(variable);
-            };
-        }
-
-        private String capitalizeFirst(String str) {
-            if (str == null || str.isEmpty()) return str;
-            return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
         }
     }
 
@@ -147,7 +118,7 @@ public class DynamicBlockModelAnalyzer {
                 return createFallbackInfo(blockId);
             }
 
-            // CRITICAL FIX: Extract ONLY the texture variables from THIS block's JSON
+            // Extract ONLY the texture variables from THIS block's JSON
             Map<String, String> textureVariables = extractDirectTextureVariables(modelJson, namespace);
 
             // SIMPLE FILTERING: Only exclude non-face textures, keep everything else from JSON
@@ -206,7 +177,7 @@ public class DynamicBlockModelAnalyzer {
     }
 
     /**
-     * CRITICAL FIX: Extract ONLY the direct texture variables from THIS block's JSON
+     * Extract ONLY the direct texture variables from THIS block's JSON
      * NO parent model resolution - just what's in this file
      */
     @Nonnull
@@ -216,7 +187,7 @@ public class DynamicBlockModelAnalyzer {
         if (modelJson.has("textures")) {
             JsonObject textures = modelJson.getAsJsonObject("textures");
 
-            // CRITICAL: Only iterate over what's actually in THIS block's JSON file
+            // Only iterate over what's actually in THIS block's JSON file
             for (Map.Entry<String, JsonElement> entry : textures.entrySet()) {
                 String variable = entry.getKey();
                 String texturePath = entry.getValue().getAsString();
@@ -319,10 +290,4 @@ public class DynamicBlockModelAnalyzer {
         return "minecraft:block/stone";
     }
 
-    /**
-     * Check if a texture path is valid
-     */
-    public static boolean isValidTexture(@Nonnull String texturePath) {
-        return BlockTextureAnalyzer.isValidTexture(texturePath);
-    }
 }

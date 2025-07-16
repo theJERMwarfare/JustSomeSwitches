@@ -29,13 +29,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Enhanced Switches Lever Block with Raw JSON Variable System - FIXED VERSION
- * UPDATED: Enhanced face selection preservation during state changes
- * 
- * FIXES APPLIED:
- * - Improved face selection preservation during lever toggles
- * - Better state change handling
- * - Enhanced restoration mechanisms
+ * Enhanced Switches Lever Block with Minimal NBT Protection - FIXED VERSION
+ * MINIMAL FIX: Protects NBT data during blockstate changes without complex preservation
+ *
+ * APPROACH: Targeted protection of face selections during lever toggles
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -136,11 +133,9 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        // CRITICAL FIX: Preserve face selections before ANY state change
-        SwitchesLeverBlockEntity blockEntity = null;
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity entity) {
-            blockEntity = entity;
-            blockEntity.preserveFaceSelectionsForStateChange();
+        // MINIMAL FIX: Protect NBT data before blockstate change
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            blockEntity.protectNBTDuringStateChange();
         }
 
         // Toggle the powered state
@@ -159,37 +154,20 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         Direction attachedDirection = getAttachedDirection(state);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);
 
-        // CRITICAL FIX: Force immediate restoration of face selections
-        if (blockEntity != null) {
-            // Schedule immediate restoration
-            level.scheduleTick(pos, this, 1);
-        }
-
         return InteractionResult.CONSUME;
     }
 
     /**
-     * FIXED: Enhanced tick method for delayed preservation restoration
+     * MINIMAL FIX: Handle scheduled ticks for NBT protection cleanup
      */
     @Override
     public void tick(@Nonnull BlockState state, @Nonnull net.minecraft.server.level.ServerLevel level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource random) {
-        // Force restoration of preserved face selections
+        // End NBT protection after blockstate change completes
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            blockEntity.forceRestorePreservedSelections();
-            
-            // Trigger model update after restoration
-            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
-            blockEntity.requestModelDataUpdate();
-        }
-    }
+            blockEntity.endNBTProtection();
 
-    /**
-     * Trigger model update while preserving face selections
-     */
-    private void triggerModelUpdatePreservingFaceSelections(@Nonnull Level level, @Nonnull BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            // Use UPDATE_CLIENTS to avoid NBT reload
-            level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_CLIENTS);
+            // Trigger model update after protection ends
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             blockEntity.requestModelDataUpdate();
         }
     }
@@ -226,7 +204,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // ENHANCED BLOCK UPDATES WITH PRESERVATION
+    // BLOCK UPDATES
     // ========================================
 
     @Override
@@ -253,25 +231,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     /**
-     * ENHANCED: Manual state change method with preservation
-     * Used when lever state is changed programmatically
-     */
-    public void changeStateWithPreservation(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState newState) {
-        // Preserve face selections first
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            blockEntity.preserveFaceSelectionsForStateChange();
-        }
-        
-        // Apply state change
-        level.setBlock(pos, newState, Block.UPDATE_ALL);
-        
-        // Force restoration
-        level.scheduleTick(pos, this, 1);
-    }
-
-    /**
      * Debug method to check current texture state
-     * UPDATED: Uses new texture variable method names
      */
     public void debugTextureState(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {

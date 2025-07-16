@@ -1,19 +1,21 @@
 package net.justsomeswitches.gui;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.justsomeswitches.util.BlockTextureAnalyzer;
+import net.minecraft.world.inventory.InventoryMenu;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
  * Switch Texture Screen with Raw JSON Variable System
- * REWRITTEN: Uses string-based texture variables with auto-apply functionality
+ * CONSOLIDATED: Moved getTextureSprite() method from BlockTextureAnalyzer for better encapsulation
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
@@ -358,8 +360,8 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
      */
     private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String texturePath) {
         try {
-            // Get texture sprite
-            TextureAtlasSprite sprite = BlockTextureAnalyzer.getTextureSprite(texturePath);
+            // Get texture sprite (moved from BlockTextureAnalyzer)
+            TextureAtlasSprite sprite = getTextureSprite(texturePath);
 
             if (sprite != null && !sprite.contents().name().toString().contains("missingno")) {
                 // Draw preview background
@@ -375,6 +377,41 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         } catch (Exception e) {
             // Draw error indicator
             graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF0000);
+        }
+    }
+
+    /**
+     * Get texture sprite for preview rendering (moved from BlockTextureAnalyzer)
+     * Provides texture sprite loading with fallback patterns for GUI preview system.
+     */
+    @Nullable
+    private TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
+        try {
+            ResourceLocation textureLocation = new ResourceLocation(texturePath);
+            TextureAtlasSprite sprite = Minecraft.getInstance()
+                    .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+                    .apply(textureLocation);
+
+            if (sprite != null && !sprite.contents().name().toString().contains("missingno")) {
+                return sprite;
+            }
+
+            // Try fallback patterns for face-specific textures
+            if (texturePath.contains("_top") || texturePath.contains("_side") || texturePath.contains("_front")) {
+                String basePath = texturePath.replaceAll("_(top|side|front)$", "");
+                ResourceLocation fallbackLocation = new ResourceLocation(basePath);
+                TextureAtlasSprite fallbackSprite = Minecraft.getInstance()
+                        .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+                        .apply(fallbackLocation);
+
+                if (fallbackSprite != null && !fallbackSprite.contents().name().toString().contains("missingno")) {
+                    return fallbackSprite;
+                }
+            }
+
+            return null;
+        } catch (Exception e) {
+            return null;
         }
     }
 
