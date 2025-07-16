@@ -29,13 +29,17 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Enhanced Switches Lever Block with BlockEntity support for texture customization
- * ---
- * FIXED: Z-fighting resolution using RenderShape.INVISIBLE
+ * Enhanced Switches Lever Block with Raw JSON Variable System - FIXED VERSION
+ * UPDATED: Enhanced face selection preservation during state changes
+ * 
+ * FIXES APPLIED:
+ * - Improved face selection preservation during lever toggles
+ * - Better state change handling
+ * - Enhanced restoration mechanisms
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
-    // Existing bounding box definitions (unchanged from Phase 2)
+    // Bounding box definitions
     private static final VoxelShape FLOOR_NORTH_SOUTH = Block.box(5.0, 0.0, 3.0, 11.0, 6.0, 13.0);
     private static final VoxelShape FLOOR_EAST_WEST = Block.box(3.0, 0.0, 5.0, 13.0, 6.0, 11.0);
     private static final VoxelShape CEILING_NORTH_SOUTH = Block.box(5.0, 10.0, 3.0, 11.0, 16.0, 13.0);
@@ -47,7 +51,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
     public SwitchesLeverBlock(Properties properties) {
         super(properties);
-        System.out.println("DEBUG Block: SwitchesLeverBlock created with Block Entity Renderer approach");
     }
 
     // ========================================
@@ -57,7 +60,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Override
     @Nullable
     public BlockEntity newBlockEntity(@Nonnull BlockPos pos, @Nonnull BlockState state) {
-        System.out.println("DEBUG Block: Creating new BlockEntity at " + pos);
         return new SwitchesLeverBlockEntity(pos, state);
     }
 
@@ -65,7 +67,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@Nonnull Level level, @Nonnull BlockState state,
                                                                   @Nonnull BlockEntityType<T> blockEntityType) {
-        // NeoForge 1.20.4 compatible ticker implementation
         if (blockEntityType == JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get()) {
             if (level.isClientSide()) {
                 return (level1, pos, state1, blockEntity) -> {
@@ -85,19 +86,18 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // CRITICAL FIX: Z-FIGHTING RESOLUTION
+    // Z-FIGHTING RESOLUTION
     // ========================================
 
     @Override
     @Nonnull
     public RenderShape getRenderShape(@Nonnull BlockState state) {
-        // FIXED: Use INVISIBLE to prevent vanilla model rendering
-        // Block Entity Renderer will handle ALL rendering to eliminate z-fighting
+        // Use INVISIBLE to prevent vanilla model rendering
         return RenderShape.INVISIBLE;
     }
 
     // ========================================
-    // EXISTING FUNCTIONALITY (UNCHANGED)
+    // SHAPE AND INTERACTION HANDLING
     // ========================================
 
     @Override
@@ -136,22 +136,21 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        System.out.println("DEBUG Block: Switch lever used at " + pos + " by player " + player.getName().getString());
-
-        // FIXED: Preserve face selections before state change
-        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+        // CRITICAL FIX: Preserve face selections before ANY state change
+        SwitchesLeverBlockEntity blockEntity = null;
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity entity) {
+            blockEntity = entity;
             blockEntity.preserveFaceSelectionsForStateChange();
         }
 
-        // Toggle the powered state (unchanged lever behavior)
+        // Toggle the powered state
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
 
-        level.setBlock(pos, newState, 3);
+        // Set the new state
+        level.setBlock(pos, newState, Block.UPDATE_ALL);
 
-        System.out.println("DEBUG Block: Lever state changed from " + currentlyPowered + " to " + !currentlyPowered);
-
-        // Play standard lever click sound with pitch variation
+        // Play standard lever click sound
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
 
@@ -160,39 +159,38 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         Direction attachedDirection = getAttachedDirection(state);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);
 
-        // FIXED: Ensure model updates happen after BlockEntity has restored face selections
-        // Add a small delay to ensure BlockEntity setBlockState has completed
-        level.scheduleTick(pos, this, 1);
+        // CRITICAL FIX: Force immediate restoration of face selections
+        if (blockEntity != null) {
+            // Schedule immediate restoration
+            level.scheduleTick(pos, this, 1);
+        }
 
         return InteractionResult.CONSUME;
     }
 
     /**
-     * FIXED: Delayed model update to ensure face selections are restored first
+     * FIXED: Enhanced tick method for delayed preservation restoration
      */
     @Override
     public void tick(@Nonnull BlockState state, @Nonnull net.minecraft.server.level.ServerLevel level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource random) {
-        // This is called after the scheduled tick from the use() method
-        triggerModelUpdatePreservingFaceSelections(level, pos);
+        // Force restoration of preserved face selections
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            blockEntity.forceRestorePreservedSelections();
+            
+            // Trigger model update after restoration
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
+            blockEntity.requestModelDataUpdate();
+        }
     }
 
     /**
-     * FIXED: Trigger model update while preserving face selections
-     * Uses UPDATE_CLIENTS instead of UPDATE_ALL to avoid NBT reload
+     * Trigger model update while preserving face selections
      */
     private void triggerModelUpdatePreservingFaceSelections(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: Triggering model update preserving face selections");
-
-            // CRITICAL FIX: Use UPDATE_CLIENTS instead of UPDATE_ALL to avoid NBT reload
-            // UPDATE_ALL (3) causes NBT to reload, which resets face selections
-            // UPDATE_CLIENTS (2) only updates client rendering without NBT reload
+            // Use UPDATE_CLIENTS to avoid NBT reload
             level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), Block.UPDATE_CLIENTS);
-
-            // Force ModelData refresh without triggering NBT reload
             blockEntity.requestModelDataUpdate();
-
-            System.out.println("DEBUG Block: Model update completed with face selection preservation");
         }
     }
 
@@ -212,27 +210,23 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     }
 
     // ========================================
-    // ENHANCED BLOCK ENTITY CLEANUP
+    // BLOCK ENTITY CLEANUP
     // ========================================
 
     @Override
     public void onRemove(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
                          @Nonnull BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
-            System.out.println("DEBUG Block: Switch lever being removed at " + pos);
-
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof SwitchesLeverBlockEntity switchEntity) {
-                // Drop any stored texture blocks when switch is broken
                 switchEntity.dropStoredTextures(level, pos);
-                System.out.println("DEBUG Block: Dropped stored texture blocks");
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
     // ========================================
-    // ENHANCED BLOCK UPDATES WITH FACE SELECTION PRESERVATION
+    // ENHANCED BLOCK UPDATES WITH PRESERVATION
     // ========================================
 
     @Override
@@ -240,48 +234,52 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                                 @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
 
-        // FIXED: Ensure model updates preserve face selections
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
-                System.out.println("DEBUG Block: Neighbor changed, updating custom texture model with face preservation");
-
-                // FIXED: Use UPDATE_CLIENTS to preserve face selections
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             }
         }
     }
 
-    /**
-     * Enhanced state change handling for texture updates with face selection preservation
-     */
     @Override
     public void setPlacedBy(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState state,
                             @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer,
                             @Nonnull net.minecraft.world.item.ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
 
-        System.out.println("DEBUG Block: Switch lever placed at " + pos + " by " +
-                (placer != null ? placer.getName().getString() : "unknown"));
-
-        // Initialize BlockEntity and trigger initial model update
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-            System.out.println("DEBUG Block: Initializing BlockEntity with default textures");
-
-            // FIXED: Use UPDATE_CLIENTS for initial setup to avoid unnecessary NBT operations
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
         }
     }
 
     /**
-     * Debug method to check current texture state (for development use)
+     * ENHANCED: Manual state change method with preservation
+     * Used when lever state is changed programmatically
+     */
+    public void changeStateWithPreservation(@Nonnull Level level, @Nonnull BlockPos pos, @Nonnull BlockState newState) {
+        // Preserve face selections first
+        if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
+            blockEntity.preserveFaceSelectionsForStateChange();
+        }
+        
+        // Apply state change
+        level.setBlock(pos, newState, Block.UPDATE_ALL);
+        
+        // Force restoration
+        level.scheduleTick(pos, this, 1);
+    }
+
+    /**
+     * Debug method to check current texture state
+     * UPDATED: Uses new texture variable method names
      */
     public void debugTextureState(@Nonnull Level level, @Nonnull BlockPos pos) {
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             System.out.println("DEBUG Block: Switch at " + pos +
                     " - Base: " + blockEntity.getBaseTexture() +
                     ", Toggle: " + blockEntity.getToggleTexture() +
-                    ", BaseFace: " + blockEntity.getBaseFaceSelection() +
-                    ", ToggleFace: " + blockEntity.getToggleFaceSelection() +
+                    ", BaseVariable: " + blockEntity.getBaseTextureVariable() +
+                    ", ToggleVariable: " + blockEntity.getToggleTextureVariable() +
                     ", Inverted: " + blockEntity.isInverted() +
                     ", HasCustom: " + blockEntity.hasCustomTextures());
         }

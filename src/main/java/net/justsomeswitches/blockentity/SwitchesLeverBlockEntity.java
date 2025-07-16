@@ -2,7 +2,6 @@ package net.justsomeswitches.blockentity;
 
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
-import net.justsomeswitches.util.BlockTextureAnalyzer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -23,9 +22,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * CRITICAL DEBUG VERSION: Track variable overwrites and fix face mapping
- * ---
- * DIAGNOSTIC: Adding comprehensive tracking to identify when/why face selections get overwritten
+ * Switches Lever BlockEntity with Raw JSON Variable System - FIXED VERSION
+ * REWRITTEN: Uses string-based face selections with universal block compatibility
+ * 
+ * FIXES APPLIED:
+ * - Enhanced face selection preservation during blockstate changes
+ * - Improved NBT loading during preservation periods
+ * - Better synchronization of face selections
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -41,20 +44,20 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private static final String BASE_TEXTURE_KEY = "base_texture_path";
     private static final String TOGGLE_TEXTURE_KEY = "toggle_texture_path";
 
-    // NBT keys for face selection storage
-    private static final String BASE_FACE_KEY = "base_face_selection";
-    private static final String TOGGLE_FACE_KEY = "toggle_face_selection";
+    // NBT keys for face selection storage (now strings)
+    private static final String BASE_VARIABLE_KEY = "base_texture_variable";
+    private static final String TOGGLE_VARIABLE_KEY = "toggle_texture_variable";
 
-    // NBT keys for inversion state
+    // NBT key for inversion state
     private static final String INVERTED_KEY = "inverted_state";
 
-    // Current texture paths
+    // Current texture configuration
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
     private String toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
 
-    // Face selections with proper initialization
-    private FaceSelectionData.FaceOption baseFaceSelection = FaceSelectionData.FaceOption.ALL;
-    private FaceSelectionData.FaceOption toggleFaceSelection = FaceSelectionData.FaceOption.ALL;
+    // Raw face selections (JSON variable names)
+    private String baseTextureVariable = "all";
+    private String toggleTextureVariable = "all";
 
     // Inversion state
     private boolean inverted = false;
@@ -64,169 +67,103 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private ItemStack guiBaseItem = ItemStack.EMPTY;
 
     // ========================================
-    // CRITICAL DEBUG: VARIABLE OVERWRITE TRACKING
+    // ENHANCED FACE SELECTION PRESERVATION SYSTEM
     // ========================================
 
-    // Track when face selections are set to detect overwrites
-    private FaceSelectionData.FaceOption debugLastSetBaseFace = FaceSelectionData.FaceOption.ALL;
-    private FaceSelectionData.FaceOption debugLastSetToggleFace = FaceSelectionData.FaceOption.ALL;
-    private boolean debugLastSetInverted = false;
-    private long debugLastSetTimestamp = 0;
-
-    // Track call stack to identify source of overwrites
-    private String debugLastSetSource = "initial";
-    private int debugSetCount = 0;
-
-    /**
-     * CRITICAL DEBUG: Track face selection changes and detect overwrites
-     */
-    private void debugTrackFaceSelectionChange(String source, FaceSelectionData.FaceOption newBase,
-                                               FaceSelectionData.FaceOption newToggle, boolean newInverted) {
-        debugSetCount++;
-        long now = System.currentTimeMillis();
-
-        // Check for unexpected overwrites
-        if (!baseFaceSelection.equals(debugLastSetBaseFace) &&
-                !newBase.equals(debugLastSetBaseFace) &&
-                debugSetCount > 1) {
-            System.out.println("🚨 CRITICAL DEBUG: UNEXPECTED FACE SELECTION OVERWRITE DETECTED!");
-            System.out.println("   Expected base: " + debugLastSetBaseFace + " → Actual: " + baseFaceSelection + " → New: " + newBase);
-            System.out.println("   Last set by: " + debugLastSetSource + " (" + (now - debugLastSetTimestamp) + "ms ago)");
-            System.out.println("   New set by: " + source);
-            System.out.println("   Call #" + debugSetCount);
-
-            // Print stack trace to identify source
-            StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-            for (int i = 2; i < Math.min(8, stack.length); i++) {
-                System.out.println("   Stack[" + i + "]: " + stack[i]);
-            }
-        }
-
-        // Update tracking
-        debugLastSetBaseFace = newBase;
-        debugLastSetToggleFace = newToggle;
-        debugLastSetInverted = newInverted;
-        debugLastSetTimestamp = now;
-        debugLastSetSource = source;
-
-        System.out.println("DEBUG TRACK: [" + source + "] Set face selections - Base: " + newBase +
-                ", Toggle: " + newToggle + ", Inverted: " + newInverted + " (Call #" + debugSetCount + ")");
-    }
-
-    /**
-     * CRITICAL DEBUG: Verify face selections before any operation
-     */
-    private void debugVerifyFaceSelections(String operation) {
-        if (!baseFaceSelection.equals(debugLastSetBaseFace) ||
-                !toggleFaceSelection.equals(debugLastSetToggleFace) ||
-                inverted != debugLastSetInverted) {
-
-            System.out.println("🚨 CRITICAL DEBUG: FACE SELECTION MISMATCH in " + operation + "!");
-            System.out.println("   Expected: Base=" + debugLastSetBaseFace + ", Toggle=" + debugLastSetToggleFace +
-                    ", Inverted=" + debugLastSetInverted);
-            System.out.println("   Actual: Base=" + baseFaceSelection + ", Toggle=" + toggleFaceSelection +
-                    ", Inverted=" + inverted);
-            System.out.println("   Last set by: " + debugLastSetSource + " (" +
-                    (System.currentTimeMillis() - debugLastSetTimestamp) + "ms ago)");
-        }
-    }
-
-    // ========================================
-    // FACE SELECTION PRESERVATION SYSTEM
-    // ========================================
-
-    // Temporary storage for preserving face selections during state changes
-    private FaceSelectionData.FaceOption preservedBaseFace = null;
-    private FaceSelectionData.FaceOption preservedToggleFace = null;
+    // Temporary storage for preserving selections during state changes
+    private String preservedBaseVariable = null;
+    private String preservedToggleVariable = null;
     private boolean preservedInverted = false;
     private boolean preservationActive = false;
+    
+    // CRITICAL FIX: Track if we're in the middle of a blockstate change
+    private boolean isInBlockStateChange = false;
 
     /**
-     * Preserve face selections before block state changes
+     * FIXED: Preserve face selections before block state changes
+     * Enhanced to handle multiple rapid state changes
      */
     public void preserveFaceSelectionsForStateChange() {
-        debugVerifyFaceSelections("preserveFaceSelectionsForStateChange");
-
-        System.out.println("DEBUG BlockEntity: Preserving face selections before state change - Base: " +
-                baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-
-        this.preservedBaseFace = this.baseFaceSelection;
-        this.preservedToggleFace = this.toggleFaceSelection;
-        this.preservedInverted = this.inverted;
-        this.preservationActive = true;
+        if (!preservationActive) {
+            this.preservedBaseVariable = this.baseTextureVariable;
+            this.preservedToggleVariable = this.toggleTextureVariable;
+            this.preservedInverted = this.inverted;
+            this.preservationActive = true;
+            this.isInBlockStateChange = true;
+        }
     }
 
     /**
-     * Restore preserved face selections after state changes
+     * FIXED: Restore preserved face selections after state changes
+     * Enhanced with better state management
      */
     private void restorePreservedFaceSelections() {
-        if (preservationActive && preservedBaseFace != null && preservedToggleFace != null) {
-            System.out.println("DEBUG BlockEntity: Restoring preserved face selections - Base: " +
-                    preservedBaseFace + ", Toggle: " + preservedToggleFace + ", Inverted: " + preservedInverted);
-
-            // Update tracking BEFORE setting values
-            debugTrackFaceSelectionChange("restorePreservedFaceSelections",
-                    preservedBaseFace, preservedToggleFace, preservedInverted);
-
-            this.baseFaceSelection = preservedBaseFace;
-            this.toggleFaceSelection = preservedToggleFace;
+        if (preservationActive && preservedBaseVariable != null && preservedToggleVariable != null) {
+            // Restore preserved values
+            this.baseTextureVariable = preservedBaseVariable;
+            this.toggleTextureVariable = preservedToggleVariable;
             this.inverted = preservedInverted;
 
             // Clear preservation state
-            this.preservedBaseFace = null;
-            this.preservedToggleFace = null;
+            this.preservedBaseVariable = null;
+            this.preservedToggleVariable = null;
             this.preservedInverted = false;
             this.preservationActive = false;
+            this.isInBlockStateChange = false;
 
-            // Force immediate save
+            // Force immediate save and update
             setChanged();
+            
+            // Update model data on client side
+            if (level != null && level.isClientSide) {
+                requestModelDataUpdate();
+            }
         }
     }
 
-    // ========================================
-    // PERFORMANCE OPTIMIZATION: CACHED ANALYSIS
-    // ========================================
-
-    // Cache analysis results to prevent repeated processing
-    private BlockTextureAnalyzer.BlockTextureInfo cachedBaseAnalysis = null;
-    private BlockTextureAnalyzer.BlockTextureInfo cachedToggleAnalysis = null;
-    private ItemStack lastAnalyzedBase = ItemStack.EMPTY;
-    private ItemStack lastAnalyzedToggle = ItemStack.EMPTY;
+    /**
+     * CRITICAL FIX: Force restoration of preserved face selections
+     * Called from the block when state changes are complete
+     */
+    public void forceRestorePreservedSelections() {
+        if (preservationActive) {
+            restorePreservedFaceSelections();
+        }
+    }
 
     // ========================================
     // ENHANCED MODEL DATA INTEGRATION
     // ========================================
 
     /**
-     * ModelProperty for passing enhanced texture data to custom models
+     * ModelProperty for passing texture data to custom models
      */
     public static final ModelProperty<SwitchTextureData> TEXTURE_PROPERTY = new ModelProperty<>();
 
     /**
-     * Enhanced data class for passing comprehensive texture information to custom models
+     * Enhanced data class for passing texture information to custom models
      */
     public static class SwitchTextureData {
         private final String baseTexture;
         private final String toggleTexture;
-        private final FaceSelectionData.FaceOption baseFace;
-        private final FaceSelectionData.FaceOption toggleFace;
+        private final String baseVariable;
+        private final String toggleVariable;
         private final boolean inverted;
 
         public SwitchTextureData(String baseTexture, String toggleTexture,
-                                 FaceSelectionData.FaceOption baseFace,
-                                 FaceSelectionData.FaceOption toggleFace,
+                                 String baseVariable, String toggleVariable,
                                  boolean inverted) {
             this.baseTexture = baseTexture;
             this.toggleTexture = toggleTexture;
-            this.baseFace = baseFace;
-            this.toggleFace = toggleFace;
+            this.baseVariable = baseVariable;
+            this.toggleVariable = toggleVariable;
             this.inverted = inverted;
         }
 
         public String getBaseTexture() { return baseTexture; }
         public String getToggleTexture() { return toggleTexture; }
-        public FaceSelectionData.FaceOption getBaseFace() { return baseFace; }
-        public FaceSelectionData.FaceOption getToggleFace() { return toggleFace; }
+        public String getBaseVariable() { return baseVariable; }
+        public String getToggleVariable() { return toggleVariable; }
         public boolean isInverted() { return inverted; }
 
         /**
@@ -235,23 +172,22 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         public boolean hasCustomTextures() {
             return !baseTexture.equals(DEFAULT_BASE_TEXTURE) ||
                     !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE) ||
-                    baseFace != FaceSelectionData.FaceOption.ALL ||
-                    toggleFace != FaceSelectionData.FaceOption.ALL ||
+                    !baseVariable.equals("all") ||
+                    !toggleVariable.equals("all") ||
                     inverted;
         }
     }
 
     /**
-     * Get enhanced ModelData for custom model rendering
+     * Get ModelData for custom model rendering
      */
     @Override
     @Nonnull
     public ModelData getModelData() {
-        debugVerifyFaceSelections("getModelData");
         return ModelData.builder()
                 .with(TEXTURE_PROPERTY, new SwitchTextureData(
                         baseTexturePath, toggleTexturePath,
-                        baseFaceSelection, toggleFaceSelection, inverted))
+                        baseTextureVariable, toggleTextureVariable, inverted))
                 .build();
     }
 
@@ -261,66 +197,53 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public SwitchesLeverBlockEntity(BlockPos pos, BlockState blockState) {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
-        debugTrackFaceSelectionChange("constructor",
-                FaceSelectionData.FaceOption.ALL, FaceSelectionData.FaceOption.ALL, false);
-        System.out.println("DEBUG BlockEntity: Created at position " + pos);
     }
 
     // ========================================
-    // BLOCK STATE MANAGEMENT WITH FACE SELECTION PRESERVATION
+    // ENHANCED BLOCK STATE MANAGEMENT WITH PRESERVATION
     // ========================================
 
     /**
-     * Override setBlockState to preserve face selections AND trigger model refresh
+     * FIXED: Override setBlockState to preserve face selections
+     * Enhanced to handle rapid state changes better
      */
     @Override
     public void setBlockState(@Nonnull BlockState blockState) {
-        System.out.println("DEBUG BlockEntity: setBlockState called - preserving face selections and triggering model refresh");
-        debugVerifyFaceSelections("setBlockState-before");
-
         // Preserve current face selections before state change
-        if (!preservationActive) {
+        if (!preservationActive && !isInBlockStateChange) {
             preserveFaceSelectionsForStateChange();
         }
 
         super.setBlockState(blockState);
 
-        // Restore face selections after state change
-        restorePreservedFaceSelections();
-
-        debugVerifyFaceSelections("setBlockState-after");
-
-        // Force immediate ModelData refresh after block state change
+        // Restore face selections after a brief delay to ensure state change completes
         if (level != null && !level.isClientSide) {
-            // Request model data update to ensure custom model gets current face selections
-            requestModelDataUpdate();
-
-            // Force block update to refresh custom model rendering with preserved face selections
-            level.sendBlockUpdated(worldPosition, blockState, blockState, Block.UPDATE_CLIENTS);
-
-            System.out.println("DEBUG BlockEntity: Triggered model refresh with current face selections - Base: " +
-                    baseFaceSelection + ", Toggle: " + toggleFaceSelection);
+            level.scheduleTick(worldPosition, blockState.getBlock(), 1);
         }
 
-        System.out.println("DEBUG BlockEntity: setBlockState completed with preserved face selections and model refresh");
+        // Force model data update
+        if (level != null && !level.isClientSide) {
+            requestModelDataUpdate();
+            level.sendBlockUpdated(worldPosition, blockState, blockState, Block.UPDATE_CLIENTS);
+        }
     }
 
     // ========================================
     // CLIENT AND SERVER TICK METHODS
     // ========================================
 
-    /**
-     * Client-side tick method for any client-specific updates
-     */
     public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
-        // Client-side logic can be added here if needed
+        // Restore preserved selections if needed
+        if (blockEntity.preservationActive && blockEntity.isInBlockStateChange) {
+            blockEntity.restorePreservedFaceSelections();
+        }
     }
 
-    /**
-     * Server-side tick method for any server-specific updates
-     */
     public static void serverTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
-        // Server-side logic can be added here if needed
+        // Restore preserved selections if needed
+        if (blockEntity.preservationActive && blockEntity.isInBlockStateChange) {
+            blockEntity.restorePreservedFaceSelections();
+        }
     }
 
     // ========================================
@@ -328,7 +251,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // ========================================
 
     /**
-     * Extract texture path from ItemStack using proper NeoForge 1.20.4 registry access
+     * Extract texture path from ItemStack
      */
     @Nonnull
     private String getTextureFromItem(@Nonnull ItemStack itemStack) {
@@ -348,7 +271,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
                 return blockId.getNamespace() + ":block/" + blockId.getPath();
             }
         } catch (Exception e) {
-            System.out.println("DEBUG BlockEntity: Error getting texture from item " + itemStack + " - " + e.getMessage());
+            // Silent failure
         }
 
         return "";
@@ -358,9 +281,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * Mark BlockEntity as dirty and trigger client synchronization
      */
     private void markDirtyAndSync() {
-        debugVerifyFaceSelections("markDirtyAndSync");
-        System.out.println("DEBUG BlockEntity: Marking dirty and syncing to clients");
-
         if (level != null && !level.isClientSide) {
             setChanged();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
@@ -369,11 +289,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Set the base texture for the switch (String version)
+     * Set the base texture for the switch
      */
     public boolean setBaseTexture(@Nonnull String texturePath) {
         if (!texturePath.equals(this.baseTexturePath)) {
-            System.out.println("DEBUG BlockEntity: Setting base texture from " + this.baseTexturePath + " to " + texturePath);
             this.baseTexturePath = texturePath;
             markDirtyAndSync();
             return true;
@@ -382,7 +301,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Set the base texture for the switch (ItemStack version for GUI compatibility)
+     * Set the base texture from ItemStack
      */
     public boolean setBaseTexture(@Nonnull ItemStack itemStack) {
         if (itemStack.isEmpty()) {
@@ -393,11 +312,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Set the toggle texture for the switch (String version)
+     * Set the toggle texture for the switch
      */
     public boolean setToggleTexture(@Nonnull String texturePath) {
         if (!texturePath.equals(this.toggleTexturePath)) {
-            System.out.println("DEBUG BlockEntity: Setting toggle texture from " + this.toggleTexturePath + " to " + texturePath);
             this.toggleTexturePath = texturePath;
             markDirtyAndSync();
             return true;
@@ -406,7 +324,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Set the toggle texture for the switch (ItemStack version for GUI compatibility)
+     * Set the toggle texture from ItemStack
      */
     public boolean setToggleTexture(@Nonnull ItemStack itemStack) {
         if (itemStack.isEmpty()) {
@@ -417,126 +335,63 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // CRITICAL DEBUG: FACE SELECTION MANAGEMENT WITH TRACKING
+    // RAW TEXTURE VARIABLE MANAGEMENT
     // ========================================
 
     /**
-     * CRITICAL DEBUG: Set base face selection with comprehensive tracking
+     * Set base texture variable (raw JSON variable name)
      */
-    public boolean setBaseFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
-        debugVerifyFaceSelections("setBaseFaceSelection-before");
-
-        if (this.baseFaceSelection != faceOption) {
-            System.out.println("DEBUG BlockEntity: Setting base face selection from " + this.baseFaceSelection + " to " + faceOption);
-
-            // Update tracking BEFORE setting value
-            debugTrackFaceSelectionChange("setBaseFaceSelection", faceOption, this.toggleFaceSelection, this.inverted);
-
-            this.baseFaceSelection = faceOption;
+    public boolean setBaseTextureVariable(@Nonnull String variable) {
+        if (!variable.equals(this.baseTextureVariable)) {
+            this.baseTextureVariable = variable;
             markDirtyAndSync();
-
-            debugVerifyFaceSelections("setBaseFaceSelection-after");
             return true;
         }
         return false;
     }
 
     /**
-     * CRITICAL DEBUG: Set toggle face selection with comprehensive tracking
+     * Set toggle texture variable (raw JSON variable name)
      */
-    public boolean setToggleFaceSelection(@Nonnull FaceSelectionData.FaceOption faceOption) {
-        debugVerifyFaceSelections("setToggleFaceSelection-before");
-
-        if (this.toggleFaceSelection != faceOption) {
-            System.out.println("DEBUG BlockEntity: Setting toggle face selection from " + this.toggleFaceSelection + " to " + faceOption);
-
-            // Update tracking BEFORE setting value
-            debugTrackFaceSelectionChange("setToggleFaceSelection", this.baseFaceSelection, faceOption, this.inverted);
-
-            this.toggleFaceSelection = faceOption;
+    public boolean setToggleTextureVariable(@Nonnull String variable) {
+        if (!variable.equals(this.toggleTextureVariable)) {
+            this.toggleTextureVariable = variable;
             markDirtyAndSync();
-
-            debugVerifyFaceSelections("setToggleFaceSelection-after");
             return true;
         }
         return false;
     }
 
     /**
-     * CRITICAL DEBUG: Set inversion state with comprehensive tracking
+     * Set inversion state
      */
     public boolean setInverted(boolean inverted) {
-        debugVerifyFaceSelections("setInverted-before");
-
         if (this.inverted != inverted) {
-            System.out.println("DEBUG BlockEntity: Setting inverted state from " + this.inverted + " to " + inverted);
-
-            // Update tracking BEFORE setting value
-            debugTrackFaceSelectionChange("setInverted", this.baseFaceSelection, this.toggleFaceSelection, inverted);
-
             this.inverted = inverted;
             markDirtyAndSync();
-
-            debugVerifyFaceSelections("setInverted-after");
             return true;
         }
         return false;
     }
 
     // ========================================
-    // BLOCK ANALYSIS INTEGRATION
+    // RAW TEXTURE SELECTION INTEGRATION
     // ========================================
 
     /**
-     * Get block analysis for base texture slot with caching
+     * Get raw texture selection for base texture slot
      */
     @Nonnull
-    public BlockTextureAnalyzer.BlockTextureInfo getBaseBlockAnalysis() {
-        // Only analyze if item changed or cache is empty
-        if (cachedBaseAnalysis == null || !ItemStack.matches(lastAnalyzedBase, guiBaseItem)) {
-            cachedBaseAnalysis = BlockTextureAnalyzer.analyzeBlock(guiBaseItem);
-            lastAnalyzedBase = guiBaseItem.copy();
-        }
-        return cachedBaseAnalysis;
+    public FaceSelectionData.RawTextureSelection getBaseTextureSelection() {
+        return FaceSelectionData.createRawTextureSelection(guiBaseItem, baseTextureVariable);
     }
 
     /**
-     * Get block analysis for toggle texture slot with caching
+     * Get raw texture selection for toggle texture slot
      */
     @Nonnull
-    public BlockTextureAnalyzer.BlockTextureInfo getToggleBlockAnalysis() {
-        // Only analyze if item changed or cache is empty
-        if (cachedToggleAnalysis == null || !ItemStack.matches(lastAnalyzedToggle, guiToggleItem)) {
-            cachedToggleAnalysis = BlockTextureAnalyzer.analyzeBlock(guiToggleItem);
-            lastAnalyzedToggle = guiToggleItem.copy();
-        }
-        return cachedToggleAnalysis;
-    }
-
-    /**
-     * Get dropdown state for base texture slot
-     */
-    @Nonnull
-    public FaceSelectionData.DropdownState getBaseDropdownState() {
-        if (guiBaseItem.isEmpty()) {
-            return FaceSelectionData.createDisabledState();
-        }
-
-        BlockTextureAnalyzer.BlockTextureInfo blockInfo = getBaseBlockAnalysis();
-        return FaceSelectionData.createDropdownState(blockInfo, baseFaceSelection);
-    }
-
-    /**
-     * Get dropdown state for toggle texture slot
-     */
-    @Nonnull
-    public FaceSelectionData.DropdownState getToggleDropdownState() {
-        if (guiToggleItem.isEmpty()) {
-            return FaceSelectionData.createDisabledState();
-        }
-
-        BlockTextureAnalyzer.BlockTextureInfo blockInfo = getToggleBlockAnalysis();
-        return FaceSelectionData.createDropdownState(blockInfo, toggleFaceSelection);
+    public FaceSelectionData.RawTextureSelection getToggleTextureSelection() {
+        return FaceSelectionData.createRawTextureSelection(guiToggleItem, toggleTextureVariable);
     }
 
     // ========================================
@@ -545,19 +400,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     @Nonnull public String getBaseTexture() { return baseTexturePath; }
     @Nonnull public String getToggleTexture() { return toggleTexturePath; }
-    @Nonnull public FaceSelectionData.FaceOption getBaseFaceSelection() { return baseFaceSelection; }
-    @Nonnull public FaceSelectionData.FaceOption getToggleFaceSelection() { return toggleFaceSelection; }
+    @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
+    @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
     public boolean isInverted() { return inverted; }
 
     /**
-     * Reset textures to defaults
+     * Reset all textures and settings to defaults
      */
     public void resetTextures() {
         boolean changed = false;
-
-        FaceSelectionData.FaceOption newBaseFace = FaceSelectionData.FaceOption.ALL;
-        FaceSelectionData.FaceOption newToggleFace = FaceSelectionData.FaceOption.ALL;
-        boolean newInverted = false;
 
         if (!baseTexturePath.equals(DEFAULT_BASE_TEXTURE)) {
             this.baseTexturePath = DEFAULT_BASE_TEXTURE;
@@ -569,16 +420,22 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             changed = true;
         }
 
-        if (baseFaceSelection != newBaseFace || toggleFaceSelection != newToggleFace || inverted != newInverted) {
-            debugTrackFaceSelectionChange("resetTextures", newBaseFace, newToggleFace, newInverted);
-            this.baseFaceSelection = newBaseFace;
-            this.toggleFaceSelection = newToggleFace;
-            this.inverted = newInverted;
+        if (!baseTextureVariable.equals("all")) {
+            this.baseTextureVariable = "all";
+            changed = true;
+        }
+
+        if (!toggleTextureVariable.equals("all")) {
+            this.toggleTextureVariable = "all";
+            changed = true;
+        }
+
+        if (inverted) {
+            this.inverted = false;
             changed = true;
         }
 
         if (changed) {
-            System.out.println("DEBUG BlockEntity: Reset all textures and settings to defaults");
             markDirtyAndSync();
         }
     }
@@ -588,6 +445,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      */
     public void resetBaseTexture() {
         setBaseTexture(DEFAULT_BASE_TEXTURE);
+        setBaseTextureVariable("all");
     }
 
     /**
@@ -595,6 +453,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      */
     public void resetToggleTexture() {
         setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
+        setToggleTextureVariable("all");
     }
 
     /**
@@ -603,8 +462,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public boolean hasCustomTextures() {
         return !baseTexturePath.equals(DEFAULT_BASE_TEXTURE) ||
                 !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE) ||
-                baseFaceSelection != FaceSelectionData.FaceOption.ALL ||
-                toggleFaceSelection != FaceSelectionData.FaceOption.ALL ||
+                !baseTextureVariable.equals("all") ||
+                !toggleTextureVariable.equals("all") ||
                 inverted;
     }
 
@@ -612,32 +471,13 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // GUI SLOT MANAGEMENT
     // ========================================
 
-    /**
-     * Get toggle item from GUI slot
-     */
-    @Nonnull
-    public ItemStack getGuiToggleItem() { return guiToggleItem; }
+    @Nonnull public ItemStack getGuiToggleItem() { return guiToggleItem; }
+    @Nonnull public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
     /**
-     * Get base item from GUI slot
-     */
-    @Nonnull
-    public ItemStack getGuiBaseItem() { return guiBaseItem; }
-
-    /**
-     * Set GUI slot items (for GUI compatibility)
+     * Set GUI slot items
      */
     public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
-        System.out.println("DEBUG BlockEntity: Setting GUI slot items - Toggle: " + toggleItem + ", Base: " + baseItem);
-
-        // Clear cache if items changed
-        if (!ItemStack.matches(this.guiToggleItem, toggleItem)) {
-            cachedToggleAnalysis = null;
-        }
-        if (!ItemStack.matches(this.guiBaseItem, baseItem)) {
-            cachedBaseAnalysis = null;
-        }
-
         this.guiToggleItem = toggleItem.copy();
         this.guiBaseItem = baseItem.copy();
     }
@@ -646,82 +486,33 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
      * Drop stored texture blocks when switch is broken
      */
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
-        System.out.println("DEBUG BlockEntity: Dropping stored textures at " + pos);
-
         if (!guiToggleItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiToggleItem);
-            System.out.println("DEBUG BlockEntity: Dropped toggle item: " + guiToggleItem);
         }
 
         if (!guiBaseItem.isEmpty()) {
             Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), guiBaseItem);
-            System.out.println("DEBUG BlockEntity: Dropped base item: " + guiBaseItem);
         }
     }
 
     // ========================================
-    // CRITICAL DEBUG: NBT SERIALIZATION WITH COMPREHENSIVE TRACKING
+    // ENHANCED NBT SERIALIZATION (STRING-BASED)
     // ========================================
 
     @Override
     protected void saveAdditional(@Nonnull CompoundTag nbt) {
         super.saveAdditional(nbt);
 
-        // CRITICAL DEBUG: Check if variables were overwritten before save
-        debugVerifyFaceSelections("saveAdditional");
+        // Save texture paths
+        nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
+        nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
 
-        if (!baseFaceSelection.equals(debugLastSetBaseFace) ||
-                !toggleFaceSelection.equals(debugLastSetToggleFace) ||
-                inverted != debugLastSetInverted) {
+        // Save raw texture variables
+        nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
+        nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
 
-            System.out.println("🚨 CRITICAL: Face selections were OVERWRITTEN before NBT save!");
-            System.out.println("   Expected: Base=" + debugLastSetBaseFace + ", Toggle=" + debugLastSetToggleFace +
-                    ", Inverted=" + debugLastSetInverted);
-            System.out.println("   Found: Base=" + baseFaceSelection + ", Toggle=" + toggleFaceSelection +
-                    ", Inverted=" + inverted);
-            System.out.println("   Last set by: " + debugLastSetSource + " (" +
-                    (System.currentTimeMillis() - debugLastSetTimestamp) + "ms ago)");
-
-            // Print stack trace to find the culprit
-            StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-            for (int i = 2; i < Math.min(10, stack.length); i++) {
-                System.out.println("   Stack[" + i + "]: " + stack[i]);
-            }
-
-            // EMERGENCY FIX: Use the values we expected to save
-            System.out.println("🔧 EMERGENCY: Saving expected values instead of corrupted ones");
-            FaceSelectionData.FaceOption saveBaseFace = debugLastSetBaseFace;
-            FaceSelectionData.FaceOption saveToggleFace = debugLastSetToggleFace;
-            boolean saveInverted = debugLastSetInverted;
-
-            // Save expected values
-            nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
-            nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
-            nbt.putString(BASE_FACE_KEY, saveBaseFace.getSerializedName());
-            nbt.putString(TOGGLE_FACE_KEY, saveToggleFace.getSerializedName());
-            nbt.putBoolean(INVERTED_KEY, saveInverted);
-
-            System.out.println("DEBUG BlockEntity: NBT save completed with CORRECTED values - Base: " + saveBaseFace +
-                    ", Toggle: " + saveToggleFace + ", Inverted: " + saveInverted);
-        } else {
-            // Normal save - variables are correct
-            System.out.println("DEBUG BlockEntity: Saving NBT data with current face selections - Base: " +
-                    baseFaceSelection + ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-
-            // Save texture paths
-            nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
-            nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
-
-            // Save current face selections
-            nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
-            nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
-
-            // Save inversion state
-            nbt.putBoolean(INVERTED_KEY, inverted);
-
-            System.out.println("DEBUG BlockEntity: NBT save completed - Base: " + baseFaceSelection +
-                    ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
-        }
+        // Save inversion state
+        nbt.putBoolean(INVERTED_KEY, inverted);
 
         // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
@@ -730,14 +521,23 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!guiBaseItem.isEmpty()) {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
+
+        // CRITICAL FIX: Save preservation state
+        if (preservationActive) {
+            nbt.putBoolean("preservation_active", true);
+            if (preservedBaseVariable != null) {
+                nbt.putString("preserved_base_variable", preservedBaseVariable);
+            }
+            if (preservedToggleVariable != null) {
+                nbt.putString("preserved_toggle_variable", preservedToggleVariable);
+            }
+            nbt.putBoolean("preserved_inverted", preservedInverted);
+        }
     }
 
     @Override
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
-
-        System.out.println("DEBUG BlockEntity: Loading NBT data");
-        debugVerifyFaceSelections("load-before");
 
         // Load texture paths with defaults
         this.baseTexturePath = nbt.getString(BASE_TEXTURE_KEY);
@@ -751,39 +551,50 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
         }
 
-        // CRITICAL FIX: Check if we just finished preserving face selections
-        if (preservationActive) {
-            System.out.println("DEBUG BlockEntity: ⚠️ SKIPPING NBT face selection load - preservation active, would overwrite restored values!");
-            // Don't call restorePreservedFaceSelections() here - it was already called in setBlockState
-        } else {
-            // Check if this NBT load is happening shortly after a face selection change
-            long timeSinceLastSet = System.currentTimeMillis() - debugLastSetTimestamp;
-            if (timeSinceLastSet < 1000 && debugSetCount > 0) {
-                System.out.println("DEBUG BlockEntity: ⚠️ SUSPICIOUS NBT load " + timeSinceLastSet + "ms after face selection change - keeping current values to prevent overwrites");
-                System.out.println("   Would load from NBT: Base=" + nbt.getString(BASE_FACE_KEY) + ", Toggle=" + nbt.getString(TOGGLE_FACE_KEY));
-                System.out.println("   Keeping current: Base=" + baseFaceSelection + ", Toggle=" + toggleFaceSelection);
+        // CRITICAL FIX: Enhanced preservation handling during NBT loading
+        boolean hadPreservationData = nbt.getBoolean("preservation_active");
+        
+        if (hadPreservationData) {
+            // Restore preservation state
+            this.preservationActive = true;
+            this.preservedBaseVariable = nbt.getString("preserved_base_variable");
+            this.preservedToggleVariable = nbt.getString("preserved_toggle_variable");
+            this.preservedInverted = nbt.getBoolean("preserved_inverted");
+            
+            // Use preserved values if available
+            if (!preservedBaseVariable.isEmpty()) {
+                this.baseTextureVariable = preservedBaseVariable;
             } else {
-                // Safe to load from NBT
-                String baseFaceName = nbt.getString(BASE_FACE_KEY);
-                FaceSelectionData.FaceOption nbtBaseFace = baseFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                        FaceSelectionData.FaceOption.fromSerializedName(baseFaceName);
-
-                String toggleFaceName = nbt.getString(TOGGLE_FACE_KEY);
-                FaceSelectionData.FaceOption nbtToggleFace = toggleFaceName.isEmpty() ? FaceSelectionData.FaceOption.ALL :
-                        FaceSelectionData.FaceOption.fromSerializedName(toggleFaceName);
-
-                boolean nbtInverted = nbt.getBoolean(INVERTED_KEY);
-
-                // Update tracking BEFORE setting values
-                debugTrackFaceSelectionChange("load-NBT", nbtBaseFace, nbtToggleFace, nbtInverted);
-
-                this.baseFaceSelection = nbtBaseFace;
-                this.toggleFaceSelection = nbtToggleFace;
-                this.inverted = nbtInverted;
-
-                System.out.println("DEBUG BlockEntity: Loaded face selections from NBT - Base: " + baseFaceSelection +
-                        ", Toggle: " + toggleFaceSelection + ", Inverted: " + inverted);
+                this.baseTextureVariable = nbt.getString(BASE_VARIABLE_KEY);
             }
+            
+            if (!preservedToggleVariable.isEmpty()) {
+                this.toggleTextureVariable = preservedToggleVariable;
+            } else {
+                this.toggleTextureVariable = nbt.getString(TOGGLE_VARIABLE_KEY);
+            }
+            
+            this.inverted = preservedInverted;
+            
+            // Clear preservation after loading
+            this.preservationActive = false;
+            this.preservedBaseVariable = null;
+            this.preservedToggleVariable = null;
+            this.preservedInverted = false;
+            
+        } else {
+            // Normal loading without preservation
+            this.baseTextureVariable = nbt.getString(BASE_VARIABLE_KEY);
+            this.toggleTextureVariable = nbt.getString(TOGGLE_VARIABLE_KEY);
+            this.inverted = nbt.getBoolean(INVERTED_KEY);
+        }
+
+        // Validate loaded variables
+        if (this.baseTextureVariable.isEmpty()) {
+            this.baseTextureVariable = "all";
+        }
+        if (this.toggleTextureVariable.isEmpty()) {
+            this.toggleTextureVariable = "all";
         }
 
         // Load GUI slot items
@@ -798,40 +609,28 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         } else {
             this.guiBaseItem = ItemStack.EMPTY;
         }
-
-        // Clear analysis cache on load
-        cachedBaseAnalysis = null;
-        cachedToggleAnalysis = null;
-
-        debugVerifyFaceSelections("load-after");
     }
 
     // ========================================
     // CLIENT-SERVER SYNCHRONIZATION
     // ========================================
 
-    /**
-     * Get update packet for client synchronization
-     */
     @Override
     @Nullable
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    /**
-     * Get enhanced update tag for client synchronization
-     */
     @Override
     @Nonnull
     public CompoundTag getUpdateTag() {
         CompoundTag nbt = super.getUpdateTag();
 
-        // Include all customization data for client sync
+        // Include all data for client sync
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
-        nbt.putString(BASE_FACE_KEY, baseFaceSelection.getSerializedName());
-        nbt.putString(TOGGLE_FACE_KEY, toggleFaceSelection.getSerializedName());
+        nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
+        nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
         nbt.putBoolean(INVERTED_KEY, inverted);
 
         // Sync GUI slot items
@@ -845,9 +644,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return nbt;
     }
 
-    /**
-     * Handle data packet from server
-     */
     @Override
     public void onDataPacket(@Nonnull net.minecraft.network.Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
         CompoundTag nbt = pkt.getTag();
@@ -855,5 +651,29 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             load(nbt);
             requestModelDataUpdate();
         }
+    }
+
+    // ========================================
+    // LEGACY COMPATIBILITY (DEPRECATED)
+    // ========================================
+
+    /**
+     * @deprecated Use getBaseTextureSelection() instead
+     */
+    @Deprecated
+    @Nonnull
+    public FaceSelectionData.DropdownState getBaseDropdownState() {
+        FaceSelectionData.RawTextureSelection rawSelection = getBaseTextureSelection();
+        return new FaceSelectionData.DropdownState(rawSelection);
+    }
+
+    /**
+     * @deprecated Use getToggleTextureSelection() instead
+     */
+    @Deprecated
+    @Nonnull
+    public FaceSelectionData.DropdownState getToggleDropdownState() {
+        FaceSelectionData.RawTextureSelection rawSelection = getToggleTextureSelection();
+        return new FaceSelectionData.DropdownState(rawSelection);
     }
 }

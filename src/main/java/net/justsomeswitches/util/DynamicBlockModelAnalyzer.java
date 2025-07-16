@@ -20,17 +20,19 @@ import java.util.*;
 
 /**
  * Dynamic block model analyzer that reads model JSON files at runtime
- * ---
- * This system provides universal compatibility with vanilla and modded blocks
- * by dynamically parsing their model JSON files to extract texture information.
+ *
+ * CRITICAL FIX: Only returns EXACT texture variables from block's OWN JSON file
+ * No parent model inheritance, no filtering, no additions - just raw variables
+ * Universal compatibility with vanilla and modded blocks
  */
 public class DynamicBlockModelAnalyzer {
 
-    // Texture variables to ignore (not actual block textures)
-    private static final Set<String> IGNORED_TEXTURE_VARIABLES = Set.of(
-            "particle", "overlay", "north_overlay", "south_overlay",
-            "east_overlay", "west_overlay", "up_overlay", "down_overlay",
-            "animation", "ctm", "connected"
+    // ONLY non-face texture variables to exclude (not actual block face textures)
+    private static final Set<String> NON_FACE_TEXTURE_VARIABLES = Set.of(
+            "particle", "overlay", "animation", "ctm", "connected",
+            "north_overlay", "south_overlay", "east_overlay", "west_overlay",
+            "up_overlay", "down_overlay", "layer0", "layer1", "layer2",
+            "layer3", "layer4", "inside", "cross", "crop", "stem", "upper_stem"
     );
 
     /**
@@ -46,18 +48,22 @@ public class DynamicBlockModelAnalyzer {
                                 Map<String, String> textureVariables,
                                 @Nullable String primaryTexture) {
             this.hasMultipleTextures = hasMultipleTextures;
-            this.textureVariables = new HashMap<>(textureVariables);
+            this.textureVariables = new LinkedHashMap<>(textureVariables); // Preserve order
             this.primaryTexture = primaryTexture;
 
-            // Filter available variables (exclude ignored ones)
-            this.availableVariables = textureVariables.keySet().stream()
-                    .filter(var -> !IGNORED_TEXTURE_VARIABLES.contains(var.toLowerCase()))
-                    .sorted() // Sort alphabetically for consistency
-                    .toList();
+            // CRITICAL FIX: ONLY exclude non-face textures, preserve EXACT JSON variables
+            this.availableVariables = new ArrayList<>();
+            for (String variable : textureVariables.keySet()) {
+                // ONLY exclude non-face textures like "particle" - include EVERYTHING else from JSON
+                if (!NON_FACE_TEXTURE_VARIABLES.contains(variable.toLowerCase()) &&
+                        !variable.startsWith("#")) { // Exclude texture references
+                    this.availableVariables.add(variable);
+                }
+            }
         }
 
         public boolean hasMultipleTextures() { return hasMultipleTextures; }
-        public Map<String, String> getTextureVariables() { return new HashMap<>(textureVariables); }
+        public Map<String, String> getTextureVariables() { return new LinkedHashMap<>(textureVariables); }
         public List<String> getAvailableVariables() { return new ArrayList<>(availableVariables); }
         public boolean shouldEnableDropdown() { return hasMultipleTextures && availableVariables.size() > 1; }
 
@@ -115,7 +121,7 @@ public class DynamicBlockModelAnalyzer {
     }
 
     /**
-     * Analyze block model by reading JSON file dynamically
+     * CRITICAL FIX: Analyze ONLY the block's own JSON file - NO parent model inheritance
      */
     @Nonnull
     private static DynamicBlockInfo analyzeBlockModel(@Nonnull String blockId) {
@@ -135,19 +141,25 @@ public class DynamicBlockModelAnalyzer {
 
             String blockName = fullPath.substring(6); // Remove "block/" prefix
 
-            // Load the block model JSON file
-            JsonObject modelJson = loadBlockModel(namespace, blockName);
+            // Load ONLY the block's own model JSON file - NO parent resolution
+            JsonObject modelJson = loadBlockModelDirect(namespace, blockName);
             if (modelJson == null) {
                 return createFallbackInfo(blockId);
             }
 
-            // Extract texture variables from model
-            Map<String, String> textureVariables = extractTextureVariables(modelJson, namespace);
+            // CRITICAL FIX: Extract ONLY the texture variables from THIS block's JSON
+            Map<String, String> textureVariables = extractDirectTextureVariables(modelJson, namespace);
 
-            // Filter out ignored variables
-            Map<String, String> filteredVariables = textureVariables.entrySet().stream()
-                    .filter(entry -> !IGNORED_TEXTURE_VARIABLES.contains(entry.getKey().toLowerCase()))
-                    .collect(HashMap::new, (m, entry) -> m.put(entry.getKey(), entry.getValue()), HashMap::putAll);
+            // SIMPLE FILTERING: Only exclude non-face textures, keep everything else from JSON
+            Map<String, String> filteredVariables = new LinkedHashMap<>();
+            for (Map.Entry<String, String> entry : textureVariables.entrySet()) {
+                String variable = entry.getKey();
+                // ONLY exclude non-face textures like "particle" - keep EVERYTHING else from JSON
+                if (!NON_FACE_TEXTURE_VARIABLES.contains(variable.toLowerCase()) &&
+                        !variable.startsWith("#")) {
+                    filteredVariables.put(variable, entry.getValue());
+                }
+            }
 
             // Determine if block has multiple textures
             Set<String> uniqueTextures = new HashSet<>(filteredVariables.values());
@@ -164,14 +176,14 @@ public class DynamicBlockModelAnalyzer {
     }
 
     /**
-     * Load block model JSON file from resource packs
+     * Load ONLY the block's own model JSON file - NO parent resolution
      */
     @Nullable
-    private static JsonObject loadBlockModel(@Nonnull String namespace, @Nonnull String blockName) {
+    private static JsonObject loadBlockModelDirect(@Nonnull String namespace, @Nonnull String blockName) {
         try {
             ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
 
-            // Try to load the block model JSON file
+            // Load only the block model JSON file - no parent resolution
             ResourceLocation modelLocation = new ResourceLocation(namespace, "models/block/" + blockName + ".json");
 
             Optional<Resource> resourceOpt = resourceManager.getResource(modelLocation);
@@ -181,8 +193,7 @@ public class DynamicBlockModelAnalyzer {
                 try (InputStreamReader reader = new InputStreamReader(resource.open(), StandardCharsets.UTF_8)) {
                     JsonElement jsonElement = JsonParser.parseReader(reader);
                     if (jsonElement.isJsonObject()) {
-                        JsonObject modelJson = jsonElement.getAsJsonObject();
-                        return resolveParentModels(modelJson, namespace, resourceManager);
+                        return jsonElement.getAsJsonObject();
                     }
                 }
             }
@@ -195,84 +206,28 @@ public class DynamicBlockModelAnalyzer {
     }
 
     /**
-     * Resolve parent models recursively to get complete texture information
+     * CRITICAL FIX: Extract ONLY the direct texture variables from THIS block's JSON
+     * NO parent model resolution - just what's in this file
      */
     @Nonnull
-    private static JsonObject resolveParentModels(@Nonnull JsonObject modelJson, @Nonnull String namespace, @Nonnull ResourceManager resourceManager) {
-        JsonObject resolvedModel = modelJson.deepCopy();
-
-        // Check if this model has a parent
-        if (modelJson.has("parent")) {
-            String parentPath = modelJson.get("parent").getAsString();
-
-            try {
-                // Parse parent path
-                String[] parentParts = parentPath.split(":");
-                String parentNamespace = parentParts.length > 1 ? parentParts[0] : namespace;
-                String parentModel = parentParts.length > 1 ? parentParts[1] : parentPath;
-
-                // Load parent model
-                ResourceLocation parentLocation = new ResourceLocation(parentNamespace, "models/" + parentModel + ".json");
-                Optional<Resource> parentResourceOpt = resourceManager.getResource(parentLocation);
-
-                if (parentResourceOpt.isPresent()) {
-                    Resource parentResource = parentResourceOpt.get();
-
-                    try (InputStreamReader reader = new InputStreamReader(parentResource.open(), StandardCharsets.UTF_8)) {
-                        JsonElement parentElement = JsonParser.parseReader(reader);
-                        if (parentElement.isJsonObject()) {
-                            JsonObject parentJson = parentElement.getAsJsonObject();
-
-                            // Recursively resolve parent's parents
-                            JsonObject resolvedParent = resolveParentModels(parentJson, parentNamespace, resourceManager);
-
-                            // Merge parent textures with child textures (child overrides parent)
-                            if (resolvedParent.has("textures")) {
-                                JsonObject parentTextures = resolvedParent.getAsJsonObject("textures");
-                                JsonObject childTextures = resolvedModel.has("textures") ?
-                                        resolvedModel.getAsJsonObject("textures") : new JsonObject();
-
-                                // Merge textures (child overrides parent)
-                                JsonObject mergedTextures = new JsonObject();
-                                for (Map.Entry<String, JsonElement> entry : parentTextures.entrySet()) {
-                                    mergedTextures.add(entry.getKey(), entry.getValue());
-                                }
-                                for (Map.Entry<String, JsonElement> entry : childTextures.entrySet()) {
-                                    mergedTextures.add(entry.getKey(), entry.getValue());
-                                }
-
-                                resolvedModel.add("textures", mergedTextures);
-                            }
-                        }
-                    }
-                }
-
-            } catch (Exception e) {
-                // Silent failure - continue without parent resolution
-            }
-        }
-
-        return resolvedModel;
-    }
-
-    /**
-     * Extract texture variables from model JSON
-     */
-    @Nonnull
-    private static Map<String, String> extractTextureVariables(@Nonnull JsonObject modelJson, @Nonnull String namespace) {
-        Map<String, String> textureVariables = new HashMap<>();
+    private static Map<String, String> extractDirectTextureVariables(@Nonnull JsonObject modelJson, @Nonnull String namespace) {
+        Map<String, String> textureVariables = new LinkedHashMap<>(); // Preserve order
 
         if (modelJson.has("textures")) {
             JsonObject textures = modelJson.getAsJsonObject("textures");
 
+            // CRITICAL: Only iterate over what's actually in THIS block's JSON file
             for (Map.Entry<String, JsonElement> entry : textures.entrySet()) {
                 String variable = entry.getKey();
                 String texturePath = entry.getValue().getAsString();
 
-                // Resolve texture path references (e.g., "#side" -> actual texture path)
-                String resolvedPath = resolveTextureReference(texturePath, textures, namespace);
+                // Resolve only simple texture path references within THIS file
+                String resolvedPath = resolveSimpleTextureReference(texturePath, textures, namespace);
 
-                textureVariables.put(variable, resolvedPath);
+                // Only add if resolved path is valid and not empty
+                if (!resolvedPath.isEmpty() && !resolvedPath.startsWith("#")) {
+                    textureVariables.put(variable, resolvedPath);
+                }
             }
         }
 
@@ -280,17 +235,35 @@ public class DynamicBlockModelAnalyzer {
     }
 
     /**
-     * Resolve texture references (e.g., "#side" references)
+     * Resolve simple texture references ONLY within the same file
      */
     @Nonnull
-    private static String resolveTextureReference(@Nonnull String texturePath, @Nonnull JsonObject allTextures, @Nonnull String namespace) {
+    private static String resolveSimpleTextureReference(@Nonnull String texturePath, @Nonnull JsonObject allTextures, @Nonnull String namespace) {
+        // Track resolution chain to prevent infinite loops
+        Set<String> visited = new HashSet<>();
+        return resolveSimpleTextureReferenceInternal(texturePath, allTextures, namespace, visited);
+    }
+
+    @Nonnull
+    private static String resolveSimpleTextureReferenceInternal(@Nonnull String texturePath, @Nonnull JsonObject allTextures, @Nonnull String namespace, @Nonnull Set<String> visited) {
         if (texturePath.startsWith("#")) {
-            // This is a reference to another texture variable
+            // This is a reference to another texture variable in THIS file
             String referencedVariable = texturePath.substring(1);
+
+            // Prevent infinite loops
+            if (visited.contains(referencedVariable)) {
+                return ""; // Return empty for circular references
+            }
+
+            visited.add(referencedVariable);
+
             if (allTextures.has(referencedVariable)) {
                 String referencedPath = allTextures.get(referencedVariable).getAsString();
-                return resolveTextureReference(referencedPath, allTextures, namespace); // Recursive resolution
+                return resolveSimpleTextureReferenceInternal(referencedPath, allTextures, namespace, visited);
             }
+
+            // Reference not found in THIS file
+            return "";
         }
 
         // If path doesn't contain namespace, add default namespace
@@ -324,7 +297,8 @@ public class DynamicBlockModelAnalyzer {
      */
     @Nonnull
     private static DynamicBlockInfo createFallbackInfo(@Nonnull String blockId) {
-        Map<String, String> fallbackTextures = Map.of("all", blockId);
+        Map<String, String> fallbackTextures = new LinkedHashMap<>();
+        fallbackTextures.put("all", blockId);
         return new DynamicBlockInfo(false, fallbackTextures, blockId);
     }
 
