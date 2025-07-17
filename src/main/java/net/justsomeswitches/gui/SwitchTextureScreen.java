@@ -8,14 +8,21 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Switch Texture Screen with Raw JSON Variable System
- * CONSOLIDATED: Moved getTextureSprite() method from BlockTextureAnalyzer for better encapsulation
+ * Switch Texture Screen with Clean Single-Path Architecture - FIXED VERSION
+ * RESTORED: Auto-default selection with proper state management
+ *
+ * ARCHITECTURE:
+ * - Auto-default selection when dropdown populated
+ * - All save operations in dropdown handlers
+ * - Complete cleanup on block removal
+ * - Minimal debugging output for critical operations only
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
@@ -64,6 +71,10 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private boolean showingLeftDropdown = false;
     private boolean showingRightDropdown = false;
 
+    // Previous selections for change detection
+    private ItemStack previousLeftItem = ItemStack.EMPTY;
+    private ItemStack previousRightItem = ItemStack.EMPTY;
+
     public SwitchTextureScreen(@Nonnull SwitchTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
 
@@ -89,7 +100,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Update UI state with raw texture selections
+     * Update UI state with change detection
      */
     private void updateUIState() {
         // Get current state from menu
@@ -97,10 +108,46 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         FaceSelectionData.RawTextureSelection newRightSelection = menu.getBaseTextureSelection();
         boolean newCheckboxState = menu.isInverted();
 
+        // Detect slot changes for cleanup only (auto-apply handled in menu)
+        ItemStack currentLeftItem = newLeftSelection.getSourceBlock();
+        ItemStack currentRightItem = newRightSelection.getSourceBlock();
+
+        // Handle left (toggle) slot changes
+        if (!ItemStack.matches(previousLeftItem, currentLeftItem)) {
+            if (currentLeftItem.isEmpty()) {
+                handleBlockRemoval(true);
+            }
+            previousLeftItem = currentLeftItem.copy();
+        }
+
+        // Handle right (base) slot changes
+        if (!ItemStack.matches(previousRightItem, currentRightItem)) {
+            if (currentRightItem.isEmpty()) {
+                handleBlockRemoval(false);
+            }
+            previousRightItem = currentRightItem.copy();
+        }
+
         // Update state
         leftTextureSelection = newLeftSelection;
         rightTextureSelection = newRightSelection;
         checkboxState = newCheckboxState;
+    }
+
+    /**
+     * Complete cleanup when block removed
+     */
+    private void handleBlockRemoval(boolean isLeft) {
+        // Close any open dropdowns
+        showingLeftDropdown = false;
+        showingRightDropdown = false;
+
+        // Reset selection to defaults (handled by menu auto-apply)
+        if (isLeft) {
+            menu.setToggleTextureVariable("all");
+        } else {
+            menu.setBaseTextureVariable("all");
+        }
     }
 
     /**
@@ -177,7 +224,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Handle dropdown selection clicks with raw variables
+     * Handle dropdown selection with immediate apply
      */
     private boolean handleDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop, boolean isLeft) {
         FaceSelectionData.RawTextureSelection selection = isLeft ? leftTextureSelection : rightTextureSelection;
@@ -189,7 +236,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         for (int i = 0; i < variables.size(); i++) {
             int optionY = dropdownY + (i * 12);
             if (isWithinBounds(mouseX, mouseY, dropdownX, optionY, FACE_DROPDOWN_WIDTH, 12)) {
-                // Selection made - triggers auto-apply
+                // Selection made - triggers immediate apply in menu
                 String selectedVariable = variables.get(i);
 
                 if (isLeft) {
@@ -230,7 +277,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         drawConnectionLines(graphics, guiLeft, guiTop);
 
         // Draw face selection dropdowns
-        drawRawVariableDropdowns(graphics, guiLeft, guiTop);
+        drawCleanArchitectureDropdowns(graphics, guiLeft, guiTop);
 
         // Draw texture previews
         drawTexturePreview(graphics, guiLeft, guiTop);
@@ -267,23 +314,23 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw raw variable dropdowns with dynamic states
+     * Draw dropdowns with blank inactive state
      */
-    private void drawRawVariableDropdowns(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+    private void drawCleanArchitectureDropdowns(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         // Left (toggle) variable dropdown
-        drawRawVariableDropdownButton(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y,
+        drawCleanDropdownButton(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y,
                 leftTextureSelection, showingLeftDropdown);
 
         // Right (base) variable dropdown
-        drawRawVariableDropdownButton(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y,
+        drawCleanDropdownButton(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y,
                 rightTextureSelection, showingRightDropdown);
     }
 
     /**
-     * Draw raw variable dropdown button
+     * Draw dropdown button with blank inactive state
      */
-    private void drawRawVariableDropdownButton(@Nonnull GuiGraphics graphics, int x, int y,
-                                               @Nonnull FaceSelectionData.RawTextureSelection selection, boolean isOpen) {
+    private void drawCleanDropdownButton(@Nonnull GuiGraphics graphics, int x, int y,
+                                         @Nonnull FaceSelectionData.RawTextureSelection selection, boolean isOpen) {
         // Determine colors based on state
         int bgColor = selection.isEnabled() ? 0xFFC6C6C6 : 0xFF888888;
         int textColor = selection.isEnabled() ? 0xFF404040 : 0xFF666666;
@@ -327,15 +374,25 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             }
         }
 
-        // Draw current selection (raw JSON variable name)
-        String displayText = selection.isEnabled() ? selection.getSelectedVariable() : "Variable";
+        // Draw current selection or blank text
+        String displayText;
+        if (!selection.isEnabled()) {
+            // Grayed out with completely empty text when inactive
+            displayText = "";
+        } else {
+            // Show current selection (raw JSON variable name)
+            displayText = selection.getSelectedVariable();
 
-        // Truncate text if too long
-        if (displayText.length() > 6) {
-            displayText = displayText.substring(0, 6);
+            // Truncate text if too long
+            if (displayText.length() > 6) {
+                displayText = displayText.substring(0, 6);
+            }
         }
 
-        graphics.drawString(this.font, displayText, x + 2, y + 2, textColor, false);
+        // Only draw text if not empty
+        if (!displayText.isEmpty()) {
+            graphics.drawString(this.font, displayText, x + 2, y + 2, textColor, false);
+        }
     }
 
     /**
@@ -360,7 +417,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
      */
     private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String texturePath) {
         try {
-            // Get texture sprite (moved from BlockTextureAnalyzer)
+            // Get texture sprite
             TextureAtlasSprite sprite = getTextureSprite(texturePath);
 
             if (sprite != null && !sprite.contents().name().toString().contains("missingno")) {
@@ -381,8 +438,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Get texture sprite for preview rendering (moved from BlockTextureAnalyzer)
-     * Provides texture sprite loading with fallback patterns for GUI preview system.
+     * Get texture sprite for preview rendering
      */
     @Nullable
     private TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
@@ -457,19 +513,19 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int guiTop = (this.height - this.imageHeight) / 2;
 
         if (showingLeftDropdown) {
-            drawRawVariableDropdownPopup(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y + FACE_DROPDOWN_HEIGHT, leftTextureSelection);
+            drawCleanDropdownPopup(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y + FACE_DROPDOWN_HEIGHT, leftTextureSelection);
         }
 
         if (showingRightDropdown) {
-            drawRawVariableDropdownPopup(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y + FACE_DROPDOWN_HEIGHT, rightTextureSelection);
+            drawCleanDropdownPopup(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y + FACE_DROPDOWN_HEIGHT, rightTextureSelection);
         }
     }
 
     /**
-     * Draw raw variable dropdown popup menu
+     * Draw dropdown popup menu
      */
-    private void drawRawVariableDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
-                                              @Nonnull FaceSelectionData.RawTextureSelection selection) {
+    private void drawCleanDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
+                                        @Nonnull FaceSelectionData.RawTextureSelection selection) {
         List<String> variables = selection.getAvailableVariables();
         int popupHeight = variables.size() * 12;
 

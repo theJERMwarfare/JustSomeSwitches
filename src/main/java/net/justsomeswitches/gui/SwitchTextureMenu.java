@@ -15,13 +15,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Switch Texture Menu with Raw JSON Variable System - FIXED VERSION
- * REWRITTEN: String-based face selections with auto-apply functionality
- * 
- * FIXES APPLIED:
- * - Auto-apply default texture when blocks are first placed
- * - Improved face selection synchronization
- * - Enhanced texture application system
+ * Switch Texture Menu with Clean Single-Path Architecture - PERSISTENCE FIXED
+ * FIXED: Face selection persistence between GUI sessions
+ *
+ * ARCHITECTURE:
+ * - Texture slots: Block analysis and auto-apply on placement ONLY when needed
+ * - Dropdown selections: All save operations and texture applications
+ * - Single source of truth: Dropdown state controls everything
+ * - Smart auto-defaults: Only apply when current variable is invalid
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -46,12 +47,12 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private final Level level;
     private SwitchesLeverBlockEntity blockEntity;
 
-    // Raw texture variable selections
+    // Current selections (read-only from BlockEntity)
     private String baseTextureVariable = "all";
     private String toggleTextureVariable = "all";
     private boolean inverted = false;
 
-    // Flag to prevent auto-apply during initialization
+    // Flag to prevent recursion during initialization
     private boolean isInitializing = true;
 
     /**
@@ -66,16 +67,16 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // Load BlockEntity data first
         loadBlockEntityData();
 
-        // Auto-apply container with FIXED change detection
+        // Container with slot monitoring for auto-apply
         this.textureContainer = new SimpleContainer(TEXTURE_SLOT_COUNT) {
             @Override
             public void setChanged() {
                 super.setChanged();
-                onSlotChangedAutoApply();
+                onSlotChangedWithAutoApply();
             }
         };
 
-        // Load GUI slot items after synchronization
+        // Load GUI slot items
         loadGuiSlotItems();
 
         // Add texture slots
@@ -96,17 +97,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
         // Initialization complete
         this.isInitializing = false;
-        
-        // CRITICAL FIX: Apply auto-defaults for any items already in slots
-        ItemStack existingToggle = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-        ItemStack existingBase = textureContainer.getItem(BASE_TEXTURE_SLOT);
-        if (!existingToggle.isEmpty() || !existingBase.isEmpty()) {
-            applyAutoDefaultsForNewBlocks(existingToggle, existingBase);
-        }
     }
 
     /**
-     * Enhanced texture slot for auto-apply functionality
+     * Enhanced texture slot for analysis-only functionality
      */
     private class EnhancedTextureSlot extends TextureSlot {
         public EnhancedTextureSlot(@Nonnull net.minecraft.world.Container container, int slot, int x, int y) {
@@ -122,65 +116,72 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * FIXED: Auto-apply handler for immediate texture application
-     * Now properly handles default face selection for newly placed blocks
+     * FIXED: Slot changes trigger auto-apply with smart default selection
      */
-    private void onSlotChangedAutoApply() {
+    private void onSlotChangedWithAutoApply() {
         if (isInitializing || blockEntity == null) {
             return;
         }
 
-        // Get items from GUI slots
+        // Get current items
         ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
         ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
 
-        // Store GUI slot items
+        // Update BlockEntity GUI items
         blockEntity.setGuiSlotItems(toggleItem, baseItem);
 
-        // CRITICAL FIX: Apply auto-defaults for newly placed blocks
-        applyAutoDefaultsForNewBlocks(toggleItem, baseItem);
+        // Apply auto-defaults ONLY when needed (smart persistence)
+        applySmartDefaults(toggleItem, baseItem);
 
-        // Apply textures with face selections atomically
+        // Apply textures with current variables
         applyTexturesWithVariables(toggleItem, baseItem);
 
-        // Force visual update
+        // Force block update
         forceBlockUpdate();
     }
 
     /**
-     * CRITICAL FIX: Apply auto-defaults for newly placed blocks
-     * This ensures default face textures are applied when blocks are first placed
+     * FIXED: Apply auto-defaults ONLY when current variable is invalid
+     * SOLVES: Face selection persistence between GUI sessions
      */
-    private void applyAutoDefaultsForNewBlocks(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
+    private void applySmartDefaults(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         boolean needsUpdate = false;
 
-        // Check toggle slot for auto-default application
+        // Smart auto-default for toggle slot
         if (!toggleItem.isEmpty()) {
-            FaceSelectionData.RawTextureSelection toggleSelection = 
-                FaceSelectionData.createRawTextureSelection(toggleItem, toggleTextureVariable);
-            
-            // If current selection is "all" but better defaults exist, apply them
-            if (toggleTextureVariable.equals("all") && !toggleSelection.getAvailableVariables().isEmpty()) {
-                String defaultVariable = FaceSelectionData.getDefaultVariable(toggleSelection.getAvailableVariables());
-                if (!defaultVariable.equals("all") && !defaultVariable.equals(toggleTextureVariable)) {
-                    toggleTextureVariable = defaultVariable;
+            FaceSelectionData.RawTextureSelection toggleSelection =
+                    FaceSelectionData.createRawTextureSelection(toggleItem, toggleTextureVariable);
+
+            if (toggleSelection.isEnabled() && !toggleSelection.getAvailableVariables().isEmpty()) {
+                // FIXED: Only apply default if current variable is invalid
+                if (toggleTextureVariable.equals("all") ||
+                        !toggleSelection.getAvailableVariables().contains(toggleTextureVariable)) {
+
+                    String defaultVariable = FaceSelectionData.getDefaultVariable(toggleSelection.getAvailableVariables());
+                    this.toggleTextureVariable = defaultVariable;
                     needsUpdate = true;
+                    System.out.println("AUTO-DEFAULT: Toggle slot set to " + defaultVariable + " (was invalid: " + (toggleTextureVariable.equals("all") ? "all" : "not in variables") + ")");
                 }
+                // If current variable is valid, keep it (persistence working)
             }
         }
 
-        // Check base slot for auto-default application
+        // Smart auto-default for base slot
         if (!baseItem.isEmpty()) {
-            FaceSelectionData.RawTextureSelection baseSelection = 
-                FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
-            
-            // If current selection is "all" but better defaults exist, apply them
-            if (baseTextureVariable.equals("all") && !baseSelection.getAvailableVariables().isEmpty()) {
-                String defaultVariable = FaceSelectionData.getDefaultVariable(baseSelection.getAvailableVariables());
-                if (!defaultVariable.equals("all") && !defaultVariable.equals(baseTextureVariable)) {
-                    baseTextureVariable = defaultVariable;
+            FaceSelectionData.RawTextureSelection baseSelection =
+                    FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
+
+            if (baseSelection.isEnabled() && !baseSelection.getAvailableVariables().isEmpty()) {
+                // FIXED: Only apply default if current variable is invalid
+                if (baseTextureVariable.equals("all") ||
+                        !baseSelection.getAvailableVariables().contains(baseTextureVariable)) {
+
+                    String defaultVariable = FaceSelectionData.getDefaultVariable(baseSelection.getAvailableVariables());
+                    this.baseTextureVariable = defaultVariable;
                     needsUpdate = true;
+                    System.out.println("AUTO-DEFAULT: Base slot set to " + defaultVariable + " (was invalid: " + (baseTextureVariable.equals("all") ? "all" : "not in variables") + ")");
                 }
+                // If current variable is valid, keep it (persistence working)
             }
         }
 
@@ -197,28 +198,38 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private void applyTexturesWithVariables(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         if (blockEntity == null) return;
 
-        // Set texture variables first
-        blockEntity.setBaseTextureVariable(baseTextureVariable);
-        blockEntity.setToggleTextureVariable(toggleTextureVariable);
-        blockEntity.setInverted(inverted);
+        try {
+            // Set texture variables first
+            blockEntity.setBaseTextureVariable(baseTextureVariable);
+            blockEntity.setToggleTextureVariable(toggleTextureVariable);
+            blockEntity.setInverted(inverted);
 
-        // Apply textures with current variables
-        if (!toggleItem.isEmpty()) {
-            String effectiveTexturePath = getEffectiveTexturePathForItem(toggleItem, toggleTextureVariable);
-            blockEntity.setToggleTexture(effectiveTexturePath);
-        } else {
-            blockEntity.resetToggleTexture();
+            // Apply textures with current variables
+            if (!toggleItem.isEmpty()) {
+                String effectiveTexturePath = getEffectiveTexturePathForItem(toggleItem, toggleTextureVariable);
+                if (effectiveTexturePath != null) {
+                    blockEntity.setToggleTexture(effectiveTexturePath);
+                }
+            } else {
+                blockEntity.resetToggleTexture();
+            }
+
+            if (!baseItem.isEmpty()) {
+                String effectiveTexturePath = getEffectiveTexturePathForItem(baseItem, baseTextureVariable);
+                if (effectiveTexturePath != null) {
+                    blockEntity.setBaseTexture(effectiveTexturePath);
+                }
+            } else {
+                blockEntity.resetBaseTexture();
+            }
+
+            // Force immediate NBT save
+            blockEntity.setChanged();
+
+        } catch (Exception e) {
+            System.out.println("ERROR: Failed to apply textures - " + e.getMessage());
+            resetToDefaults();
         }
-
-        if (!baseItem.isEmpty()) {
-            String effectiveTexturePath = getEffectiveTexturePathForItem(baseItem, baseTextureVariable);
-            blockEntity.setBaseTexture(effectiveTexturePath);
-        } else {
-            blockEntity.resetBaseTexture();
-        }
-
-        // Force immediate NBT save
-        blockEntity.setChanged();
     }
 
     /**
@@ -241,13 +252,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private void loadBlockEntityData() {
         this.blockEntity = getBlockEntity();
         if (blockEntity != null) {
-            // Brief pause to ensure preservation operations complete
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                // Ignore
-            }
-
             // Synchronize texture variables from BlockEntity
             this.baseTextureVariable = blockEntity.getBaseTextureVariable();
             this.toggleTextureVariable = blockEntity.getToggleTextureVariable();
@@ -256,7 +260,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Load GUI slot items after synchronization
+     * Load GUI slot items from BlockEntity
      */
     private void loadGuiSlotItems() {
         if (blockEntity != null) {
@@ -276,59 +280,93 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // RAW TEXTURE VARIABLE MANAGEMENT
+    // DROPDOWN-DRIVEN SAVE OPERATIONS
     // ========================================
 
     /**
-     * Set base texture variable with atomic sync
+     * Set base texture variable with immediate apply
      */
     public void setBaseTextureVariable(@Nonnull String variable) {
-        if (!variable.equals(this.baseTextureVariable)) {
-            this.baseTextureVariable = variable;
-
-            if (blockEntity != null && !isInitializing) {
-                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-
-                applyTexturesWithVariables(toggleItem, baseItem);
-                forceBlockUpdate();
-            }
+        if (blockEntity == null || isInitializing) {
+            return;
         }
+
+        this.baseTextureVariable = variable;
+
+        // Get current items and apply immediately
+        ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
+        ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+
+        applyTexturesWithVariables(toggleItem, baseItem);
+        forceBlockUpdate();
     }
 
     /**
-     * Set toggle texture variable with atomic sync
+     * Set toggle texture variable with immediate apply
      */
     public void setToggleTextureVariable(@Nonnull String variable) {
-        if (!variable.equals(this.toggleTextureVariable)) {
-            this.toggleTextureVariable = variable;
+        if (blockEntity == null || isInitializing) {
+            return;
+        }
 
-            if (blockEntity != null && !isInitializing) {
-                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
+        this.toggleTextureVariable = variable;
 
-                applyTexturesWithVariables(toggleItem, baseItem);
-                forceBlockUpdate();
-            }
+        // Get current items and apply immediately
+        ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
+        ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
+
+        applyTexturesWithVariables(toggleItem, baseItem);
+        forceBlockUpdate();
+    }
+
+    /**
+     * Set inversion state with immediate apply
+     */
+    public void setInverted(boolean inverted) {
+        if (blockEntity == null || isInitializing) {
+            return;
+        }
+
+        this.inverted = inverted;
+        blockEntity.setInverted(inverted);
+        forceBlockUpdate();
+    }
+
+    /**
+     * Reset to defaults on error
+     */
+    private void resetToDefaults() {
+        if (blockEntity != null) {
+            blockEntity.resetTextures();
+            this.baseTextureVariable = "all";
+            this.toggleTextureVariable = "all";
+            this.inverted = false;
+            forceBlockUpdate();
         }
     }
 
     /**
-     * Set inversion state with atomic sync
+     * Get effective texture path for item based on variable selection
      */
-    public void setInverted(boolean inverted) {
-        if (this.inverted != inverted) {
-            this.inverted = inverted;
-
-            if (blockEntity != null && !isInitializing) {
-                ItemStack baseItem = textureContainer.getItem(BASE_TEXTURE_SLOT);
-                ItemStack toggleItem = textureContainer.getItem(TOGGLE_TEXTURE_SLOT);
-
-                applyTexturesWithVariables(toggleItem, baseItem);
-                forceBlockUpdate();
-            }
+    @Nullable
+    private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull String variable) {
+        if (item.isEmpty()) {
+            return null;
         }
+
+        // Get texture path for specific variable
+        String texturePath = FaceSelectionData.getTextureForVariable(item, variable);
+        if (texturePath != null) {
+            return texturePath;
+        }
+
+        // Fallback to default variable
+        return FaceSelectionData.getTextureForVariable(item, "all");
     }
+
+    // ========================================
+    // READ-ONLY STATE ACCESS
+    // ========================================
 
     /**
      * Get raw texture selection for base texture slot
@@ -349,37 +387,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Get current texture variables
+     * Get current texture variables (read-only)
      */
     @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
     @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
     public boolean isInverted() { return inverted; }
-
-    /**
-     * Get effective texture path for item based on variable selection
-     */
-    @Nonnull
-    private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull String variable) {
-        if (item.isEmpty()) {
-            return "minecraft:block/stone";
-        }
-
-        // Get texture path for specific variable
-        String texturePath = FaceSelectionData.getTextureForVariable(item, variable);
-
-        if (texturePath != null) {
-            return texturePath;
-        }
-
-        // Fallback to default variable
-        String fallbackPath = FaceSelectionData.getTextureForVariable(item, "all");
-        if (fallbackPath != null) {
-            return fallbackPath;
-        }
-
-        // Final fallback
-        return "minecraft:block/stone";
-    }
 
     /**
      * Force block update for visual changes
@@ -395,7 +407,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     @Override
     public void removed(@Nonnull Player player) {
         super.removed(player);
-        // All updates handled by auto-apply system
+        // Clean exit - all data already saved
     }
 
     @Override
@@ -491,25 +503,5 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     public FaceSelectionData.DropdownState getToggleDropdownState() {
         FaceSelectionData.RawTextureSelection rawSelection = getToggleTextureSelection();
         return new FaceSelectionData.DropdownState(rawSelection);
-    }
-
-    /**
-     * @deprecated Use setBaseTextureVariable() instead
-     */
-    @Deprecated
-    public void setBaseFaceSelection(@Nonnull Object faceOption) {
-        if (faceOption != null) {
-            setBaseTextureVariable(faceOption.toString());
-        }
-    }
-
-    /**
-     * @deprecated Use setToggleTextureVariable() instead
-     */
-    @Deprecated
-    public void setToggleFaceSelection(@Nonnull Object faceOption) {
-        if (faceOption != null) {
-            setToggleTextureVariable(faceOption.toString());
-        }
     }
 }
