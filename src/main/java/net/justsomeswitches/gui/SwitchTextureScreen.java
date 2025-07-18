@@ -15,8 +15,8 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Switch Texture Screen with Clean Single-Path Architecture - FIXED VERSION
- * RESTORED: Auto-default selection with proper state management
+ * Switch Texture Screen with Clean Single-Path Architecture - POSITION ADJUSTED VERSION
+ * UPDATED: Improved positioning for dropdown menus and texture previews
  *
  * ARCHITECTURE:
  * - Auto-default selection when dropdown populated
@@ -36,19 +36,19 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int PREVIEW_CENTER_X = 88;
     private static final int PREVIEW_CENTER_Y = 36;
 
-    // Face dropdown positioning
-    private static final int LEFT_FACE_X = 17;
-    private static final int LEFT_FACE_Y = 53;
-    private static final int RIGHT_FACE_X = 121;
-    private static final int RIGHT_FACE_Y = 53;
+    // Face dropdown positioning - ADJUSTED
+    private static final int LEFT_FACE_X = 12;
+    private static final int LEFT_FACE_Y = 48;
+    private static final int RIGHT_FACE_X = 116;
+    private static final int RIGHT_FACE_Y = 48;
     private static final int FACE_DROPDOWN_WIDTH = 48;
     private static final int FACE_DROPDOWN_HEIGHT = 12;
 
-    // Texture preview positioning
-    private static final int LEFT_PREVIEW_X = 17;
-    private static final int LEFT_PREVIEW_Y = 67;
-    private static final int RIGHT_PREVIEW_X = 121;
-    private static final int RIGHT_PREVIEW_Y = 67;
+    // Texture preview positioning - ADJUSTED
+    private static final int LEFT_PREVIEW_X = 27;
+    private static final int LEFT_PREVIEW_Y = 64;
+    private static final int RIGHT_PREVIEW_X = 131;
+    private static final int RIGHT_PREVIEW_Y = 64;
     private static final int PREVIEW_SIZE = 18;
 
     // Connection line positioning
