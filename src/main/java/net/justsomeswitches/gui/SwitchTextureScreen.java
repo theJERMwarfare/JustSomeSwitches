@@ -467,12 +467,16 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw dropdown popup menu
+     * Draw dropdown popup menu with elevated z-order
      */
     private void drawCleanDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
                                         @Nonnull FaceSelectionData.RawTextureSelection selection) {
         List<String> variables = selection.getAvailableVariables();
         int popupHeight = variables.size() * 12;
+
+        // Elevate z-order to render above inventory items
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 400);
 
         // Draw popup background
         graphics.fill(x, y, x + FACE_DROPDOWN_WIDTH, y + popupHeight, 0xFFC6C6C6);
@@ -500,6 +504,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             }
             graphics.drawString(this.font, displayText, x + 2, optionY + 2, 0xFF000000, false);
         }
+
+        // Restore z-order
+        graphics.pose().popPose();
     }
 
     @Override
