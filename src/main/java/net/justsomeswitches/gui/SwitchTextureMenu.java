@@ -50,7 +50,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     // Current selections (read-only from BlockEntity)
     private String baseTextureVariable = "all";
     private String toggleTextureVariable = "all";
-    private boolean inverted = false;
 
     // Flag to prevent recursion during initialization
     private boolean isInitializing = true;
@@ -202,7 +201,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // Set texture variables first
             blockEntity.setBaseTextureVariable(baseTextureVariable);
             blockEntity.setToggleTextureVariable(toggleTextureVariable);
-            blockEntity.setInverted(inverted);
 
             // Apply textures with current variables
             if (!toggleItem.isEmpty()) {
@@ -255,7 +253,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             // Synchronize texture variables from BlockEntity
             this.baseTextureVariable = blockEntity.getBaseTextureVariable();
             this.toggleTextureVariable = blockEntity.getToggleTextureVariable();
-            this.inverted = blockEntity.isInverted();
         }
     }
 
@@ -320,19 +317,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Set inversion state with immediate apply
-     */
-    public void setInverted(boolean inverted) {
-        if (blockEntity == null || isInitializing) {
-            return;
-        }
-
-        this.inverted = inverted;
-        blockEntity.setInverted(inverted);
-        forceBlockUpdate();
-    }
-
-    /**
      * Reset to defaults on error
      */
     private void resetToDefaults() {
@@ -340,7 +324,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             blockEntity.resetTextures();
             this.baseTextureVariable = "all";
             this.toggleTextureVariable = "all";
-            this.inverted = false;
             forceBlockUpdate();
         }
     }
@@ -391,7 +374,6 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      */
     @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
     @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
-    public boolean isInverted() { return inverted; }
 
     /**
      * Force block update for visual changes

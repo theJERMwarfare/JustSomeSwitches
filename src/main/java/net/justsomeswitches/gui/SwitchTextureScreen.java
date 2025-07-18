@@ -51,10 +51,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int RIGHT_PREVIEW_Y = 67;
     private static final int PREVIEW_SIZE = 18;
 
-    // Inverted checkbox positioning
-    private static final int INVERTED_X = 59;
-    private static final int INVERTED_Y = 54;
-
     // Connection line positioning
     private static final int LEFT_LINE_START = 48;
     private static final int LEFT_LINE_END = 68;
@@ -65,7 +61,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     // Current dynamic state
     private FaceSelectionData.RawTextureSelection leftTextureSelection = FaceSelectionData.createDisabledSelection();
     private FaceSelectionData.RawTextureSelection rightTextureSelection = FaceSelectionData.createDisabledSelection();
-    private boolean checkboxState = false;
 
     // Dropdown popup management
     private boolean showingLeftDropdown = false;
@@ -106,7 +101,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Get current state from menu
         FaceSelectionData.RawTextureSelection newLeftSelection = menu.getToggleTextureSelection();
         FaceSelectionData.RawTextureSelection newRightSelection = menu.getBaseTextureSelection();
-        boolean newCheckboxState = menu.isInverted();
 
         // Detect slot changes for cleanup only (auto-apply handled in menu)
         ItemStack currentLeftItem = newLeftSelection.getSourceBlock();
@@ -131,7 +125,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Update state
         leftTextureSelection = newLeftSelection;
         rightTextureSelection = newRightSelection;
-        checkboxState = newCheckboxState;
     }
 
     /**
@@ -151,7 +144,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Enhanced mouse click handling for dropdowns and checkbox
+     * Enhanced mouse click handling for dropdowns
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -173,12 +166,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 toggleRightDropdown();
                 return true;
             }
-        }
-
-        // Handle checkbox click
-        if (isWithinBounds(mouseX, mouseY, guiLeft + INVERTED_X, guiTop + INVERTED_Y, 10, 10)) {
-            toggleInversionState();
-            return true;
         }
 
         // Handle dropdown selection clicks
@@ -254,14 +241,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         return false;
     }
 
-    /**
-     * Toggle inversion checkbox state
-     */
-    private void toggleInversionState() {
-        checkboxState = !checkboxState;
-        menu.setInverted(checkboxState);
-    }
-
     @Override
     protected void renderBg(@Nonnull GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int guiLeft = (this.width - this.imageWidth) / 2;
@@ -281,9 +260,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
         // Draw texture previews
         drawTexturePreview(graphics, guiLeft, guiTop);
-
-        // Draw inversion checkbox
-        drawInversionCheckbox(graphics, guiLeft, guiTop);
     }
 
     /**
@@ -469,37 +445,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /**
-     * Draw inversion checkbox
-     */
-    private void drawInversionCheckbox(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        int checkboxX = guiLeft + INVERTED_X;
-        int checkboxY = guiTop + INVERTED_Y;
-
-        // Draw checkbox background
-        graphics.fill(checkboxX, checkboxY, checkboxX + 10, checkboxY + 10, 0xFFFFFFFF);
-
-        // Draw checkbox border
-        graphics.fill(checkboxX, checkboxY, checkboxX + 10, checkboxY + 1, 0xFF555555);
-        graphics.fill(checkboxX, checkboxY, checkboxX + 1, checkboxY + 10, 0xFF555555);
-        graphics.fill(checkboxX, checkboxY + 9, checkboxX + 10, checkboxY + 10, 0xFFDDDDDD);
-        graphics.fill(checkboxX + 9, checkboxY, checkboxX + 10, checkboxY + 10, 0xFFDDDDDD);
-
-        // Draw checkmark if checked
-        if (checkboxState) {
-            graphics.fill(checkboxX + 2, checkboxY + 5, checkboxX + 3, checkboxY + 6, 0xFF000000);
-            graphics.fill(checkboxX + 3, checkboxY + 6, checkboxX + 4, checkboxY + 7, 0xFF000000);
-            graphics.fill(checkboxX + 4, checkboxY + 4, checkboxX + 5, checkboxY + 5, 0xFF000000);
-            graphics.fill(checkboxX + 5, checkboxY + 3, checkboxX + 6, checkboxY + 4, 0xFF000000);
-            graphics.fill(checkboxX + 6, checkboxY + 2, checkboxX + 7, checkboxY + 3, 0xFF000000);
-            graphics.fill(checkboxX + 7, checkboxY + 1, checkboxX + 8, checkboxY + 2, 0xFF000000);
-        }
-
-        // Draw "Inverted" label
-        Component label = Component.literal("Inverted");
-        graphics.drawString(this.font, label, checkboxX + 15, checkboxY + 1, 0x404040, false);
     }
 
     @Override

@@ -45,9 +45,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private static final String BASE_VARIABLE_KEY = "base_texture_variable";
     private static final String TOGGLE_VARIABLE_KEY = "toggle_texture_variable";
 
-    // NBT key for inversion state
-    private static final String INVERTED_KEY = "inverted_state";
-
     // Current texture configuration
     private String baseTexturePath = DEFAULT_BASE_TEXTURE;
     private String toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
@@ -55,9 +52,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // Raw face selections (JSON variable names)
     private String baseTextureVariable = "all";
     private String toggleTextureVariable = "all";
-
-    // Inversion state
-    private boolean inverted = false;
 
     // GUI slot storage
     private ItemStack guiToggleItem = ItemStack.EMPTY;
@@ -104,23 +98,19 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         private final String toggleTexture;
         private final String baseVariable;
         private final String toggleVariable;
-        private final boolean inverted;
 
         public SwitchTextureData(String baseTexture, String toggleTexture,
-                                 String baseVariable, String toggleVariable,
-                                 boolean inverted) {
+                                 String baseVariable, String toggleVariable) {
             this.baseTexture = baseTexture;
             this.toggleTexture = toggleTexture;
             this.baseVariable = baseVariable;
             this.toggleVariable = toggleVariable;
-            this.inverted = inverted;
         }
 
         public String getBaseTexture() { return baseTexture; }
         public String getToggleTexture() { return toggleTexture; }
         public String getBaseVariable() { return baseVariable; }
         public String getToggleVariable() { return toggleVariable; }
-        public boolean isInverted() { return inverted; }
 
         /**
          * Check if using custom textures (different from defaults)
@@ -129,8 +119,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             return !baseTexture.equals(DEFAULT_BASE_TEXTURE) ||
                     !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE) ||
                     !baseVariable.equals("all") ||
-                    !toggleVariable.equals("all") ||
-                    inverted;
+                    !toggleVariable.equals("all");
         }
     }
 
@@ -143,7 +132,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return ModelData.builder()
                 .with(TEXTURE_PROPERTY, new SwitchTextureData(
                         baseTexturePath, toggleTexturePath,
-                        baseTextureVariable, toggleTextureVariable, inverted))
+                        baseTextureVariable, toggleTextureVariable))
                 .build();
     }
 
@@ -317,18 +306,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return false;
     }
 
-    /**
-     * Set inversion state
-     */
-    public boolean setInverted(boolean inverted) {
-        if (this.inverted != inverted) {
-            this.inverted = inverted;
-            markDirtyAndSync();
-            return true;
-        }
-        return false;
-    }
-
     // ========================================
     // RAW TEXTURE SELECTION INTEGRATION
     // ========================================
@@ -357,7 +334,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     @Nonnull public String getToggleTexture() { return toggleTexturePath; }
     @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
     @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
-    public boolean isInverted() { return inverted; }
 
     /**
      * Reset all textures and settings to defaults
@@ -382,11 +358,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         if (!toggleTextureVariable.equals("all")) {
             this.toggleTextureVariable = "all";
-            changed = true;
-        }
-
-        if (inverted) {
-            this.inverted = false;
             changed = true;
         }
 
@@ -418,8 +389,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return !baseTexturePath.equals(DEFAULT_BASE_TEXTURE) ||
                 !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE) ||
                 !baseTextureVariable.equals("all") ||
-                !toggleTextureVariable.equals("all") ||
-                inverted;
+                !toggleTextureVariable.equals("all");
     }
 
     // ========================================
@@ -466,9 +436,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
         nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
 
-        // Save inversion state
-        nbt.putBoolean(INVERTED_KEY, inverted);
-
         // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
             nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
@@ -503,7 +470,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         // Load raw texture variables
         this.baseTextureVariable = nbt.getString(BASE_VARIABLE_KEY);
         this.toggleTextureVariable = nbt.getString(TOGGLE_VARIABLE_KEY);
-        this.inverted = nbt.getBoolean(INVERTED_KEY);
 
         // Validate loaded variables
         if (this.baseTextureVariable.isEmpty()) {
@@ -547,7 +513,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
         nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
         nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
-        nbt.putBoolean(INVERTED_KEY, inverted);
 
         // Sync GUI slot items
         if (!guiToggleItem.isEmpty()) {

@@ -240,7 +240,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                     ", Toggle: " + blockEntity.getToggleTexture() +
                     ", BaseVariable: " + blockEntity.getBaseTextureVariable() +
                     ", ToggleVariable: " + blockEntity.getToggleTextureVariable() +
-                    ", Inverted: " + blockEntity.isInverted() +
                     ", HasCustom: " + blockEntity.hasCustomTextures());
         }
     }
