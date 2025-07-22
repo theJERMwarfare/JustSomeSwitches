@@ -15,14 +15,8 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Switch Texture Screen with Clean Single-Path Architecture - POSITION ADJUSTED VERSION
- * UPDATED: Improved positioning for dropdown menus and texture previews
- *
- * ARCHITECTURE:
- * - Auto-default selection when dropdown populated
- * - All save operations in dropdown handlers
- * - Complete cleanup on block removal
- * - Minimal debugging output for critical operations only
+ * Switch Texture Screen with Clean Single-Path Architecture - CORRECTED POSITIONING VERSION
+ * FIXED: Restored 3D preview, corrected texture preview positions, adjusted dropdown positioning
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
@@ -32,31 +26,25 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     // GUI background texture
     private static final ResourceLocation GUI_BACKGROUND = new ResourceLocation("justsomeswitches", "textures/gui/switch_texture_gui.png");
 
-    // Central preview positioning
+    // Central 3D preview positioning - CORRECTED
     private static final int PREVIEW_CENTER_X = 88;
-    private static final int PREVIEW_CENTER_Y = 36;
+    private static final int PREVIEW_CENTER_Y = 35; // Moved up 1 pixel from 36
+    private static final int PREVIEW_SCALE = 2; // 2x scale for visibility
 
-    // Face dropdown positioning - ADJUSTED
-    private static final int LEFT_FACE_X = 12;
-    private static final int LEFT_FACE_Y = 48;
-    private static final int RIGHT_FACE_X = 116;
-    private static final int RIGHT_FACE_Y = 48;
-    private static final int FACE_DROPDOWN_WIDTH = 48;
+    // Face dropdown positioning - CORRECTED
+    private static final int LEFT_FACE_X = 14; // Moved 2 pixels right for centering with new width
+    private static final int LEFT_FACE_Y = 47; // Moved up 1 pixel from 48
+    private static final int RIGHT_FACE_X = 118; // Moved further right by 4 pixels (was 114)
+    private static final int RIGHT_FACE_Y = 47; // Moved up 1 pixel from 48
+    private static final int FACE_DROPDOWN_WIDTH = 44; // Reduced by 4 pixels from 48
     private static final int FACE_DROPDOWN_HEIGHT = 12;
 
-    // Texture preview positioning - ADJUSTED
-    private static final int LEFT_PREVIEW_X = 27;
-    private static final int LEFT_PREVIEW_Y = 64;
-    private static final int RIGHT_PREVIEW_X = 131;
-    private static final int RIGHT_PREVIEW_Y = 64;
+    // 2D texture preview positioning - RESTORED TO ORIGINAL
+    private static final int LEFT_PREVIEW_X = 27; // Restored original position
+    private static final int LEFT_PREVIEW_Y = 64; // Restored original position
+    private static final int RIGHT_PREVIEW_X = 131; // Restored original position
+    private static final int RIGHT_PREVIEW_Y = 64; // Restored original position
     private static final int PREVIEW_SIZE = 18;
-
-    // Connection line positioning
-    private static final int LEFT_LINE_START = 48;
-    private static final int LEFT_LINE_END = 68;
-    private static final int RIGHT_LINE_START = 108;
-    private static final int RIGHT_LINE_END = 128;
-    private static final int LINE_Y = 35;
 
     // Current dynamic state
     private FaceSelectionData.RawTextureSelection leftTextureSelection = FaceSelectionData.createDisabledSelection();
@@ -249,44 +237,62 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Draw GUI background
         graphics.blit(GUI_BACKGROUND, guiLeft, guiTop + 4, 0, 0, this.imageWidth, this.imageHeight, 256, 256);
 
-        // Draw central preview area
-        drawPreviewPlaceholder(graphics, guiLeft, guiTop);
+        // CORRECTED: Draw 3D switch preview (restored functionality)
+        drawBasic3DPreview(graphics, guiLeft, guiTop);
 
-        // Draw connection lines
-        drawConnectionLines(graphics, guiLeft, guiTop);
+        // REMOVED: Connection lines (now on background image)
 
         // Draw face selection dropdowns
         drawCleanArchitectureDropdowns(graphics, guiLeft, guiTop);
 
-        // Draw texture previews
+        // Draw working 2D texture previews
         drawTexturePreview(graphics, guiLeft, guiTop);
     }
 
     /**
-     * Draw preview placeholder text
+     * CORRECTED: Basic 3D switch preview without custom texture application
+     * Shows default switch ItemStack at 2x scale in center of GUI
      */
-    private void drawPreviewPlaceholder(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+    private void drawBasic3DPreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+        try {
+            // Create basic switch ItemStack (no custom textures, no NBT)
+            ItemStack switchStack = new ItemStack(
+                    net.justsomeswitches.init.JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get()
+            );
+
+            // Calculate center position for 2x scaled item
+            int centerX = guiLeft + PREVIEW_CENTER_X;
+            int centerY = guiTop + PREVIEW_CENTER_Y;
+
+            // Render 3D switch preview at 2x scale
+            graphics.pose().pushPose();
+            graphics.pose().translate(centerX, centerY, 100);
+            graphics.pose().scale(PREVIEW_SCALE, PREVIEW_SCALE, 1.0f);
+            graphics.pose().translate(-8, -8, 0); // Center the 16x16 item
+
+            // Render the basic switch ItemStack (default textures)
+            graphics.renderItem(switchStack, 0, 0);
+
+            graphics.pose().popPose();
+
+        } catch (Exception e) {
+            // Fallback to text if 3D rendering fails
+            drawFallbackText(graphics, guiLeft, guiTop);
+        }
+    }
+
+    /**
+     * Fallback text if 3D rendering fails
+     */
+    private void drawFallbackText(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         int centerX = guiLeft + PREVIEW_CENTER_X;
         int centerY = guiTop + PREVIEW_CENTER_Y;
 
-        Component previewText = Component.literal("Auto-Apply");
+        Component previewText = Component.literal("Switch");
         int textWidth = this.font.width(previewText);
         int textX = centerX - textWidth / 2;
         int textY = centerY - 4;
         graphics.drawString(this.font, previewText, textX, textY, 0x404040, false);
-    }
-
-    /**
-     * Draw connection lines between slots and preview
-     */
-    private void drawConnectionLines(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        int lineY = guiTop + LINE_Y;
-
-        // Left connection line
-        graphics.fill(guiLeft + LEFT_LINE_START, lineY, guiLeft + LEFT_LINE_END, lineY + 1, 0xFF999999);
-
-        // Right connection line
-        graphics.fill(guiLeft + RIGHT_LINE_START, lineY, guiLeft + RIGHT_LINE_END, lineY + 1, 0xFF999999);
     }
 
     /**
@@ -359,9 +365,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             // Show current selection (raw JSON variable name)
             displayText = selection.getSelectedVariable();
 
-            // Truncate text if too long
-            if (displayText.length() > 6) {
-                displayText = displayText.substring(0, 6);
+            // Truncate text if too long for new width
+            if (displayText.length() > 5) { // Reduced from 6 due to narrower dropdown
+                displayText = displayText.substring(0, 5);
             }
         }
 
@@ -372,7 +378,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw texture previews under dropdowns
+     * Draw working 2D texture previews under dropdowns
      */
     private void drawTexturePreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         // Draw left (toggle) texture preview
@@ -389,7 +395,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draw individual texture preview box
+     * Draw individual 2D texture preview box
      */
     private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String texturePath) {
         try {
@@ -414,7 +420,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Get texture sprite for preview rendering
+     * Get texture sprite for 2D preview rendering
      */
     @Nullable
     private TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
@@ -499,8 +505,8 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
             // Draw variable name (raw JSON variable, no modification)
             String displayText = variable;
-            if (displayText.length() > 6) {
-                displayText = displayText.substring(0, 6);
+            if (displayText.length() > 5) { // Reduced from 6 due to narrower dropdown
+                displayText = displayText.substring(0, 5);
             }
             graphics.drawString(this.font, displayText, x + 2, optionY + 2, 0xFF000000, false);
         }

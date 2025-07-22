@@ -1,6 +1,7 @@
 package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
@@ -15,14 +16,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Switch Texture Menu with Clean Single-Path Architecture - PERSISTENCE FIXED
- * FIXED: Face selection persistence between GUI sessions
- *
- * ARCHITECTURE:
- * - Texture slots: Block analysis and auto-apply on placement ONLY when needed
- * - Dropdown selections: All save operations and texture applications
- * - Single source of truth: Dropdown state controls everything
- * - Smart auto-defaults: Only apply when current variable is invalid
+ * Switch Texture Menu with Clean Single-Path Architecture - GUI REFINED
+ * UPDATED: Adjusted slot positions for GUI background refinement
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -31,11 +26,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private static final int TOGGLE_TEXTURE_SLOT = 0;
     private static final int BASE_TEXTURE_SLOT = 1;
 
-    // Positioning constants
+    // Positioning constants - UPDATED for GUI refinement
     private static final int TOGGLE_SLOT_X = 28;
-    private static final int TOGGLE_SLOT_Y = 28;
+    private static final int TOGGLE_SLOT_Y = 27; // Moved up 1 pixel
     private static final int BASE_SLOT_X = 132;
-    private static final int BASE_SLOT_Y = 28;
+    private static final int BASE_SLOT_Y = 27; // Moved up 1 pixel
 
     // Player inventory positioning
     private static final int PLAYER_INV_Y = 98;
@@ -78,7 +73,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // Load GUI slot items
         loadGuiSlotItems();
 
-        // Add texture slots
+        // Add texture slots with updated positions
         addSlot(new EnhancedTextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
         addSlot(new EnhancedTextureSlot(textureContainer, BASE_TEXTURE_SLOT, BASE_SLOT_X, BASE_SLOT_Y));
 
@@ -115,7 +110,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * FIXED: Slot changes trigger auto-apply with smart default selection
+     * Slot changes trigger auto-apply with smart default selection
      */
     private void onSlotChangedWithAutoApply() {
         if (isInitializing || blockEntity == null) {
@@ -140,8 +135,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * FIXED: Apply auto-defaults ONLY when current variable is invalid
-     * SOLVES: Face selection persistence between GUI sessions
+     * Apply auto-defaults ONLY when current variable is invalid
      */
     private void applySmartDefaults(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         boolean needsUpdate = false;
@@ -152,16 +146,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                     FaceSelectionData.createRawTextureSelection(toggleItem, toggleTextureVariable);
 
             if (toggleSelection.isEnabled() && !toggleSelection.getAvailableVariables().isEmpty()) {
-                // FIXED: Only apply default if current variable is invalid
                 if (toggleTextureVariable.equals("all") ||
                         !toggleSelection.getAvailableVariables().contains(toggleTextureVariable)) {
 
                     String defaultVariable = FaceSelectionData.getDefaultVariable(toggleSelection.getAvailableVariables());
                     this.toggleTextureVariable = defaultVariable;
                     needsUpdate = true;
-                    System.out.println("AUTO-DEFAULT: Toggle slot set to " + defaultVariable + " (was invalid: " + (toggleTextureVariable.equals("all") ? "all" : "not in variables") + ")");
+                    System.out.println("AUTO-DEFAULT: Toggle slot set to " + defaultVariable);
                 }
-                // If current variable is valid, keep it (persistence working)
             }
         }
 
@@ -171,16 +163,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                     FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
 
             if (baseSelection.isEnabled() && !baseSelection.getAvailableVariables().isEmpty()) {
-                // FIXED: Only apply default if current variable is invalid
                 if (baseTextureVariable.equals("all") ||
                         !baseSelection.getAvailableVariables().contains(baseTextureVariable)) {
 
                     String defaultVariable = FaceSelectionData.getDefaultVariable(baseSelection.getAvailableVariables());
                     this.baseTextureVariable = defaultVariable;
                     needsUpdate = true;
-                    System.out.println("AUTO-DEFAULT: Base slot set to " + defaultVariable + " (was invalid: " + (baseTextureVariable.equals("all") ? "all" : "not in variables") + ")");
+                    System.out.println("AUTO-DEFAULT: Base slot set to " + defaultVariable);
                 }
-                // If current variable is valid, keep it (persistence working)
             }
         }
 
