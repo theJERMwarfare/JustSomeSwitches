@@ -35,6 +35,8 @@ public class DynamicBlockModelAnalyzer {
             "layer3", "layer4", "inside", "cross", "crop", "stem", "upper_stem"
     );
 
+
+
     /**
      * Result of dynamic block model analysis
      */
@@ -62,13 +64,7 @@ public class DynamicBlockModelAnalyzer {
             }
         }
 
-        public boolean hasMultipleTextures() { return hasMultipleTextures; }
-        public Map<String, String> getTextureVariables() { return new LinkedHashMap<>(textureVariables); }
         public List<String> getAvailableVariables() { return new ArrayList<>(availableVariables); }
-        public boolean shouldEnableDropdown() { return hasMultipleTextures && availableVariables.size() > 1; }
-
-        @Nullable
-        public String getPrimaryTexture() { return primaryTexture; }
 
         @Nullable
         public String getTextureForVariable(String variable) {
@@ -97,20 +93,19 @@ public class DynamicBlockModelAnalyzer {
     @Nonnull
     private static DynamicBlockInfo analyzeBlockModel(@Nonnull String blockId) {
         try {
-            // Extract namespace and block name from blockId
             String[] parts = blockId.split(":");
             if (parts.length != 2) {
                 return createFallbackInfo(blockId);
             }
 
             String namespace = parts[0];
-            String fullPath = parts[1]; // "block/blockname"
+            String fullPath = parts[1];
 
             if (!fullPath.startsWith("block/")) {
                 return createFallbackInfo(blockId);
             }
 
-            String blockName = fullPath.substring(6); // Remove "block/" prefix
+            String blockName = fullPath.substring(6);
 
             // Load ONLY the block's own model JSON file - NO parent resolution
             JsonObject modelJson = loadBlockModelDirect(namespace, blockName);
@@ -132,11 +127,9 @@ public class DynamicBlockModelAnalyzer {
                 }
             }
 
-            // Determine if block has multiple textures
+            // Determine characteristics
             Set<String> uniqueTextures = new HashSet<>(filteredVariables.values());
             boolean hasMultipleTextures = uniqueTextures.size() > 1;
-
-            // Determine primary texture
             String primaryTexture = getPrimaryTexture(filteredVariables);
 
             return new DynamicBlockInfo(hasMultipleTextures, filteredVariables, primaryTexture);
@@ -153,8 +146,6 @@ public class DynamicBlockModelAnalyzer {
     private static JsonObject loadBlockModelDirect(@Nonnull String namespace, @Nonnull String blockName) {
         try {
             ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
-
-            // Load only the block model JSON file - no parent resolution
             ResourceLocation modelLocation = new ResourceLocation(namespace, "models/block/" + blockName + ".json");
 
             Optional<Resource> resourceOpt = resourceManager.getResource(modelLocation);
@@ -289,5 +280,6 @@ public class DynamicBlockModelAnalyzer {
 
         return "minecraft:block/stone";
     }
+
 
 }

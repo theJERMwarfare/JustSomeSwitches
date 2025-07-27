@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    " L ",
+    "   "
+  ],
+  "key": {
+    "S": {
+      "tag": "forge:rods/wooden"
+    },
+    "L": {
+      "item": "minecraft:lever"
+    }
+  },
+  "result": {
+    "item": "justsomeswitches:basic_lever",
+    "count": 1
+  }
+}

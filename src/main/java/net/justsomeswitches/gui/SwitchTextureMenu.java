@@ -1,7 +1,6 @@
 package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
-import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.SimpleContainer;
@@ -16,8 +15,14 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Switch Texture Menu with Clean Single-Path Architecture - GUI REFINED
- * UPDATED: Adjusted slot positions for GUI background refinement
+ * Manages texture customization for switch blocks through a GUI interface.
+ * <p>
+ * This menu provides a clean architecture for selecting and applying custom textures
+ * to switch blocks via dynamic block model analysis and NBT persistence. Features
+ * include auto-apply texture changes, smart default selection, and universal 
+ * compatibility with any Minecraft block.
+ * 
+ * @since 1.0.0
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
@@ -26,11 +31,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private static final int TOGGLE_TEXTURE_SLOT = 0;
     private static final int BASE_TEXTURE_SLOT = 1;
 
-    // Positioning constants - UPDATED for GUI refinement
+    // Positioning constants
     private static final int TOGGLE_SLOT_X = 28;
-    private static final int TOGGLE_SLOT_Y = 27; // Moved up 1 pixel
+    private static final int TOGGLE_SLOT_Y = 27;
     private static final int BASE_SLOT_X = 132;
-    private static final int BASE_SLOT_Y = 27; // Moved up 1 pixel
+    private static final int BASE_SLOT_Y = 27;
 
     // Player inventory positioning
     private static final int PLAYER_INV_Y = 98;
@@ -50,7 +55,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private boolean isInitializing = true;
 
     /**
-     * Constructor for the Switch Texture Menu
+     * Creates a new Switch Texture Menu for texture customization.
+     * 
+     * @param containerId the unique container ID for this menu instance
+     * @param playerInventory the player's inventory for slot management
+     * @param blockPos the position of the switch block being customized
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
@@ -73,7 +82,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // Load GUI slot items
         loadGuiSlotItems();
 
-        // Add texture slots with updated positions
+        // Add texture slots
         addSlot(new EnhancedTextureSlot(textureContainer, TOGGLE_TEXTURE_SLOT, TOGGLE_SLOT_X, TOGGLE_SLOT_Y));
         addSlot(new EnhancedTextureSlot(textureContainer, BASE_TEXTURE_SLOT, BASE_SLOT_X, BASE_SLOT_Y));
 
@@ -94,23 +103,44 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Enhanced texture slot for analysis-only functionality
+     * Enhanced texture slot with validation for texture blocks.
+     * <p>
+     * Static inner class for optimal memory usage and proper encapsulation.
+     * Only accepts solid, full-cube blocks suitable for texture extraction.
      */
-    private class EnhancedTextureSlot extends TextureSlot {
+    private static class EnhancedTextureSlot extends TextureSlot {
+        /**
+         * Creates a new enhanced texture slot.
+         * 
+         * @param container the container holding the slot items
+         * @param slot the slot index within the container
+         * @param x the x position of the slot in the GUI
+         * @param y the y position of the slot in the GUI
+         */
         public EnhancedTextureSlot(@Nonnull net.minecraft.world.Container container, int slot, int x, int y) {
             super(container, slot, x, y);
         }
     }
 
     /**
-     * Network constructor for client-side menu creation
+     * Network constructor for client-side menu creation.
+     * <p>
+     * Required by NeoForge's MenuType system for proper client-server synchronization.
+     * 
+     * @param containerId the unique container ID
+     * @param playerInventory the player's inventory
+     * @param extraData network buffer containing block position data
      */
     public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull FriendlyByteBuf extraData) {
         this(containerId, playerInventory, extraData.readBlockPos());
     }
 
     /**
-     * Slot changes trigger auto-apply with smart default selection
+     * Handles slot changes with automatic texture application.
+     * <p>
+     * Implements smart default selection and immediate texture updates to provide
+     * responsive user experience. Preserves valid selections while providing
+     * intelligent defaults for new blocks.
      */
     private void onSlotChangedWithAutoApply() {
         if (isInitializing || blockEntity == null) {
@@ -135,7 +165,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Apply auto-defaults ONLY when current variable is invalid
+     * Applies intelligent defaults when current texture variable is invalid.
+     * <p>
+     * Uses priority order (side, top, front, etc.) to select the most appropriate
+     * texture variable for new blocks while preserving valid existing selections.
+     * 
+     * @param toggleItem the current toggle texture item
+     * @param baseItem the current base texture item
      */
     private void applySmartDefaults(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         boolean needsUpdate = false;
@@ -145,14 +181,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             FaceSelectionData.RawTextureSelection toggleSelection =
                     FaceSelectionData.createRawTextureSelection(toggleItem, toggleTextureVariable);
 
-            if (toggleSelection.isEnabled() && !toggleSelection.getAvailableVariables().isEmpty()) {
+            if (toggleSelection.enabled() && !toggleSelection.availableVariables().isEmpty()) {
                 if (toggleTextureVariable.equals("all") ||
-                        !toggleSelection.getAvailableVariables().contains(toggleTextureVariable)) {
+                        !toggleSelection.availableVariables().contains(toggleTextureVariable)) {
 
-                    String defaultVariable = FaceSelectionData.getDefaultVariable(toggleSelection.getAvailableVariables());
+                    String defaultVariable = FaceSelectionData.getDefaultVariable(toggleSelection.availableVariables());
                     this.toggleTextureVariable = defaultVariable;
                     needsUpdate = true;
-                    System.out.println("AUTO-DEFAULT: Toggle slot set to " + defaultVariable);
                 }
             }
         }
@@ -162,14 +197,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             FaceSelectionData.RawTextureSelection baseSelection =
                     FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
 
-            if (baseSelection.isEnabled() && !baseSelection.getAvailableVariables().isEmpty()) {
+            if (baseSelection.enabled() && !baseSelection.availableVariables().isEmpty()) {
                 if (baseTextureVariable.equals("all") ||
-                        !baseSelection.getAvailableVariables().contains(baseTextureVariable)) {
+                        !baseSelection.availableVariables().contains(baseTextureVariable)) {
 
-                    String defaultVariable = FaceSelectionData.getDefaultVariable(baseSelection.getAvailableVariables());
+                    String defaultVariable = FaceSelectionData.getDefaultVariable(baseSelection.availableVariables());
                     this.baseTextureVariable = defaultVariable;
                     needsUpdate = true;
-                    System.out.println("AUTO-DEFAULT: Base slot set to " + defaultVariable);
                 }
             }
         }
@@ -182,7 +216,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Apply textures and variables atomically
+     * Applies texture changes atomically to prevent inconsistent state.
+     * <p>
+     * Updates both texture variables and texture paths in a single operation
+     * with proper error recovery to defaults on failure.
+     * 
+     * @param toggleItem the toggle texture item
+     * @param baseItem the base texture item
      */
     private void applyTexturesWithVariables(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
         if (blockEntity == null) return;
@@ -215,13 +255,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             blockEntity.setChanged();
 
         } catch (Exception e) {
-            System.out.println("ERROR: Failed to apply textures - " + e.getMessage());
             resetToDefaults();
         }
     }
 
     /**
-     * Get BlockEntity for this menu's position
+     * Retrieves the BlockEntity associated with this menu's block position.
+     * 
+     * @return the SwitchesLeverBlockEntity if valid, null otherwise
      */
     @Nullable
     private SwitchesLeverBlockEntity getBlockEntity() {
@@ -235,7 +276,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Load BlockEntity data and synchronize texture variables
+     * Loads BlockEntity data and synchronizes texture variables.
+     * <p>
+     * Ensures the menu state matches the current BlockEntity configuration
+     * for consistent user experience across GUI sessions.
      */
     private void loadBlockEntityData() {
         this.blockEntity = getBlockEntity();
@@ -247,7 +291,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Load GUI slot items from BlockEntity
+     * Loads GUI slot items from the BlockEntity's stored state.
+     * <p>
+     * Restores the previous session's texture block selections for
+     * seamless continuation of customization work.
      */
     private void loadGuiSlotItems() {
         if (blockEntity != null) {
@@ -259,19 +306,18 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Check if there's a valid BlockEntity
-     */
-    public boolean hasValidBlockEntity() {
-        return blockEntity != null;
-    }
-
     // ========================================
     // DROPDOWN-DRIVEN SAVE OPERATIONS
     // ========================================
 
     /**
-     * Set base texture variable with immediate apply
+     * Sets the base texture variable with immediate application.
+     * <p>
+     * Called by the GUI dropdown selection to update the base texture
+     * variable and trigger immediate texture application.
+     * 
+     * @param variable the texture variable name from block model JSON
+     * @throws IllegalArgumentException if variable is null or empty
      */
     public void setBaseTextureVariable(@Nonnull String variable) {
         if (blockEntity == null || isInitializing) {
@@ -289,7 +335,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Set toggle texture variable with immediate apply
+     * Sets the toggle texture variable with immediate application.
+     * <p>
+     * Called by the GUI dropdown selection to update the toggle texture
+     * variable and trigger immediate texture application.
+     * 
+     * @param variable the texture variable name from block model JSON
+     * @throws IllegalArgumentException if variable is null or empty
      */
     public void setToggleTextureVariable(@Nonnull String variable) {
         if (blockEntity == null || isInitializing) {
@@ -307,7 +359,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Reset to defaults on error
+     * Resets all textures to defaults on error conditions.
+     * <p>
+     * Provides safe fallback when texture application fails to prevent
+     * corrupted or inconsistent texture state.
      */
     private void resetToDefaults() {
         if (blockEntity != null) {
@@ -319,7 +374,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Get effective texture path for item based on variable selection
+     * Gets the effective texture path for an item based on variable selection.
+     * <p>
+     * Resolves the specific texture path from the item's block model JSON
+     * using the selected texture variable, with fallback to default variable.
+     * 
+     * @param item the texture source item
+     * @param variable the selected texture variable name
+     * @return the resolved texture path, or null if unavailable
      */
     @Nullable
     private String getEffectiveTexturePathForItem(@Nonnull ItemStack item, @Nonnull String variable) {
@@ -342,7 +404,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     // ========================================
 
     /**
-     * Get raw texture selection for base texture slot
+     * Gets the raw texture selection state for the base texture slot.
+     * <p>
+     * Provides current selection state for GUI rendering and dropdown management.
+     * 
+     * @return the current base texture selection state
      */
     @Nonnull
     public FaceSelectionData.RawTextureSelection getBaseTextureSelection() {
@@ -351,7 +417,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Get raw texture selection for toggle texture slot
+     * Gets the raw texture selection state for the toggle texture slot.
+     * <p>
+     * Provides current selection state for GUI rendering and dropdown management.
+     * 
+     * @return the current toggle texture selection state
      */
     @Nonnull
     public FaceSelectionData.RawTextureSelection getToggleTextureSelection() {
@@ -360,13 +430,10 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Get current texture variables (read-only)
-     */
-    @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
-    @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
-
-    /**
-     * Force block update for visual changes
+     * Forces a block update to synchronize visual changes.
+     * <p>
+     * Triggers client-server synchronization and block entity model data
+     * updates to ensure immediate visual feedback for texture changes.
      */
     private void forceBlockUpdate() {
         if (blockEntity != null && level != null && blockPos != null) {

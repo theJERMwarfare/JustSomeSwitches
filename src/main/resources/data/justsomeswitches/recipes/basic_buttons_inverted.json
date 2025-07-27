@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "   ",
+    " L ",
+    " B "
+  ],
+  "key": {
+    "B": {
+      "tag": "minecraft:buttons"
+    },
+    "L": {
+      "item": "minecraft:lever"
+    }
+  },
+  "result": {
+    "item": "justsomeswitches:basic_buttons_inverted",
+    "count": 1
+  }
+}

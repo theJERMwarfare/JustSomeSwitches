@@ -47,7 +47,17 @@ public class JustSomeSwitchesModTabs {
                         // Add Switches Texture Wrench
                         output.accept(JustSomeSwitchesModBlocks.SWITCHES_TEXTURE_WRENCH.get());
 
-                        // TODO: Add future switch variants here:
+                        // Add Basic Block Variants (8 blocks)
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_LEVER_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_LEVER_INVERTED_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_ROCKER_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_ROCKER_INVERTED_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_BUTTONS_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_BUTTONS_INVERTED_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_SLIDE_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_SLIDE_INVERTED_ITEM.get());
+
+                        // TODO: Add future advanced switch variants here:
                         // output.accept(JustSomeSwitchesModBlocks.SWITCHES_ROCKER_ITEM.get());
                         // output.accept(JustSomeSwitchesModBlocks.SWITCHES_BUTTON_ITEM.get());
                         // output.accept(JustSomeSwitchesModBlocks.SWITCHES_SLIDE_ITEM.get());

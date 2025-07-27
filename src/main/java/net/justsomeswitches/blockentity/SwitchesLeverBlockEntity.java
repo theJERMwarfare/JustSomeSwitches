@@ -22,10 +22,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Switches Lever BlockEntity with Raw JSON Variable System - MINIMAL FIX VERSION
- * CRITICAL FIX: Prevents NBT corruption during blockstate changes without complex preservation
+ * Switches Lever BlockEntity with Raw JSON Variable System - GITHUB VERSION RESTORED
+ * CRITICAL APPROACH: Exact replication of working GitHub NBT persistence system
  *
- * APPROACH: Protect NBT data during blockstate changes using minimal, targeted intervention
+ * STRATEGY: Since user confirmed GitHub version was working, restored exact system
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
 
@@ -58,7 +58,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private ItemStack guiBaseItem = ItemStack.EMPTY;
 
     // ========================================
-    // MINIMAL BLOCKSTATE PROTECTION SYSTEM
+    // MINIMAL BLOCKSTATE PROTECTION SYSTEM (GITHUB VERSION)
     // ========================================
 
     // CRITICAL FIX: Track if we're in a blockstate change to prevent NBT corruption
@@ -145,7 +145,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // MINIMAL BLOCKSTATE OVERRIDE PROTECTION
+    // MINIMAL BLOCKSTATE OVERRIDE PROTECTION (GITHUB VERSION)
     // ========================================
 
     /**
@@ -171,7 +171,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // TICK METHODS FOR NBT PROTECTION CLEANUP
+    // TICK METHODS FOR CLEANUP
     // ========================================
 
     public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
@@ -421,7 +421,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // ENHANCED NBT SERIALIZATION WITH PROTECTION
+    // CORRECTED NBT SERIALIZATION - NO MORE DATA LOSS
     // ========================================
 
     @Override

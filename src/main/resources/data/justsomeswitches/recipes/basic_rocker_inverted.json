@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "   ",
+    " L ",
+    " P "
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "L": {
+      "item": "minecraft:lever"
+    }
+  },
+  "result": {
+    "item": "justsomeswitches:basic_rocker_inverted",
+    "count": 1
+  }
+}

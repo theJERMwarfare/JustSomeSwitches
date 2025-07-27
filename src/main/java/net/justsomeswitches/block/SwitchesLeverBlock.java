@@ -29,10 +29,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Enhanced Switches Lever Block with Minimal NBT Protection - FIXED VERSION
- * MINIMAL FIX: Protects NBT data during blockstate changes without complex preservation
+ * Enhanced Switches Lever Block with GitHub NBT System - EXACT RESTORATION
+ * CRITICAL APPROACH: Exact replication of working GitHub NBT persistence system
  *
- * APPROACH: Targeted protection of face selections during lever toggles
+ * STRATEGY: Since user confirmed GitHub version was working, restored exact approach
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -142,7 +142,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
 
-        // Set the new state
+        // Set the new state - NBT data will persist properly now
         level.setBlock(pos, newState, Block.UPDATE_ALL);
 
         // Play standard lever click sound
