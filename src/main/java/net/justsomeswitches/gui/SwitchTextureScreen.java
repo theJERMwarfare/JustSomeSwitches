@@ -1,5 +1,6 @@
 package net.justsomeswitches.gui;
 
+import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -52,6 +53,25 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final int RIGHT_PREVIEW_Y = 64;
     private static final int PREVIEW_SIZE = 18;
 
+    // Power category positioning
+    private static final int POWER_DROPDOWN_X = 64;
+    private static final int POWER_DROPDOWN_Y = 49;
+    private static final int POWER_DROPDOWN_WIDTH = 48;
+    private static final int POWER_DROPDOWN_HEIGHT = 12;
+    
+    // Power texture preview positioning (6x6 previews)
+    private static final int UNPOWERED_PREVIEW_X = 57;
+    private static final int UNPOWERED_PREVIEW_Y = 65;
+    private static final int POWERED_PREVIEW_X = 63;
+    private static final int POWERED_PREVIEW_Y = 76;
+    private static final int POWER_PREVIEW_SIZE = 6;
+    
+    // Power label positioning
+    private static final int UNPOWERED_LABEL_X = 68;
+    private static final int UNPOWERED_LABEL_Y = 64;
+    private static final int POWERED_LABEL_X = 74;
+    private static final int POWERED_LABEL_Y = 75;
+
     // Current dynamic state
     private FaceSelectionData.RawTextureSelection leftTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
     private FaceSelectionData.RawTextureSelection rightTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
@@ -59,6 +79,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     // Dropdown popup management
     private boolean showingLeftDropdown = false;
     private boolean showingRightDropdown = false;
+    private boolean showingPowerDropdown = false;
 
     // Previous selections for change detection
     private ItemStack previousLeftItem = ItemStack.EMPTY;
@@ -86,6 +107,12 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     @Override
     protected void init() {
         super.init();
+        
+        // Complete menu initialization now that GUI is fully rendered
+        // This enables slot analysis for user interactions while preventing
+        // premature analysis during GUI setup that would overwrite persisted values
+        menu.completeInitialization();
+        
         updateUIState();
     }
 
@@ -175,6 +202,12 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             }
         }
 
+        // Handle power dropdown click
+        if (isWithinPowerDropdownBounds(mouseX, mouseY, guiLeft + POWER_DROPDOWN_X, guiTop + POWER_DROPDOWN_Y)) {
+            togglePowerDropdown();
+            return true;
+        }
+
         // Handle dropdown selection clicks
         if (showingLeftDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, true)) {
             return true;
@@ -184,10 +217,16 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             return true;
         }
 
+        // Handle power dropdown selection clicks
+        if (showingPowerDropdown && handlePowerDropdownSelection(mouseX, mouseY, guiLeft, guiTop)) {
+            return true;
+        }
+
         // Close dropdowns if clicking elsewhere
-        if (showingLeftDropdown || showingRightDropdown) {
+        if (showingLeftDropdown || showingRightDropdown || showingPowerDropdown) {
             showingLeftDropdown = false;
             showingRightDropdown = false;
+            showingPowerDropdown = false;
             return true;
         }
 
@@ -210,11 +249,19 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
+     * Optimized bounds checking for power dropdown area.
+     */
+    private boolean isWithinPowerDropdownBounds(double mouseX, double mouseY, int x, int y) {
+        return mouseX >= x && mouseX < x + POWER_DROPDOWN_WIDTH && mouseY >= y && mouseY < y + POWER_DROPDOWN_HEIGHT;
+    }
+
+    /**
      * Toggles the left (toggle) dropdown state.
      */
     private void toggleLeftDropdown() {
         showingLeftDropdown = !showingLeftDropdown;
         showingRightDropdown = false;
+        showingPowerDropdown = false;
     }
 
     /**
@@ -223,6 +270,16 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private void toggleRightDropdown() {
         showingRightDropdown = !showingRightDropdown;
         showingLeftDropdown = false;
+        showingPowerDropdown = false;
+    }
+
+    /**
+     * Toggles the power dropdown state.
+     */
+    private void togglePowerDropdown() {
+        showingPowerDropdown = !showingPowerDropdown;
+        showingLeftDropdown = false;
+        showingRightDropdown = false;
     }
 
     /**
@@ -263,6 +320,29 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         return false;
     }
 
+    /**
+     * Handles power dropdown option selection with immediate power mode application.
+     */
+    private boolean handlePowerDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop) {
+        SwitchesLeverBlockEntity.PowerMode[] modes = SwitchesLeverBlockEntity.PowerMode.values();
+        
+        int dropdownX = guiLeft + POWER_DROPDOWN_X;
+        int dropdownY = guiTop + POWER_DROPDOWN_Y + POWER_DROPDOWN_HEIGHT;
+        
+        for (int i = 0; i < modes.length; i++) {
+            int optionY = dropdownY + (i * 12);
+            if (isWithinPowerDropdownBounds(mouseX, mouseY, dropdownX, optionY)) {
+                // Selection made - triggers immediate apply in menu
+                SwitchesLeverBlockEntity.PowerMode selectedMode = modes[i];
+                menu.setPowerMode(selectedMode);
+                showingPowerDropdown = false;
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
     @Override
     protected void renderBg(@Nonnull GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int guiLeft = (this.width - this.imageWidth) / 2;
@@ -276,6 +356,9 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
         // Draw face selection dropdowns
         drawCleanArchitectureDropdowns(graphics, guiLeft, guiTop);
+
+        // Draw power category dropdown and previews
+        drawPowerCategoryElements(graphics, guiLeft, guiTop);
 
         // Draw working 2D texture previews with null safety
         drawSafeTexturePreview(graphics, guiLeft, guiTop);
@@ -510,12 +593,10 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     @Nonnull
     private String getSafeSpriteName(@Nonnull TextureAtlasSprite sprite) {
         try {
-            // Safe access to sprite contents
-            var contents = sprite.contents();
-            if (contents != null && contents.name() != null) {
+            // Safe access to sprite contents with proper resource management
+            try (var contents = sprite.contents()) {
                 return contents.name().toString();
             }
-            return "missingno";
         } catch (Exception e) {
             // Return safe fallback on any resource access error
             return "missingno";
@@ -585,6 +666,10 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         if (showingRightDropdown) {
             drawCleanDropdownPopup(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y + FACE_DROPDOWN_HEIGHT, rightTextureSelection);
         }
+
+        if (showingPowerDropdown) {
+            drawPowerDropdownPopup(graphics, guiLeft + POWER_DROPDOWN_X, guiTop + POWER_DROPDOWN_Y + POWER_DROPDOWN_HEIGHT);
+        }
     }
 
     /**
@@ -633,6 +718,236 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
         // Restore z-order
         graphics.pose().popPose();
+    }
+
+    // ========================================
+    // POWER CATEGORY GUI ELEMENTS
+    // ========================================
+
+    /**
+     * Draws power category dropdown and texture previews.
+     */
+    private void drawPowerCategoryElements(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+        // Draw power mode dropdown
+        drawPowerDropdownButton(graphics, guiLeft + POWER_DROPDOWN_X, guiTop + POWER_DROPDOWN_Y);
+        
+        // Draw power texture previews
+        drawPowerTexturePreview(graphics, guiLeft, guiTop);
+        
+        // Draw power labels
+        drawPowerLabels(graphics, guiLeft, guiTop);
+    }
+
+    /**
+     * Draws the power mode dropdown button.
+     */
+    private void drawPowerDropdownButton(@Nonnull GuiGraphics graphics, int x, int y) {
+        SwitchesLeverBlockEntity.PowerMode currentMode = menu.getPowerMode();
+        
+        // Draw dropdown background
+        graphics.fill(x, y, x + POWER_DROPDOWN_WIDTH, y + POWER_DROPDOWN_HEIGHT, 0xFFC6C6C6);
+        
+        // Draw dropdown border
+        int lightColor = showingPowerDropdown ? 0xFF555555 : 0xFFFFFFFF;
+        int darkColor = showingPowerDropdown ? 0xFFFFFFFF : 0xFF555555;
+        
+        graphics.fill(x, y, x + POWER_DROPDOWN_WIDTH, y + 1, lightColor);
+        graphics.fill(x, y, x + 1, y + POWER_DROPDOWN_HEIGHT, lightColor);
+        graphics.fill(x, y + POWER_DROPDOWN_HEIGHT - 1, x + POWER_DROPDOWN_WIDTH, y + POWER_DROPDOWN_HEIGHT, darkColor);
+        graphics.fill(x + POWER_DROPDOWN_WIDTH - 1, y, x + POWER_DROPDOWN_WIDTH, y + POWER_DROPDOWN_HEIGHT, darkColor);
+        
+        // Draw dropdown arrow
+        int arrowColor = 0xFF000000;
+        int arrowX = x + POWER_DROPDOWN_WIDTH - 10;
+        int arrowY = y + 4;
+        
+        if (!showingPowerDropdown) {
+            // Down arrow (closed state)
+            graphics.fill(arrowX + 2, arrowY, arrowX + 4, arrowY + 1, arrowColor);
+            graphics.fill(arrowX + 1, arrowY + 1, arrowX + 5, arrowY + 2, arrowColor);
+            graphics.fill(arrowX, arrowY + 2, arrowX + 6, arrowY + 3, arrowColor);
+        } else {
+            // Up arrow (open state)
+            graphics.fill(arrowX, arrowY + 2, arrowX + 6, arrowY + 3, arrowColor);
+            graphics.fill(arrowX + 1, arrowY + 1, arrowX + 5, arrowY + 2, arrowColor);
+            graphics.fill(arrowX + 2, arrowY, arrowX + 4, arrowY + 1, arrowColor);
+        }
+        
+        // Draw current power mode text (lowercase as specified)
+        String displayText = formatPowerModeText(currentMode.name());
+        graphics.drawString(this.font, displayText, x + 2, y + 2, 0xFF404040, false);
+    }
+
+    /**
+     * Draws power dropdown popup menu.
+     */
+    private void drawPowerDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y) {
+        SwitchesLeverBlockEntity.PowerMode[] modes = SwitchesLeverBlockEntity.PowerMode.values();
+        SwitchesLeverBlockEntity.PowerMode currentMode = menu.getPowerMode();
+        int popupHeight = modes.length * 12;
+        
+        // Elevate z-order to render above other elements
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 400);
+        
+        // Draw popup background
+        graphics.fill(x, y, x + POWER_DROPDOWN_WIDTH, y + popupHeight, 0xFFC6C6C6);
+        
+        // Draw popup border
+        graphics.fill(x, y, x + POWER_DROPDOWN_WIDTH, y + 1, 0xFF000000);
+        graphics.fill(x, y, x + 1, y + popupHeight, 0xFF000000);
+        graphics.fill(x, y + popupHeight - 1, x + POWER_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+        graphics.fill(x + POWER_DROPDOWN_WIDTH - 1, y, x + POWER_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+        
+        // Draw power mode options
+        for (int i = 0; i < modes.length; i++) {
+            SwitchesLeverBlockEntity.PowerMode mode = modes[i];
+            int optionY = y + (i * 12);
+            
+            // Highlight selected mode
+            if (mode == currentMode) {
+                graphics.fill(x + 1, optionY, x + POWER_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
+            }
+            
+            // Draw mode name (lowercase as specified)
+            String modeText = formatPowerModeText(mode.name());
+            graphics.drawString(this.font, modeText, x + 2, optionY + 2, 0xFF000000, false);
+        }
+        
+        // Restore z-order
+        graphics.pose().popPose();
+    }
+
+    /**
+     * Draws power texture previews (6x6 boxes).
+     */
+    private void drawPowerTexturePreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+        String unpoweredTexture = menu.getUnpoweredTexturePreview();
+        String poweredTexture = menu.getPoweredTexturePreview();
+        
+        // Draw unpowered texture preview
+        if (!unpoweredTexture.isEmpty()) {
+            drawSmallTexturePreviewBox(graphics, guiLeft + UNPOWERED_PREVIEW_X, guiTop + UNPOWERED_PREVIEW_Y, unpoweredTexture);
+        } else {
+            // Draw empty preview box
+            drawEmptyPreviewBox(graphics, guiLeft + UNPOWERED_PREVIEW_X, guiTop + UNPOWERED_PREVIEW_Y);
+        }
+        
+        // Draw powered texture preview
+        if (!poweredTexture.isEmpty()) {
+            drawSmallTexturePreviewBox(graphics, guiLeft + POWERED_PREVIEW_X, guiTop + POWERED_PREVIEW_Y, poweredTexture);
+        } else {
+            // Draw empty preview box
+            drawEmptyPreviewBox(graphics, guiLeft + POWERED_PREVIEW_X, guiTop + POWERED_PREVIEW_Y);
+        }
+    }
+
+    /**
+     * Draws a small 6x6 texture preview box showing the specific 2x2 UV area that will be rendered on the model.
+     * This provides an exact preview of what the user will see on the switch, rather than a scaled-down full texture.
+     */
+    private void drawSmallTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String texturePath) {
+        try {
+            TextureAtlasSprite sprite = getTextureSprite(texturePath);
+            if (sprite != null) {
+                String spriteName = getSafeSpriteName(sprite);
+                if (!spriteName.contains("missingno")) {
+                    // Draw preview background (black border, white fill)
+                    graphics.fill(x - 1, y - 1, x + POWER_PREVIEW_SIZE + 1, y + POWER_PREVIEW_SIZE + 1, 0xFF000000);
+                    graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFFFFFFF);
+                    
+                    // Draw the specific 2x2 UV area scaled to fill the 6x6 preview
+                    drawUVSpecificPreview(graphics, x, y, sprite);
+                } else {
+                    drawEmptyPreviewBox(graphics, x, y);
+                }
+            } else {
+                drawEmptyPreviewBox(graphics, x, y);
+            }
+        } catch (Exception e) {
+            drawEmptyPreviewBox(graphics, x, y);
+        }
+    }
+    
+    /**
+     * Draws UV-specific power texture preview using scissor clipping approach.
+     * ---
+     * Updated for simplified UV coordinates where both powered and unpowered states
+     * use the same location on the texture:
+     * - 2 pixels from the left edge of the texture
+     * - 6 pixels from the top edge of the texture
+     * ---
+     * Mathematical mapping with 3x scaling (16x16 → 48x48):
+     * - Texture UV (2,6) with 2x2 area → Texture pixels 2-3 (width), 6-7 (height)
+     * - GUI pixels: 6-11 (width), 18-23 (height) = 6x6 preview area
+     * ---
+     * @param graphics the GUI graphics context
+     * @param x the preview box X position  
+     * @param y the preview box Y position
+     * @param sprite the texture sprite to display
+     */
+    private void drawUVSpecificPreview(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull TextureAtlasSprite sprite) {
+        try {
+            // Draw preview background
+            graphics.fill(x - 1, y - 1, x + POWER_PREVIEW_SIZE + 1, y + POWER_PREVIEW_SIZE + 1, 0xFF000000);
+            graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFFFFFFF);
+
+            // Simplified UV coordinate mapping - both powered and unpowered use same location:
+            // UV (2,6) with 2x2 area → GUI pixels 6-11 (width), 18-23 (height)
+            
+            int offsetX = 6;   // UV X coordinate 2 * 3 (scale factor) = 6
+            int offsetY = 18;  // UV Y coordinate 6 * 3 (scale factor) = 18
+            
+            // Calculate texture position so target UV area appears in preview location
+            int textureX = x - offsetX;
+            int textureY = y - offsetY;
+            
+            // 1. Enable scissor clipping to 6x6 preview area (crop to show only target UV)
+            graphics.enableScissor(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE);
+            
+            // 2. Render 48x48 texture positioned so target UV area appears in preview
+            //    (48x48 = 3x scale factor from 16x16 original)
+            graphics.blit(textureX, textureY, 0, 48, 48, sprite);
+            
+            // 3. Disable scissor clipping
+            graphics.disableScissor();
+            
+        } catch (Exception e) {
+            // Fallback to a solid color if rendering fails
+            graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFCCCCCC);
+        }
+    }
+
+    /**
+     * Draws an empty preview box.
+     */
+    private void drawEmptyPreviewBox(@Nonnull GuiGraphics graphics, int x, int y) {
+        // Draw black border, white fill
+        graphics.fill(x - 1, y - 1, x + POWER_PREVIEW_SIZE + 1, y + POWER_PREVIEW_SIZE + 1, 0xFF000000);
+        graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFFFFFFF);
+    }
+
+    /**
+     * Draws power category labels.
+     */
+    private void drawPowerLabels(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+        // Draw "Unpowered" label
+        graphics.drawString(this.font, "Unpowered", guiLeft + UNPOWERED_LABEL_X, guiTop + UNPOWERED_LABEL_Y, 0xFF404040, false);
+        
+        // Draw "Powered" label
+        graphics.drawString(this.font, "Powered", guiLeft + POWERED_LABEL_X, guiTop + POWERED_LABEL_Y, 0xFF404040, false);
+    }
+
+    /**
+     * Formats power mode text for display (lowercase with capital first letter).
+     */
+    private String formatPowerModeText(String modeText) {
+        if (modeText == null || modeText.isEmpty()) {
+            return "default";
+        }
+        
+        String lowercase = modeText.toLowerCase();
+        return Character.toUpperCase(lowercase.charAt(0)) + lowercase.substring(1);
     }
 
     @Override

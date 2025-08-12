@@ -17,6 +17,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.client.model.data.ModelProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,11 +30,11 @@ import javax.annotation.Nullable;
  * STRATEGY: Since user confirmed GitHub version was working, restored exact system
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SwitchesLeverBlockEntity.class);
 
     // ========================================
     // TEXTURE CONFIGURATION
     // ========================================
-
     // Default texture paths
     public static final String DEFAULT_BASE_TEXTURE = "minecraft:block/stone";
     public static final String DEFAULT_TOGGLE_TEXTURE = "minecraft:block/oak_planks";
@@ -56,6 +58,30 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // GUI slot storage
     private ItemStack guiToggleItem = ItemStack.EMPTY;
     private ItemStack guiBaseItem = ItemStack.EMPTY;
+    
+    // Control sync behavior during analysis vs user selection
+    private boolean suppressSync = false;
+
+    // ========================================
+    // POWER CATEGORY SYSTEM
+    // ========================================
+
+    /**
+     * Power mode enum for controlling how powered/unpowered UV faces are textured
+     */
+    public enum PowerMode {
+        DEFAULT,  // Use block's original JSON texture definitions
+        ALT,      // unpowered = redstone block, powered = green concrete powder  
+        NONE      // both use current toggle face texture selection
+    }
+
+    // Power category state
+    private PowerMode powerMode = PowerMode.DEFAULT;
+    private static final String POWER_MODE_KEY = "power_mode";
+
+    // Hardcoded texture paths for ALT mode
+    private static final String ALT_UNPOWERED_TEXTURE = "minecraft:block/redstone_block";
+    private static final String ALT_POWERED_TEXTURE = "minecraft:block/lime_concrete_powder";
 
     // ========================================
     // MINIMAL BLOCKSTATE PROTECTION SYSTEM (GITHUB VERSION)
@@ -98,19 +124,37 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         private final String toggleTexture;
         private final String baseVariable;
         private final String toggleVariable;
-
+        private final PowerMode powerMode;
+        private final String unpoweredTexture;
+        private final String poweredTexture;
         public SwitchTextureData(String baseTexture, String toggleTexture,
-                                 String baseVariable, String toggleVariable) {
+                                 String baseVariable, String toggleVariable, PowerMode powerMode,
+                                 SwitchesLeverBlockEntity blockEntity) {
             this.baseTexture = baseTexture;
             this.toggleTexture = toggleTexture;
             this.baseVariable = baseVariable;
             this.toggleVariable = toggleVariable;
+            this.powerMode = powerMode;
+            
+            // Get model-specific power textures (empty for DEFAULT mode)
+            this.unpoweredTexture = blockEntity != null ? blockEntity.getUnpoweredTextureForModel() : "";
+            this.poweredTexture = blockEntity != null ? blockEntity.getPoweredTextureForModel() : "";
         }
 
         public String getBaseTexture() { return baseTexture; }
         public String getToggleTexture() { return toggleTexture; }
         public String getBaseVariable() { return baseVariable; }
         public String getToggleVariable() { return toggleVariable; }
+        public PowerMode getPowerMode() { return powerMode; }
+        public String getUnpoweredTexture() { return unpoweredTexture; }
+        public String getPoweredTexture() { return poweredTexture; }
+
+        /**
+         * Check if power mode affects model rendering
+         */
+        public boolean hasPowerTextureOverride() {
+            return powerMode != PowerMode.DEFAULT;
+        }
 
         /**
          * Check if using custom textures (different from defaults)
@@ -119,7 +163,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             return !baseTexture.equals(DEFAULT_BASE_TEXTURE) ||
                     !toggleTexture.equals(DEFAULT_TOGGLE_TEXTURE) ||
                     !baseVariable.equals("all") ||
-                    !toggleVariable.equals("all");
+                    !toggleVariable.equals("all") ||
+                    powerMode != PowerMode.DEFAULT;
         }
     }
 
@@ -132,7 +177,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return ModelData.builder()
                 .with(TEXTURE_PROPERTY, new SwitchTextureData(
                         baseTexturePath, toggleTexturePath,
-                        baseTextureVariable, toggleTextureVariable))
+                        baseTextureVariable, toggleTextureVariable, powerMode, this))
                 .build();
     }
 
@@ -194,42 +239,31 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     // TEXTURE MANAGEMENT
     // ========================================
 
-    /**
-     * Extract texture path from ItemStack
-     */
-    @Nonnull
-    private String getTextureFromItem(@Nonnull ItemStack itemStack) {
-        if (itemStack.isEmpty()) {
-            return "";
-        }
 
-        Item item = itemStack.getItem();
-        if (!(item instanceof BlockItem blockItem)) {
-            return "";
-        }
-
-        Block block = blockItem.getBlock();
-        try {
-            ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(block);
-            if (blockId != null) {
-                return blockId.getNamespace() + ":block/" + blockId.getPath();
-            }
-        } catch (Exception e) {
-            // Silent failure
-        }
-
-        return "";
-    }
 
     /**
-     * Mark BlockEntity as dirty and trigger client synchronization
+     * Mark BlockEntity as dirty and trigger synchronization
+     * Fixed to handle both client-to-server and server-to-client updates
      */
     private void markDirtyAndSync() {
-        if (level != null && !level.isClientSide) {
+        if (level != null && !suppressSync) {
             setChanged();
             requestModelDataUpdate();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+            
+            if (level.isClientSide) {
+                // Client side: Mark for server sync (server will handle the update)
+                } else {
+                // Server side: Send update to clients immediately
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+                }
         }
+    }
+    
+    /**
+     * Temporarily suppress sync during analysis operations
+     */
+    public void setSyncSuppressed(boolean suppressed) {
+        this.suppressSync = suppressed;
     }
 
     /**
@@ -245,17 +279,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * Set the base texture from ItemStack
-     */
-    public boolean setBaseTexture(@Nonnull ItemStack itemStack) {
-        if (itemStack.isEmpty()) {
-            return setBaseTexture(DEFAULT_BASE_TEXTURE);
-        }
-        String texturePath = getTextureFromItem(itemStack);
-        return !texturePath.isEmpty() && setBaseTexture(texturePath);
-    }
-
-    /**
      * Set the toggle texture for the switch
      */
     public boolean setToggleTexture(@Nonnull String texturePath) {
@@ -265,17 +288,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Set the toggle texture from ItemStack
-     */
-    public boolean setToggleTexture(@Nonnull ItemStack itemStack) {
-        if (itemStack.isEmpty()) {
-            return setToggleTexture(DEFAULT_TOGGLE_TEXTURE);
-        }
-        String texturePath = getTextureFromItem(itemStack);
-        return !texturePath.isEmpty() && setToggleTexture(texturePath);
     }
 
     // ========================================
@@ -334,37 +346,37 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     @Nonnull public String getToggleTexture() { return toggleTexturePath; }
     @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
     @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
+    @Nonnull public PowerMode getPowerMode() { return powerMode; }
 
     /**
-     * Reset all textures and settings to defaults
+     * Get all custom textures as a map for renderer integration
+     * Returns empty map if no custom textures are configured
      */
-    public void resetTextures() {
-        boolean changed = false;
-
+    @Nonnull
+    public java.util.Map<String, ResourceLocation> getAllCustomTextures() {
+        java.util.Map<String, ResourceLocation> customTextures = new java.util.HashMap<>();
+        
+        // Only include textures that are different from defaults
         if (!baseTexturePath.equals(DEFAULT_BASE_TEXTURE)) {
-            this.baseTexturePath = DEFAULT_BASE_TEXTURE;
-            changed = true;
+            try {
+                customTextures.put("base_" + baseTextureVariable, new ResourceLocation(baseTexturePath));
+            } catch (Exception e) {
+                // Invalid texture path, skip
+            }
         }
-
+        
         if (!toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE)) {
-            this.toggleTexturePath = DEFAULT_TOGGLE_TEXTURE;
-            changed = true;
+            try {
+                customTextures.put("toggle_" + toggleTextureVariable, new ResourceLocation(toggleTexturePath));
+            } catch (Exception e) {
+                // Invalid texture path, skip
+            }
         }
-
-        if (!baseTextureVariable.equals("all")) {
-            this.baseTextureVariable = "all";
-            changed = true;
-        }
-
-        if (!toggleTextureVariable.equals("all")) {
-            this.toggleTextureVariable = "all";
-            changed = true;
-        }
-
-        if (changed) {
-            markDirtyAndSync();
-        }
+        
+        return customTextures;
     }
+
+
 
     /**
      * Reset base texture to default
@@ -389,7 +401,85 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return !baseTexturePath.equals(DEFAULT_BASE_TEXTURE) ||
                 !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE) ||
                 !baseTextureVariable.equals("all") ||
-                !toggleTextureVariable.equals("all");
+                !toggleTextureVariable.equals("all") ||
+                powerMode != PowerMode.DEFAULT ||
+                hasPowerTextureOverrides();
+    }
+    
+    /**
+     * Check if power mode requires texture overrides for model rendering
+     */
+    public boolean hasPowerTextureOverrides() {
+        return switch (powerMode) {
+            case ALT, NONE -> true; // These modes override power textures
+            case DEFAULT -> false; // Uses original JSON textures
+        };
+    }
+
+    // ========================================
+    // POWER CATEGORY MANAGEMENT
+    // ========================================
+
+    /**
+     * Set the power mode for controlling powered/unpowered UV textures
+     */
+    public boolean setPowerMode(@Nonnull PowerMode mode) {
+        if (mode != this.powerMode) {
+            this.powerMode = mode;
+            markDirtyAndSync();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get texture path for unpowered state based on current power mode
+     */
+    @Nonnull
+    public String getUnpoweredTexture() {
+        return switch (powerMode) {
+            case ALT -> ALT_UNPOWERED_TEXTURE;
+            case NONE -> toggleTexturePath; // Use toggle texture for both states
+            case DEFAULT -> "minecraft:block/gray_concrete_powder"; // Use the actual unpowered texture from switches_lever.json
+        };
+    }
+
+    /**
+     * Get texture path for powered state based on current power mode
+     */
+    @Nonnull
+    public String getPoweredTexture() {
+        return switch (powerMode) {
+            case ALT -> ALT_POWERED_TEXTURE;
+            case NONE -> toggleTexturePath; // Use toggle texture for both states
+            case DEFAULT -> "minecraft:block/redstone_block"; // Use the actual powered texture from switches_lever.json
+        };
+    }
+
+    /**
+     * Get texture path for unpowered state for MODEL RENDERING
+     * (different from preview - this returns empty for DEFAULT to use original JSON)
+     */
+    @Nonnull
+    public String getUnpoweredTextureForModel() {
+        return switch (powerMode) {
+            case ALT -> ALT_UNPOWERED_TEXTURE;
+            case NONE -> toggleTexturePath;
+            case DEFAULT -> ""; // Use original block JSON definitions
+        };
+    }
+
+    /**
+     * Get texture path for powered state for MODEL RENDERING
+     * (different from preview - this returns empty for DEFAULT to use original JSON)
+     */
+    @Nonnull
+    public String getPoweredTextureForModel() {
+        return switch (powerMode) {
+            case ALT -> ALT_POWERED_TEXTURE;
+            case NONE -> toggleTexturePath;
+            case DEFAULT -> ""; // Use original block JSON definitions
+        };
     }
 
     // ========================================
@@ -399,11 +489,19 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     @Nonnull public ItemStack getGuiToggleItem() { return guiToggleItem; }
     @Nonnull public ItemStack getGuiBaseItem() { return guiBaseItem; }
 
+
+
     /**
-     * Set GUI slot items
+     * Set only the toggle slot item - for independent category updates
      */
-    public void setGuiSlotItems(@Nonnull ItemStack toggleItem, @Nonnull ItemStack baseItem) {
+    public void setToggleSlotItem(@Nonnull ItemStack toggleItem) {
         this.guiToggleItem = toggleItem.copy();
+    }
+
+    /**
+     * Set only the base slot item - for independent category updates
+     */
+    public void setBaseSlotItem(@Nonnull ItemStack baseItem) {
         this.guiBaseItem = baseItem.copy();
     }
 
@@ -436,6 +534,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
         nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
 
+        // Save power mode
+        nbt.putString(POWER_MODE_KEY, powerMode.name());
+
         // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
             nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
@@ -456,8 +557,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
 
         // Load texture paths with defaults
-        this.baseTexturePath = nbt.getString(BASE_TEXTURE_KEY);
-        this.toggleTexturePath = nbt.getString(TOGGLE_TEXTURE_KEY);
+        String loadedBasePath = nbt.getString(BASE_TEXTURE_KEY);
+        String loadedTogglePath = nbt.getString(TOGGLE_TEXTURE_KEY);
+        
+        this.baseTexturePath = loadedBasePath;
+        this.toggleTexturePath = loadedTogglePath;
 
         // Validate loaded paths
         if (this.baseTexturePath.isEmpty()) {
@@ -468,8 +572,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
 
         // Load raw texture variables
-        this.baseTextureVariable = nbt.getString(BASE_VARIABLE_KEY);
-        this.toggleTextureVariable = nbt.getString(TOGGLE_VARIABLE_KEY);
+        String loadedBaseVar = nbt.getString(BASE_VARIABLE_KEY);
+        String loadedToggleVar = nbt.getString(TOGGLE_VARIABLE_KEY);
+        
+        this.baseTextureVariable = loadedBaseVar;
+        this.toggleTextureVariable = loadedToggleVar;
 
         // Validate loaded variables
         if (this.baseTextureVariable.isEmpty()) {
@@ -477,6 +584,19 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
         if (this.toggleTextureVariable.isEmpty()) {
             this.toggleTextureVariable = "all";
+        }
+
+        // Load power mode
+        String loadedPowerMode = nbt.getString(POWER_MODE_KEY);
+        if (!loadedPowerMode.isEmpty()) {
+            try {
+                this.powerMode = PowerMode.valueOf(loadedPowerMode);
+            } catch (IllegalArgumentException e) {
+                this.powerMode = PowerMode.DEFAULT;
+                LOGGER.warn("Invalid power mode '{}', defaulting to DEFAULT", loadedPowerMode);
+            }
+        } else {
+            this.powerMode = PowerMode.DEFAULT;
         }
 
         // Load GUI slot items
@@ -513,6 +633,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
         nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
         nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
+        nbt.putString(POWER_MODE_KEY, powerMode.name());
 
         // Sync GUI slot items
         if (!guiToggleItem.isEmpty()) {

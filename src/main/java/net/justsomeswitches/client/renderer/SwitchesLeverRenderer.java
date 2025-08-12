@@ -51,8 +51,8 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
     /**
      * Cache size tracking for monitoring and cleanup.
      */
-    private static volatile int cacheHits = 0;
-    private static volatile int cacheMisses = 0;
+    private static final java.util.concurrent.atomic.AtomicInteger cacheHits = new java.util.concurrent.atomic.AtomicInteger(0);
+    private static final java.util.concurrent.atomic.AtomicInteger cacheMisses = new java.util.concurrent.atomic.AtomicInteger(0);
 
     private final BlockRenderDispatcher blockRenderer;
 
@@ -122,20 +122,34 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
         // PERFORMANCE OPTIMIZATION: Use cached texture sprites
         TextureAtlasSprite baseSprite = getCachedTextureSprite(blockEntity.getBaseTexture());
         TextureAtlasSprite toggleSprite = getCachedTextureSprite(blockEntity.getToggleTexture());
+        
+        // POWER CATEGORY: Get power texture sprites for model rendering
+        TextureAtlasSprite unpoweredSprite = null;
+        TextureAtlasSprite poweredSprite = null;
+        String unpoweredTexture = blockEntity.getUnpoweredTextureForModel();
+        String poweredTexture = blockEntity.getPoweredTextureForModel();
+        
+        // POWER CATEGORY: Load power textures for ALT/NONE modes only
+        if (!unpoweredTexture.isEmpty()) {
+            unpoweredSprite = getCachedTextureSprite(unpoweredTexture);
+        }
+        if (!poweredTexture.isEmpty()) {
+            poweredSprite = getCachedTextureSprite(poweredTexture);
+        }
 
         RandomSource random = RandomSource.create();
 
         // Process face-specific quads
         for (Direction face : Direction.values()) {
-            List<BakedQuad> quads = baseModel.getQuads(blockState, face, random);
+            List<BakedQuad> quads = baseModel.getQuads(blockState, face, random, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
             processQuads(quads, poseStack, vertexConsumer, baseSprite, toggleSprite,
-                    packedLight, packedOverlay);
+                    unpoweredSprite, poweredSprite, packedLight, packedOverlay);
         }
 
         // Process general quads
-        List<BakedQuad> generalQuads = baseModel.getQuads(blockState, null, random);
+        List<BakedQuad> generalQuads = baseModel.getQuads(blockState, null, random, net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
         processQuads(generalQuads, poseStack, vertexConsumer, baseSprite, toggleSprite,
-                packedLight, packedOverlay);
+                unpoweredSprite, poweredSprite, packedLight, packedOverlay);
     }
 
     /**
@@ -157,17 +171,17 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
             TextureAtlasSprite cachedSprite = (ref != null) ? ref.get() : null;
             
             if (cachedSprite != null) {
-                cacheHits++;
+                cacheHits.incrementAndGet();
                 return cachedSprite;
             }
             
             // Cache miss - load texture and cache it
-            cacheMisses++;
+            cacheMisses.incrementAndGet();
             TextureAtlasSprite sprite = loadTextureSprite(textureLocation);
             TEXTURE_CACHE.put(textureLocation, new WeakReference<>(sprite));
             
             // PERFORMANCE OPTIMIZATION: Periodic cache cleanup
-            if ((cacheHits + cacheMisses) % 1000 == 0) {
+            if ((cacheHits.get() + cacheMisses.get()) % 1000 == 0) {
                 cleanupCache();
             }
             
@@ -221,6 +235,8 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
                               @Nonnull VertexConsumer vertexConsumer,
                               @Nonnull TextureAtlasSprite baseSprite,
                               @Nonnull TextureAtlasSprite toggleSprite,
+                              @javax.annotation.Nullable TextureAtlasSprite unpoweredSprite,
+                              @javax.annotation.Nullable TextureAtlasSprite poweredSprite,
                               int packedLight, int packedOverlay) {
 
         var lastPose = poseStack.last();
@@ -229,8 +245,9 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
 
         for (BakedQuad quad : quads) {
             TextureAtlasSprite originalSprite = quad.getSprite();
+            
             TextureAtlasSprite replacementSprite = determineReplacementTexture(
-                    originalSprite, baseSprite, toggleSprite);
+                    originalSprite, baseSprite, toggleSprite, unpoweredSprite, poweredSprite);
 
             if (replacementSprite != originalSprite) {
                 renderQuadWithCustomTexture(quad, replacementSprite, pose, normal,
@@ -247,10 +264,24 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
     @Nonnull
     private TextureAtlasSprite determineReplacementTexture(@Nonnull TextureAtlasSprite originalSprite,
                                                            @Nonnull TextureAtlasSprite baseSprite,
-                                                           @Nonnull TextureAtlasSprite toggleSprite) {
-        String originalName = originalSprite.contents().name().toString();
+                                                           @Nonnull TextureAtlasSprite toggleSprite,
+                                                           @javax.annotation.Nullable TextureAtlasSprite unpoweredSprite,
+                                                           @javax.annotation.Nullable TextureAtlasSprite poweredSprite) {
+        String originalName;
+        try (var contents = originalSprite.contents()) {
+            originalName = contents.name().toString();
+        }
 
-        // Exclude powered/unpowered state textures from replacement
+        // POWER CATEGORY: Handle powered/unpowered textures first
+        if (isPoweredTexture(originalName) && poweredSprite != null) {
+            return poweredSprite;
+        }
+        
+        if (isUnpoweredTexture(originalName) && unpoweredSprite != null) {
+            return unpoweredSprite;
+        }
+
+        // Exclude non-power textures that should not be replaced
         if (shouldExcludeFromReplacement(originalName)) {
             return originalSprite;
         }
@@ -274,8 +305,29 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
         return textureName.contains("redstone") ||
                 textureName.contains("_on") ||
                 textureName.contains("_off") ||
-                textureName.contains("powered") ||
                 textureName.contains("gray_concrete_powder");
+    }
+
+    /**
+     * Check if this is a powered texture that should be replaced by power category.
+     */
+    private boolean isPoweredTexture(@Nonnull String textureName) {
+        // Check for actual switch model powered textures
+        return textureName.contains("redstone_block") ||
+               textureName.contains("switches_lever_powered") ||
+               textureName.contains("powered") ||
+               (textureName.contains("lever") && textureName.contains("on"));
+    }
+
+    /**
+     * Check if this is an unpowered texture that should be replaced by power category.
+     */
+    private boolean isUnpoweredTexture(@Nonnull String textureName) {
+        // Check for actual switch model unpowered textures
+        return textureName.contains("gray_concrete_powder") ||
+               textureName.contains("switches_lever_unpowered") ||
+               textureName.contains("unpowered") ||
+               (textureName.contains("lever") && textureName.contains("off"));
     }
 
     /**
@@ -387,7 +439,7 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
             float v = Float.intBitsToFloat(vertexData[baseIndex + 5]);
 
             int normalData = vertexData[baseIndex + 6];
-            float nx = ((normalData >> 0) & 0xFF) / 127.5f - 1.0f;
+            float nx = (normalData & 0xFF) / 127.5f - 1.0f;
             float ny = ((normalData >> 8) & 0xFF) / 127.5f - 1.0f;
             float nz = ((normalData >> 16) & 0xFF) / 127.5f - 1.0f;
 
@@ -420,21 +472,5 @@ public class SwitchesLeverRenderer implements BlockEntityRenderer<SwitchesLeverB
                 packedLight, packedOverlay);
     }
 
-    /**
-     * Get cache performance statistics for monitoring.
-     * 
-     * @return array containing [cache hits, cache misses, cache size]
-     */
-    public static int[] getCacheStats() {
-        return new int[]{cacheHits, cacheMisses, TEXTURE_CACHE.size()};
-    }
 
-    /**
-     * Clear the texture cache (useful for debugging or memory pressure).
-     */
-    public static void clearCache() {
-        TEXTURE_CACHE.clear();
-        cacheHits = 0;
-        cacheMisses = 0;
-    }
 }
