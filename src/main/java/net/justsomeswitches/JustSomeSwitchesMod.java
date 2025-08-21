@@ -8,8 +8,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 import javax.annotation.Nonnull;
 
@@ -28,8 +27,7 @@ public class JustSomeSwitchesMod {
     // Mod identifier - must match the mod ID in mods.toml
     public static final String MODID = "justsomeswitches";
 
-    // Logger for debugging and information output
-    public static final Logger LOGGER = LoggerFactory.getLogger(JustSomeSwitchesMod.class);
+
 
     /**
      * Main mod constructor - called when NeoForge loads the mod
@@ -57,8 +55,7 @@ public class JustSomeSwitchesMod {
         // Register event listeners
         modEventBus.addListener(this::commonSetup);
 
-        LOGGER.info("Just Some Switches mod initialized successfully!");
-        LOGGER.info("Phase 3A: Block Entity infrastructure ready");
+
     }
 
     /**
@@ -68,7 +65,6 @@ public class JustSomeSwitchesMod {
      * @param event The common setup event
      */
     private void commonSetup(final FMLCommonSetupEvent event) {
-        LOGGER.info("Just Some Switches common setup complete!");
-        LOGGER.info("Phase 3A: NBT foundation infrastructure initialized");
+
     }
 }

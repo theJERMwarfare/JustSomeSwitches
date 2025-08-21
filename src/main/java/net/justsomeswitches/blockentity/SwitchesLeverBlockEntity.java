@@ -17,20 +17,43 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.client.model.data.ModelProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Switches Lever BlockEntity with Raw JSON Variable System - GITHUB VERSION RESTORED
- * CRITICAL APPROACH: Exact replication of working GitHub NBT persistence system
- *
- * STRATEGY: Since user confirmed GitHub version was working, restored exact system
+ * Switches Lever BlockEntity with advanced texture management and NBT persistence.
+ * Features raw JSON variable system for face-specific texture customization.
  */
 public class SwitchesLeverBlockEntity extends BlockEntity {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SwitchesLeverBlockEntity.class);
+
+
+    // ========================================
+    // WALL ORIENTATION SYSTEM
+    // ========================================
+    
+    // Wall orientation for advanced placement
+    private String wallOrientation = "center";
+    private static final String WALL_ORIENTATION_KEY = "wall_orientation";
+    
+    /**
+     * Set wall orientation for advanced placement
+     */
+    public void setWallOrientation(@Nonnull String orientation) {
+        if (!orientation.equals(this.wallOrientation)) {
+            this.wallOrientation = orientation;
+            markDirtyAndSync();
+        }
+    }
+    
+    /**
+     * Get current wall orientation
+     */
+    @Nonnull
+    public String getWallOrientation() {
+        return wallOrientation;
+    }
 
     // ========================================
     // TEXTURE CONFIGURATION
@@ -84,15 +107,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private static final String ALT_POWERED_TEXTURE = "minecraft:block/lime_concrete_powder";
 
     // ========================================
-    // MINIMAL BLOCKSTATE PROTECTION SYSTEM (GITHUB VERSION)
+    // BLOCKSTATE PROTECTION SYSTEM
     // ========================================
 
-    // CRITICAL FIX: Track if we're in a blockstate change to prevent NBT corruption
+    // Track if we're in a blockstate change to prevent NBT corruption
     private boolean isInBlockStateChange = false;
     private boolean skipNextNBTLoad = false;
 
     /**
-     * MINIMAL FIX: Mark start of blockstate change to protect NBT data
+     * Mark start of blockstate change to protect NBT data
      */
     public void protectNBTDuringStateChange() {
         this.isInBlockStateChange = true;
@@ -100,7 +123,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     /**
-     * MINIMAL FIX: Mark end of blockstate change and restore normal NBT processing
+     * Mark end of blockstate change and restore normal NBT processing
      */
     public void endNBTProtection() {
         this.isInBlockStateChange = false;
@@ -190,11 +213,11 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
     // ========================================
-    // MINIMAL BLOCKSTATE OVERRIDE PROTECTION (GITHUB VERSION)
+    // BLOCKSTATE OVERRIDE PROTECTION
     // ========================================
 
     /**
-     * MINIMAL FIX: Override setBlockState to protect NBT data
+     * Override setBlockState to protect NBT data
      */
     @Override
     public void setBlockState(@Nonnull BlockState blockState) {
@@ -536,6 +559,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         // Save power mode
         nbt.putString(POWER_MODE_KEY, powerMode.name());
+        
+        // Save wall orientation
+        nbt.putString(WALL_ORIENTATION_KEY, wallOrientation);
 
         // Save GUI slot items
         if (!guiToggleItem.isEmpty()) {
@@ -550,7 +576,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void load(@Nonnull CompoundTag nbt) {
         super.load(nbt);
 
-        // CRITICAL FIX: Skip NBT loading during blockstate changes to prevent corruption
+        // Skip NBT loading during blockstate changes to prevent corruption
         if (skipNextNBTLoad) {
             skipNextNBTLoad = false;
             return;
@@ -593,11 +619,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
                 this.powerMode = PowerMode.valueOf(loadedPowerMode);
             } catch (IllegalArgumentException e) {
                 this.powerMode = PowerMode.DEFAULT;
-                LOGGER.warn("Invalid power mode '{}', defaulting to DEFAULT", loadedPowerMode);
+
             }
         } else {
             this.powerMode = PowerMode.DEFAULT;
         }
+        
+        // Load wall orientation
+        String loadedWallOrientation = nbt.getString(WALL_ORIENTATION_KEY);
+        this.wallOrientation = loadedWallOrientation.isEmpty() ? "center" : loadedWallOrientation;
 
         // Load GUI slot items
         if (nbt.contains("gui_toggle_item")) {
@@ -634,6 +664,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
         nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
         nbt.putString(POWER_MODE_KEY, powerMode.name());
+        nbt.putString(WALL_ORIENTATION_KEY, wallOrientation);
 
         // Sync GUI slot items
         if (!guiToggleItem.isEmpty()) {
@@ -655,27 +686,5 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
     }
 
-    // ========================================
-    // LEGACY COMPATIBILITY (DEPRECATED)
-    // ========================================
 
-    /**
-     * @deprecated Use getBaseTextureSelection() instead
-     */
-    @Deprecated
-    @Nonnull
-    public FaceSelectionData.DropdownState getBaseDropdownState() {
-        FaceSelectionData.RawTextureSelection rawSelection = getBaseTextureSelection();
-        return new FaceSelectionData.DropdownState(rawSelection);
-    }
-
-    /**
-     * @deprecated Use getToggleTextureSelection() instead
-     */
-    @Deprecated
-    @Nonnull
-    public FaceSelectionData.DropdownState getToggleDropdownState() {
-        FaceSelectionData.RawTextureSelection rawSelection = getToggleTextureSelection();
-        return new FaceSelectionData.DropdownState(rawSelection);
-    }
 }

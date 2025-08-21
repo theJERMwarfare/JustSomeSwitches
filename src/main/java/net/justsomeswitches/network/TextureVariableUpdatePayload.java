@@ -10,8 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.PlayPayloadContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 import javax.annotation.Nonnull;
 
@@ -26,7 +25,7 @@ public record TextureVariableUpdatePayload(
     String texturePath
 ) implements CustomPacketPayload {
     
-    private static final Logger LOGGER = LoggerFactory.getLogger(TextureVariableUpdatePayload.class);
+
     
     public static final ResourceLocation ID = new ResourceLocation(JustSomeSwitchesMod.MODID, "texture_variable_update");
     
@@ -57,7 +56,7 @@ public record TextureVariableUpdatePayload(
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) {
-                LOGGER.warn("TextureVariableUpdatePayload: No player found");
+
                 return;
             }
             
@@ -65,38 +64,37 @@ public record TextureVariableUpdatePayload(
             BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
             
             if (!(blockEntity instanceof SwitchesLeverBlockEntity switchEntity)) {
-                LOGGER.warn("TextureVariableUpdatePayload: BlockEntity not found or wrong type at {}", payload.blockPos());
+
                 return;
             }
             
-            LOGGER.debug("[NETWORK] Received texture update: {} category '{}' -> '{}' with texture '{}'", 
-                payload.category(), getCurrentVariable(switchEntity, payload.category()), payload.variable(), payload.texturePath());
+
             
             // Update the server-side BlockEntity directly
             switch (payload.category()) {
                 case "base" -> {
                     switchEntity.setBaseTextureVariable(payload.variable());
                     switchEntity.setBaseTexture(payload.texturePath());
-                    LOGGER.debug("[NETWORK] Updated server-side base texture: {} -> {}", payload.variable(), payload.texturePath());
+
                 }
                 case "toggle" -> {
                     switchEntity.setToggleTextureVariable(payload.variable());
                     switchEntity.setToggleTexture(payload.texturePath());
-                    LOGGER.debug("[NETWORK] Updated server-side toggle texture: {} -> {}", payload.variable(), payload.texturePath());
+
                 }
                 case "power" -> {
                     // Parse power mode from variable name
                     try {
                         SwitchesLeverBlockEntity.PowerMode powerMode = SwitchesLeverBlockEntity.PowerMode.valueOf(payload.variable().toUpperCase());
                         switchEntity.setPowerMode(powerMode);
-                        LOGGER.debug("[NETWORK] Updated server-side power mode: {}", powerMode);
+
                     } catch (IllegalArgumentException e) {
-                        LOGGER.warn("[NETWORK] Invalid power mode: {}", payload.variable());
+
                         return;
                     }
                 }
                 default -> {
-                    LOGGER.warn("[NETWORK] Unknown texture category: {}", payload.category());
+
                     return;
                 }
             }
@@ -106,7 +104,7 @@ public record TextureVariableUpdatePayload(
             switchEntity.requestModelDataUpdate();
             level.sendBlockUpdated(payload.blockPos(), level.getBlockState(payload.blockPos()), level.getBlockState(payload.blockPos()), 3);
             
-            LOGGER.debug("[NETWORK] Server-side texture update complete for {} category", payload.category());
+
         });
     }
     

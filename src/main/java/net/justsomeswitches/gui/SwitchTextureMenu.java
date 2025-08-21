@@ -16,8 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,7 +34,7 @@ import javax.annotation.Nullable;
  */
 public class SwitchTextureMenu extends AbstractContainerMenu {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SwitchTextureMenu.class);
+
 
     // Simple slot layout constants
     private static final int TEXTURE_SLOT_COUNT = 2;
@@ -44,9 +43,9 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
     // Positioning constants  
     private static final int TOGGLE_SLOT_X = 28;
-    private static final int TOGGLE_SLOT_Y = 27;
+    private static final int TOGGLE_SLOT_Y = 24;  // Moved up 3px closer to top edge (item slot)
     private static final int BASE_SLOT_X = 132;
-    private static final int BASE_SLOT_Y = 27;
+    private static final int BASE_SLOT_Y = 24;  // Moved up 3px closer to top edge (item slot)
     private static final int PLAYER_INV_Y = 98;
     private static final int HOTBAR_Y = 156;
 
@@ -138,7 +137,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             this.isInitializing = false;
         }
 
-        LOGGER.info("Clean architecture texture menu created for block at {}", blockPos);
+
     }
 
     /**
@@ -194,7 +193,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // Trigger dropdown analysis for new block
         analyzeToggleBlock(toggleItem);
         
-        LOGGER.debug("Toggle slot changed to: {}", toggleItem.isEmpty() ? "empty" : toggleItem.getItem().toString());
+
     }
 
     /**
@@ -239,7 +238,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         // Trigger dropdown analysis for new block
         analyzeBaseBlock(baseItem);
         
-        LOGGER.debug("Base slot changed to: {}", baseItem.isEmpty() ? "empty" : baseItem.getItem().toString());
+
     }
 
     // ========================================
@@ -270,8 +269,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                     blockEntity.setToggleTexture(texturePath);
                 }
                 
-                LOGGER.info("Toggle block analyzed - Default variable: {} from options: {}", 
-                    defaultVariable, selection.availableVariables());
+
             } else {
                 // Block has single texture - use "all"
                 this.toggleTextureVariable = "all";
@@ -282,7 +280,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                     blockEntity.setToggleTexture(texturePath);
                 }
                 
-                LOGGER.info("Toggle block analyzed - Single texture, using 'all'");
+
             }
         } finally {
             // Re-enable sync
@@ -314,8 +312,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                     blockEntity.setBaseTexture(texturePath);
                 }
                 
-                LOGGER.info("Base block analyzed - Default variable: {} from options: {}", 
-                    defaultVariable, selection.availableVariables());
+
             } else {
                 // Block has single texture - use "all"
                 this.baseTextureVariable = "all";
@@ -326,7 +323,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                     blockEntity.setBaseTexture(texturePath);
                 }
                 
-                LOGGER.info("Base block analyzed - Single texture, using 'all'");
+
             }
         } finally {
             // Re-enable sync
@@ -345,13 +342,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      */
     public void setToggleTextureVariable(@Nonnull String variable) {
         if (blockEntity == null) {
-            LOGGER.warn("Cannot set toggle texture variable - no BlockEntity");
+
             return;
         }
 
         ItemStack toggleItem = textureItemHandler.getStackInSlot(TOGGLE_TEXTURE_SLOT);
         if (toggleItem.isEmpty()) {
-            LOGGER.warn("Cannot set toggle texture variable - no item in slot");
+
             return;
         }
 
@@ -371,9 +368,9 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                 forceBlockUpdate();
             }
             
-            LOGGER.info("Toggle texture variable changed to: {} with texture: {}", variable, texturePath);
+
         } else {
-            LOGGER.warn("No texture found for toggle variable: {}", variable);
+
         }
     }
 
@@ -384,13 +381,13 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      */
     public void setBaseTextureVariable(@Nonnull String variable) {
         if (blockEntity == null) {
-            LOGGER.warn("Cannot set base texture variable - no BlockEntity");
+
             return;
         }
 
         ItemStack baseItem = textureItemHandler.getStackInSlot(BASE_TEXTURE_SLOT);
         if (baseItem.isEmpty()) {
-            LOGGER.warn("Cannot set base texture variable - no item in slot");
+
             return;
         }
 
@@ -410,9 +407,9 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
                 forceBlockUpdate();
             }
             
-            LOGGER.info("Base texture variable changed to: {} with texture: {}", variable, texturePath);
+
         } else {
-            LOGGER.warn("No texture found for base variable: {}", variable);
+
         }
     }
 
@@ -467,7 +464,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      */
     public void setPowerMode(@Nonnull SwitchesLeverBlockEntity.PowerMode mode) {
         if (blockEntity == null) {
-            LOGGER.warn("Cannot set power mode - no BlockEntity");
+
             return;
         }
 
@@ -483,7 +480,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             forceBlockUpdate();
         }
         
-        LOGGER.info("Power mode changed to: {}", mode);
+
     }
 
     /**
@@ -737,7 +734,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
     @Override
     public void removed(@Nonnull Player player) {
-        LOGGER.info("Clean architecture texture menu closed for player: {}", player.getDisplayName().getString());
+
         super.removed(player);
     }
 
@@ -758,13 +755,43 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(@Nonnull ItemStack stack) {
-            // Use outer class validation method
+            // Use outer class validation method for block type
+            // Allow placement regardless of stack size - slot will handle splitting
             return SwitchTextureMenu.this.isValidTextureItem(stack);
         }
 
         @Override
         public int getMaxStackSize() {
             return 1; // Only one block per texture slot
+        }
+        
+        @Override
+        @Nonnull
+        public ItemStack safeInsert(@Nonnull ItemStack stack, int amount) {
+            // Ensure we never insert more than 1 item regardless of input
+            if (stack.isEmpty() || amount <= 0) {
+                return stack;
+            }
+            
+            // If slot is already occupied, reject insertion
+            if (this.hasItem()) {
+                return stack;
+            }
+            
+            // Only insert 1 item, return the rest
+            ItemStack toInsert = stack.copy();
+            toInsert.setCount(1);
+            
+            if (this.mayPlace(toInsert)) {
+                this.set(toInsert);
+                
+                // Return remaining items
+                ItemStack remaining = stack.copy();
+                remaining.shrink(1);
+                return remaining.isEmpty() ? ItemStack.EMPTY : remaining;
+            }
+            
+            return stack;
         }
 
         @Override
@@ -778,24 +805,26 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     }
 
     // ========================================
-    // LEGACY COMPATIBILITY (DEPRECATED)
+    // PUBLIC ACCESS METHODS
     // ========================================
 
     /**
-     * @deprecated Use getBaseTextureSelection() instead
+     * Get the block position for this menu.
+     * Used by GUI for world state access.
      */
-    @Deprecated
-    @Nonnull
-    public FaceSelectionData.DropdownState getBaseDropdownState() {
-        return new FaceSelectionData.DropdownState(getBaseTextureSelection());
+    @Nullable
+    public BlockPos getBlockPos() {
+        return blockPos;
     }
 
     /**
-     * @deprecated Use getToggleTextureSelection() instead
+     * Get the level for this menu.
+     * Used by GUI for world state access.
      */
-    @Deprecated
-    @Nonnull
-    public FaceSelectionData.DropdownState getToggleDropdownState() {
-        return new FaceSelectionData.DropdownState(getToggleTextureSelection());
+    @Nullable
+    public Level getLevel() {
+        return level;
     }
+
+
 }
