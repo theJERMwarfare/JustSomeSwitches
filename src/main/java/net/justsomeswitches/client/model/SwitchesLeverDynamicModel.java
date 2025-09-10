@@ -1,0 +1,764 @@
+package net.justsomeswitches.client.model;
+
+import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.ItemOverrides;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.client.model.IDynamicBakedModel;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import org.joml.Matrix4f;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Dynamic model for lever blocks with custom texture support.
+ */
+public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
+    /**
+     * Checks if block is wall-mounted.
+     */
+    private boolean isWallPlacement(@Nonnull BlockState state) {
+        try {
+            net.minecraft.world.level.block.state.properties.AttachFace attachFace = 
+                state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE);
+            return attachFace == net.minecraft.world.level.block.state.properties.AttachFace.WALL;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    /**
+     * Applies wall orientation rotations.
+     */
+    @Nonnull
+    private List<BakedQuad> applyWallOrientationRotations(@Nonnull List<BakedQuad> baseQuads, 
+                                                          @Nonnull BlockState state, 
+                                                          @Nonnull ModelData extraData) {
+        
+        String wallOrientation = getWallOrientationFromBlockEntity(extraData);
+        
+        if ("center".equals(wallOrientation)) {
+            return baseQuads;
+        }
+        net.minecraft.core.Direction wallFace;
+        try {
+            wallFace = state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING);
+        } catch (Exception e) {
+            return baseQuads;
+        }
+        
+        Matrix4f wallOrientationMatrix = createWallOrientationMatrix(wallOrientation, wallFace);
+        
+        if (wallOrientationMatrix.equals(new Matrix4f().identity())) {
+            return baseQuads;
+        }
+        List<BakedQuad> rotatedQuads = new ArrayList<>();
+        for (BakedQuad quad : baseQuads) {
+            BakedQuad rotatedQuad = transformQuadWithMatrix(quad, wallOrientationMatrix);
+            rotatedQuads.add(rotatedQuad);
+        }
+        
+        return rotatedQuads;
+    }
+    /**
+     * Gets wall orientation from model data.
+     */
+    @Nonnull
+    private String getWallOrientationFromBlockEntity(@Nonnull ModelData extraData) {
+        try {
+            String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
+            if (wallOrientation != null && !wallOrientation.isEmpty()) {
+                return wallOrientation;
+            }
+        } catch (Exception e) {
+            // Ignore exception
+        }
+        
+        return "center";
+    }
+    /**
+     * Creates rotation matrix for wall orientation.
+     */
+    @Nonnull
+    private Matrix4f createWallOrientationMatrix(@Nonnull String wallOrientation, 
+                                                 @Nonnull net.minecraft.core.Direction wallFace) {
+        
+        Matrix4f matrix = new Matrix4f().identity();
+
+        int degrees;
+        switch (wallOrientation) {
+            case "top":
+                degrees = 180;
+                break;
+            case "left":
+                degrees = 90;
+                break;
+            case "right":
+                degrees = -90;
+                break;
+            case "bottom":
+            case "center":
+            default:
+                return matrix;
+        }
+        
+        float radians = (float) Math.toRadians(degrees);
+
+        switch (wallFace) {
+            case NORTH:
+            case SOUTH:
+
+                matrix.rotateZ(radians);
+                break;
+            case EAST:
+            case WEST:
+
+                matrix.rotateX(-radians);
+                break;
+        }
+        
+        return matrix;
+    }
+    /**
+     * Transforms quad using rotation matrix.
+     */
+    @Nonnull
+    private BakedQuad transformQuadWithMatrix(@Nonnull BakedQuad originalQuad, @Nonnull Matrix4f matrix) {
+        int[] originalVertices = originalQuad.getVertices();
+        int[] transformedVertices = new int[originalVertices.length];
+        System.arraycopy(originalVertices, 0, transformedVertices, 0, originalVertices.length);
+
+        for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
+            int baseIndex = vertexIndex * 8;
+            float x = Float.intBitsToFloat(originalVertices[baseIndex]);
+            float y = Float.intBitsToFloat(originalVertices[baseIndex + 1]);
+            float z = Float.intBitsToFloat(originalVertices[baseIndex + 2]);
+            
+            org.joml.Vector3f vertex = new org.joml.Vector3f(x, y, z);
+            vertex.sub(0.5f, 0.5f, 0.5f);
+            matrix.transformPosition(vertex);
+            vertex.add(0.5f, 0.5f, 0.5f);
+            transformedVertices[baseIndex] = Float.floatToIntBits(vertex.x);
+            transformedVertices[baseIndex + 1] = Float.floatToIntBits(vertex.y);
+            transformedVertices[baseIndex + 2] = Float.floatToIntBits(vertex.z);
+        }
+        
+        return new BakedQuad(
+                transformedVertices,
+                originalQuad.getTintIndex(),
+                originalQuad.getDirection(),
+                originalQuad.getSprite(),
+                originalQuad.isShade()
+        );
+    }
+    private final Map<ModelCacheKey, List<BakedQuad>> instanceCache = new HashMap<>();
+
+
+    private static final Map<ModelCacheKey, List<BakedQuad>> GLOBAL_CACHE = new ConcurrentHashMap<>();
+
+
+    private final Map<String, TextureAtlasSprite> textureSprites;
+    private final BakedModel vanillaLeverModel;
+    private final ItemOverrides itemOverrides;
+
+    private static final java.util.concurrent.atomic.AtomicInteger cacheHits = 
+            new java.util.concurrent.atomic.AtomicInteger(0);
+    private static final java.util.concurrent.atomic.AtomicInteger cacheMisses = 
+            new java.util.concurrent.atomic.AtomicInteger(0);
+
+
+    public SwitchesLeverDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
+                             @SuppressWarnings("unused") @Nonnull Map<String, Matrix4f> orientationTransforms,
+                             @SuppressWarnings("unused") @Nonnull Map<String, String> jsonVariables,
+                             @SuppressWarnings("unused") @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
+                             @Nonnull BakedModel vanillaLeverModel,
+                             @Nonnull ItemOverrides itemOverrides) {
+        this.textureSprites = new HashMap<>(textureSprites);
+        this.vanillaLeverModel = vanillaLeverModel;
+        this.itemOverrides = itemOverrides;
+        // Note: orientationTransforms, jsonVariables, and powerModeConfig are reserved for future features
+    }
+    /**
+     * Validates and corrects ModelData before rendering.
+     */
+    @Nullable
+    private ModelData validateAndCorrectModelData(@Nonnull ModelData extraData) {
+        if (extraData == ModelData.EMPTY) {
+            return null;
+        }
+        String toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
+        String baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
+        
+        if (toggleTexture == null && baseTexture == null) {
+            return null;
+        }
+        return extraData;
+    }
+
+    @Override
+    @Nonnull
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side,
+                                   @Nonnull RandomSource rand, @Nonnull ModelData extraData, 
+                                   @Nullable RenderType renderType) {
+
+        ModelData validatedModelData = validateAndCorrectModelData(extraData);
+        boolean hasValidModelData = (validatedModelData != null);
+        
+        if (!hasValidModelData) {
+            return vanillaLeverModel.getQuads(state, side, rand, ModelData.EMPTY, renderType);
+        }
+
+
+        ModelCacheKey cacheKey = createCacheKey(state, side, validatedModelData, renderType);
+
+
+        List<BakedQuad> cachedQuads = getCachedQuads(cacheKey);
+        if (cachedQuads != null) {
+            cacheHits.incrementAndGet();
+            return cachedQuads;
+        }
+
+
+        cacheMisses.incrementAndGet();
+        List<BakedQuad> generatedQuads = generateSwitchQuads(state, side, validatedModelData, rand, renderType);
+
+
+        cacheGeneratedQuads(cacheKey, generatedQuads);
+
+
+        if ((cacheHits.get() + cacheMisses.get()) % 1000 == 0) {
+            cleanupGlobalCache();
+        }
+
+        return generatedQuads;
+    }
+
+    @Override
+    @Nonnull
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side, @Nonnull RandomSource rand) {
+        return getQuads(state, side, rand, ModelData.EMPTY, null);
+    }
+
+    /**
+     * Multi-level cache lookup.
+     */
+    @Nullable
+    private List<BakedQuad> getCachedQuads(@Nonnull ModelCacheKey key) {
+
+        List<BakedQuad> cached = instanceCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+
+
+        cached = GLOBAL_CACHE.get(key);
+        if (cached != null) {
+            instanceCache.put(key, cached);
+            return cached;
+        }
+
+        return null;
+    }
+
+
+    private void cacheGeneratedQuads(@Nonnull ModelCacheKey key, @Nonnull List<BakedQuad> quads) {
+
+        instanceCache.put(key, quads);
+
+
+        if (isCommonConfiguration(key)) {
+            GLOBAL_CACHE.put(key, quads);
+        }
+    }
+
+
+    private boolean isCommonConfiguration(@Nonnull ModelCacheKey key) {
+
+        return key.isDefaultTextures() || "center".equals(key.getWallOrientation());
+    }
+
+    /**
+     * Generates switch quads based on current configuration.
+     */
+    @Nonnull
+    private List<BakedQuad> generateSwitchQuads(@Nullable BlockState state, @Nullable Direction side,
+                                               @Nonnull ModelData extraData, @Nonnull RandomSource rand,
+                                               @Nullable RenderType renderType) {
+
+
+        boolean hasTextureData = false;
+        String toggleTexture = null;
+        String baseTexture = null;
+        String faceSelection = null;
+        String powerMode = null;
+        
+        if (extraData != ModelData.EMPTY) {
+            toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
+            baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
+            faceSelection = extraData.get(SwitchesLeverBlockEntity.FACE_SELECTION);
+            powerMode = extraData.get(SwitchesLeverBlockEntity.POWER_MODE);
+            
+
+            hasTextureData = (toggleTexture != null && !toggleTexture.equals(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) ||
+                           (baseTexture != null && !baseTexture.equals(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE)) ||
+                           (powerMode != null && !powerMode.equals("DEFAULT"));
+        }
+
+
+        List<BakedQuad> baseQuads = vanillaLeverModel.getQuads(state, side, rand, 
+                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, renderType);
+        
+        if (baseQuads.isEmpty()) {
+            return baseQuads;
+        }
+
+        List<BakedQuad> texturedQuads = baseQuads;
+        if (hasTextureData) {
+            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state);
+        }
+
+        if (state != null && isWallPlacement(state) && extraData != ModelData.EMPTY) {
+            texturedQuads = applyWallOrientationRotations(texturedQuads, state, extraData);
+        }
+
+        return texturedQuads;
+    }
+
+    /**
+     * Applies custom texture replacement to quads.
+     */
+    @Nonnull
+    private List<BakedQuad> applyCustomTextures(@Nonnull List<BakedQuad> baseQuads, 
+                                               @Nullable String toggleTexture,
+                                               @Nullable String baseTexture,
+                                               @SuppressWarnings("unused") @Nullable String faceSelection,
+                                               @Nullable String powerMode,
+                                               @Nullable BlockState state) {
+        
+        List<BakedQuad> texturedQuads = new ArrayList<>();
+        for (BakedQuad quad : baseQuads) {
+            BakedQuad processedQuad = processQuadWithCustomTextures(quad, toggleTexture, baseTexture, 
+                                                                  faceSelection, powerMode, state);
+            texturedQuads.add(processedQuad);
+        }
+        
+        return texturedQuads;
+    }
+    /**
+     * Processes individual quad with custom texture replacement.
+     */
+    @Nonnull
+    private BakedQuad processQuadWithCustomTextures(@Nonnull BakedQuad originalQuad,
+                                                   @Nullable String toggleTexture,
+                                                   @Nullable String baseTexture,
+                                                   @Nullable String faceSelection,
+                                                   @Nullable String powerMode,
+                                                   @SuppressWarnings("unused") @Nullable BlockState state) {
+
+        TextureAtlasSprite originalSprite = originalQuad.getSprite();
+        String originalTextureName = getTextureName(originalSprite);
+
+
+        TextureAtlasSprite replacementSprite = determineReplacementTexture(
+                originalSprite, originalTextureName, toggleTexture, baseTexture, 
+                powerMode);
+
+        if (replacementSprite == originalSprite) {
+            return originalQuad;
+        }
+        return replaceQuadTexture(originalQuad, replacementSprite);
+    }
+
+    /**
+     * Determines replacement texture based on part type.
+     */
+    @Nonnull
+    private TextureAtlasSprite determineReplacementTexture(@Nonnull TextureAtlasSprite originalSprite,
+                                                         @Nonnull String originalTextureName,
+                                                         @Nullable String toggleTexture,
+                                                         @Nullable String baseTexture,
+                                                         @Nullable String powerMode) {
+
+
+        if (powerMode != null && !powerMode.equals("DEFAULT")) {
+            if (isPoweredTexture(originalTextureName)) {
+                return getPoweredReplacementTexture(powerMode, toggleTexture);
+            }
+            if (isUnpoweredTexture(originalTextureName)) {
+                return getUnpoweredReplacementTexture(powerMode, toggleTexture);
+            }
+        }
+
+
+        if (isLeverMovingPart(originalTextureName) && toggleTexture != null) {
+            TextureAtlasSprite toggleSprite = getTextureSprite(toggleTexture);
+            if (toggleSprite != null) {
+                return toggleSprite;
+            }
+        }
+
+
+        if (isLeverBasePart(originalTextureName) && baseTexture != null) {
+            TextureAtlasSprite baseSprite = getTextureSprite(baseTexture);
+            if (baseSprite != null) {
+                return baseSprite;
+            }
+        }
+
+        return originalSprite;
+    }
+
+    /**
+     * Gets powered texture replacement based on power mode.
+     */
+    @Nonnull
+    private TextureAtlasSprite getPoweredReplacementTexture(@Nullable String powerMode, @Nullable String toggleTexture) {
+        if ("ALT".equals(powerMode)) {
+
+            TextureAtlasSprite altSprite = getTextureSprite("minecraft:block/lime_concrete_powder");
+            if (altSprite != null) return altSprite;
+        } else if ("NONE".equals(powerMode) && toggleTexture != null) {
+
+            TextureAtlasSprite toggleSprite = getTextureSprite(toggleTexture);
+            if (toggleSprite != null) return toggleSprite;
+        }
+
+        TextureAtlasSprite fallback = getTextureSprite("minecraft:block/redstone_block");
+        return fallback != null ? fallback : textureSprites.values().iterator().next();
+    }
+
+    /**
+     * Gets unpowered texture replacement based on power mode.
+     */
+    @Nonnull
+    private TextureAtlasSprite getUnpoweredReplacementTexture(@Nullable String powerMode, @Nullable String toggleTexture) {
+        if ("ALT".equals(powerMode)) {
+
+            TextureAtlasSprite altSprite = getTextureSprite("minecraft:block/redstone_block");
+            if (altSprite != null) return altSprite;
+        } else if ("NONE".equals(powerMode) && toggleTexture != null) {
+
+            TextureAtlasSprite toggleSprite = getTextureSprite(toggleTexture);
+            if (toggleSprite != null) return toggleSprite;
+        }
+
+        TextureAtlasSprite fallback = getTextureSprite("minecraft:block/gray_concrete_powder");
+        return fallback != null ? fallback : textureSprites.values().iterator().next();
+    }
+
+
+    @Nonnull
+    private BakedQuad replaceQuadTexture(@Nonnull BakedQuad originalQuad, 
+                                        @Nonnull TextureAtlasSprite newSprite) {
+        
+        int[] originalVertices = originalQuad.getVertices();
+        TextureAtlasSprite originalSprite = originalQuad.getSprite();
+
+
+        int[] newVertices = transformVertexData(originalVertices, originalSprite, newSprite);
+
+
+        return new BakedQuad(
+                newVertices,
+                originalQuad.getTintIndex(),
+                originalQuad.getDirection(),
+                newSprite,
+                originalQuad.isShade()
+        );
+    }
+
+
+    @Nonnull
+    private int[] transformVertexData(@Nonnull int[] originalVertices,
+                                     @Nonnull TextureAtlasSprite originalTexture,
+                                     @Nonnull TextureAtlasSprite newTexture) {
+
+        int[] newVertices = originalVertices.clone();
+
+        for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
+            int baseIndex = vertexIndex * 8;
+
+            float originalU = Float.intBitsToFloat(originalVertices[baseIndex + 4]);
+            float originalV = Float.intBitsToFloat(originalVertices[baseIndex + 5]);
+
+            float newU = transformU(originalU, originalTexture, newTexture);
+            float newV = transformV(originalV, originalTexture, newTexture);
+
+            newVertices[baseIndex + 4] = Float.floatToIntBits(newU);
+            newVertices[baseIndex + 5] = Float.floatToIntBits(newV);
+        }
+
+        return newVertices;
+    }
+
+
+    private float transformU(float originalU, @Nonnull TextureAtlasSprite originalTexture,
+                           @Nonnull TextureAtlasSprite newTexture) {
+        float relativeU = (originalU - originalTexture.getU0()) / (originalTexture.getU1() - originalTexture.getU0());
+        return newTexture.getU0() + relativeU * (newTexture.getU1() - newTexture.getU0());
+    }
+
+
+    private float transformV(float originalV, @Nonnull TextureAtlasSprite originalTexture,
+                           @Nonnull TextureAtlasSprite newTexture) {
+        float relativeV = (originalV - originalTexture.getV0()) / (originalTexture.getV1() - originalTexture.getV0());
+        return newTexture.getV0() + relativeV * (newTexture.getV1() - newTexture.getV0());
+    }
+
+    /**
+     * Identifies lever moving parts for toggle texture.
+     */
+    private boolean isLeverMovingPart(@Nonnull String originalTextureName) {
+
+        if (isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName)) {
+            return false;
+        }
+
+        return originalTextureName.contains("planks") ||
+               originalTextureName.contains("wood") ||
+               originalTextureName.contains("oak") ||
+               originalTextureName.contains("lever") ||
+
+               (!originalTextureName.contains("cobblestone") && 
+                !originalTextureName.contains("stone") &&
+                !originalTextureName.contains("iron"));
+    }
+
+    /**
+     * Identifies lever base parts for base texture.
+     */
+    private boolean isLeverBasePart(@Nonnull String originalTextureName) {
+
+        if (isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName)) {
+            return false;
+        }
+
+        return originalTextureName.contains("cobblestone") ||
+               originalTextureName.contains("stone") ||
+               originalTextureName.contains("bricks") ||
+               originalTextureName.contains("iron");
+    }
+
+
+
+    @Nonnull
+    private String getTextureName(@Nonnull TextureAtlasSprite sprite) {
+        try (var contents = sprite.contents()) {
+            return contents.name().toString();
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
+    private boolean isPoweredTexture(@Nonnull String textureName) {
+        return textureName.contains("redstone_block") ||
+               textureName.contains("switches_lever_powered") ||
+               textureName.contains("powered") ||
+               (textureName.contains("lever") && textureName.contains("on"));
+    }
+
+    private boolean isUnpoweredTexture(@Nonnull String textureName) {
+        return textureName.contains("gray_concrete_powder") ||
+               textureName.contains("switches_lever_unpowered") ||
+               textureName.contains("unpowered") ||
+               (textureName.contains("lever") && textureName.contains("off"));
+    }
+    /**
+     * Gets texture sprite from path string.
+     */
+    @Nullable
+    private TextureAtlasSprite getTextureSprite(@Nullable String texturePath) {
+        if (texturePath == null || texturePath.isEmpty()) {
+            return null;
+        }
+        
+        try {
+
+            ResourceLocation textureLocation = new ResourceLocation(texturePath);
+
+            for (TextureAtlasSprite sprite : textureSprites.values()) {
+                try (var contents = sprite.contents()) {
+                    if (contents.name().equals(textureLocation)) {
+                        return sprite;
+                    }
+                } catch (Exception e) {
+                    // Continue checking other sprites
+                }
+            }
+
+            TextureAtlasSprite directSprite = textureSprites.get(texturePath);
+            if (directSprite != null) {
+                return directSprite;
+            }
+
+            String simplifiedKey = textureLocation.getPath().replace("/", "_");
+            TextureAtlasSprite simplifiedSprite = textureSprites.get(simplifiedKey);
+            if (simplifiedSprite != null) {
+                return simplifiedSprite;
+            }
+
+            net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+            try {
+                @SuppressWarnings("deprecation")
+                TextureAtlasSprite atlasSprite = minecraft.getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
+                    .apply(textureLocation);
+                if (atlasSprite != null) {
+                    return atlasSprite;
+                }
+            } catch (Exception atlasException) {
+                // Ignore exception
+            }
+            
+        } catch (Exception e) {
+            // Ignore exception
+        }
+        
+        return null;
+    }
+
+    /**
+     * Creates cache key from rendering parameters.
+     */
+    @Nonnull
+    private ModelCacheKey createCacheKey(@Nullable BlockState state, @Nullable Direction side,
+                                        @Nonnull ModelData extraData, @Nullable RenderType renderType) {
+
+        String toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
+        String baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
+        String powerMode = extraData.get(SwitchesLeverBlockEntity.POWER_MODE);
+        String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
+
+        return new ModelCacheKey(
+                state != null ? state.toString() : "null",
+                side,
+                toggleTexture,
+                baseTexture,
+                powerMode,
+                wallOrientation,
+                renderType
+        );
+    }
+
+
+    private static void cleanupGlobalCache() {
+        if (GLOBAL_CACHE.size() > 10000) {
+
+            int removeCount = GLOBAL_CACHE.size() / 5;
+            GLOBAL_CACHE.entrySet().stream()
+                    .limit(removeCount)
+                    .map(Map.Entry::getKey)
+                    .forEach(GLOBAL_CACHE::remove);
+        }
+    }
+
+
+
+    @Override
+    public boolean useAmbientOcclusion() {
+        return vanillaLeverModel.useAmbientOcclusion();
+    }
+
+    @Override
+    public boolean isGui3d() {
+        return vanillaLeverModel.isGui3d();
+    }
+
+    @Override
+    public boolean usesBlockLight() {
+        return vanillaLeverModel.usesBlockLight();
+    }
+
+    @Override
+    public boolean isCustomRenderer() {
+        return false;
+    }
+
+    @Override
+    @Nonnull
+    public TextureAtlasSprite getParticleIcon() {
+
+        TextureAtlasSprite stoneTexture = textureSprites.get("base_default");
+        if (stoneTexture != null) {
+            return stoneTexture;
+        }
+
+        return vanillaLeverModel.getParticleIcon();
+    }
+
+    @Override
+    @Nonnull
+    public ItemOverrides getOverrides() {
+        return itemOverrides;
+    }
+
+    /**
+     * Cache key for memory efficiency and fast comparison.
+     */
+    private static class ModelCacheKey {
+        private final String blockStateString;
+        private final Direction side;
+        private final String toggleTexture;
+        private final String baseTexture;
+        private final String powerMode;
+        private final String wallOrientation;
+        private final RenderType renderType;
+        private final int hashCode;
+
+        public ModelCacheKey(@Nonnull String blockStateString, @Nullable Direction side,
+                            @Nullable String toggleTexture, @Nullable String baseTexture,
+                            @Nullable String powerMode, @Nullable String wallOrientation,
+                            @Nullable RenderType renderType) {
+            this.blockStateString = blockStateString;
+            this.side = side;
+            this.toggleTexture = toggleTexture;
+            this.baseTexture = baseTexture;
+            this.powerMode = powerMode;
+            this.wallOrientation = wallOrientation;
+            this.renderType = renderType;
+
+            this.hashCode = Objects.hash(blockStateString, side, toggleTexture, baseTexture, powerMode, wallOrientation, renderType);
+        }
+
+        public boolean isDefaultTextures() {
+            return (toggleTexture == null || toggleTexture.equals(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) &&
+                   (baseTexture == null || baseTexture.equals(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE)) &&
+                   (powerMode == null || powerMode.equals("DEFAULT"));
+        }
+
+        @Nullable
+        public String getWallOrientation() {
+            return wallOrientation != null ? wallOrientation : "center";
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (!(obj instanceof ModelCacheKey other)) return false;
+            return Objects.equals(blockStateString, other.blockStateString) &&
+                   Objects.equals(side, other.side) &&
+                   Objects.equals(toggleTexture, other.toggleTexture) &&
+                   Objects.equals(baseTexture, other.baseTexture) &&
+                   Objects.equals(powerMode, other.powerMode) &&
+                   Objects.equals(wallOrientation, other.wallOrientation) &&
+                   Objects.equals(renderType, other.renderType);
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCode;
+        }
+    }
+}

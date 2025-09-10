@@ -15,11 +15,33 @@
       "powered": "minecraft:block/redstone_block"
     }
   },
+  "orientations": {
+    "center": {
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "translation": {"x": 0.0, "y": 0.5, "z": 0.0}
+    },
+    "left": {
+      "rotation": {"x": 0, "y": 270, "z": 0},
+      "translation": {"x": -0.4, "y": 0.5, "z": 0.0}
+    },
+    "right": {
+      "rotation": {"x": 0, "y": 90, "z": 0},
+      "translation": {"x": 0.4, "y": 0.5, "z": 0.0}
+    },
+    "top": {
+      "rotation": {"x": -90, "y": 0, "z": 0},
+      "translation": {"x": 0.0, "y": 0.9, "z": 0.0}
+    },
+    "bottom": {
+      "rotation": {"x": 90, "y": 0, "z": 0},
+      "translation": {"x": 0.0, "y": 0.1, "z": 0.0}
+    }
+  },
   "variables": {
     "all": "all",
     "north": "north",
     "south": "south",
-    "east": "east",
+    "east": "east", 
     "west": "west",
     "up": "up",
     "down": "down"
@@ -29,8 +51,5 @@
       "unpowered": "minecraft:block/redstone_block",
       "powered": "minecraft:block/lime_concrete_powder"
     }
-  },
-  "textures": {
-    "particle": "minecraft:block/stone"
   }
 }

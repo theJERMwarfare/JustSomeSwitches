@@ -9,62 +9,40 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 
-
 import javax.annotation.Nonnull;
 
 /**
- * Main mod class for Just Some Switches - Phase 3A Enhanced
- * ---
- * This mod adds customizable switch variants that behave like vanilla levers
- * but with enhanced functionality and custom textures.
- * ---
- * Phase 3A additions:
- * - Block Entity registration for NBT-based texture storage
+ * Main mod class for Just Some Switches
+ *
+ * Adds customizable switch variants that behave like vanilla levers
+ * with enhanced functionality and custom textures.
  */
 @Mod(JustSomeSwitchesMod.MODID)
 public class JustSomeSwitchesMod {
 
-    // Mod identifier - must match the mod ID in mods.toml
     public static final String MODID = "justsomeswitches";
-
-
-
     /**
-     * Main mod constructor - called when NeoForge loads the mod
-     * Enhanced for Phase 3A with Block Entity support
+     * Main mod constructor
      *
      * @param modContainer The mod container provided by NeoForge
      */
+    @SuppressWarnings("DataFlowIssue")
     public JustSomeSwitchesMod(@Nonnull ModContainer modContainer) {
-        // Get the mod event bus for registering mod-specific content
         @Nonnull IEventBus modEventBus = modContainer.getEventBus();
 
-        // Register our blocks and items with the mod event bus
         JustSomeSwitchesModBlocks.BLOCKS.register(modEventBus);
         JustSomeSwitchesModBlocks.ITEMS.register(modEventBus);
-
-        // NEW: Register our block entities with the mod event bus (Phase 3A)
         JustSomeSwitchesModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
-
-        // Register our creative tabs with the mod event bus
         JustSomeSwitchesModTabs.CREATIVE_MODE_TABS.register(modEventBus);
-
-        // Register our menu types with the mod event bus
         JustSomeSwitchesMenuTypes.MENU_TYPES.register(modEventBus);
 
-        // Register event listeners
         modEventBus.addListener(this::commonSetup);
-
-
     }
 
     /**
-     * Common setup event - called after registration events are complete
-     * Use this for any setup that needs to happen after all mods have registered their content
-     *
-     * @param event The common setup event
+     * Common setup event
      */
     private void commonSetup(final FMLCommonSetupEvent event) {
-
+        // Currently unused
     }
 }

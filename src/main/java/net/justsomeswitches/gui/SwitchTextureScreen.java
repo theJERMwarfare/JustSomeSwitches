@@ -29,87 +29,71 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Switch Texture Screen for texture customization GUI.
- * <p>
- * Provides an intuitive interface for selecting and applying custom textures
- * to switch blocks with real-time preview, dropdown face selection, and
- * immediate texture application. Features professional resource management
- * and null safety for optimal stability.
- * 
- * @since 1.0.0
+ * Switch texture screen for customization GUI.
  */
 public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
 
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 176;
 
-    // GUI background texture
+
     private static final ResourceLocation GUI_BACKGROUND = new ResourceLocation("justsomeswitches", "textures/gui/switch_texture_gui.png");
 
-    // Central 3D preview positioning and scaling
-    private static final int PREVIEW_CENTER_X = 82;  // Moved 1px closer to left edge (final positioning)
-    private static final int PREVIEW_CENTER_Y = 34;  // Moved up 1px closer to top edge (final positioning)
-    private static final float PREVIEW_SCALE = 2.0f; // 2x normal item size (32x32 pixels)
 
-    // Face dropdown positioning
+    private static final int PREVIEW_CENTER_X = 82;
+    private static final int PREVIEW_CENTER_Y = 34;
+    private static final float PREVIEW_SCALE = 2.0f;
+
+
     private static final int LEFT_FACE_X = 14;
-    private static final int LEFT_FACE_Y = 45;  // Moved up 2px closer to top edge
+    private static final int LEFT_FACE_Y = 45;
     private static final int RIGHT_FACE_X = 118;
-    private static final int RIGHT_FACE_Y = 45;  // Moved up 2px closer to top edge
+    private static final int RIGHT_FACE_Y = 45;
     private static final int FACE_DROPDOWN_WIDTH = 44;
     private static final int FACE_DROPDOWN_HEIGHT = 12;
 
-    // 2D texture preview positioning
+
     private static final int LEFT_PREVIEW_X = 27;
-    private static final int LEFT_PREVIEW_Y = 63;  // Moved up 1px closer to top edge (final positioning)
+    private static final int LEFT_PREVIEW_Y = 63;
     private static final int RIGHT_PREVIEW_X = 131;
-    private static final int RIGHT_PREVIEW_Y = 63;  // Moved up 1px closer to top edge (final positioning)
+    private static final int RIGHT_PREVIEW_Y = 63;
     private static final int PREVIEW_SIZE = 18;
 
-    // Power category positioning
+
     private static final int POWER_DROPDOWN_X = 64;
     private static final int POWER_DROPDOWN_Y = 49;
     private static final int POWER_DROPDOWN_WIDTH = 48;
     private static final int POWER_DROPDOWN_HEIGHT = 12;
-    
-    // Power texture preview positioning (6x6 previews)
+
     private static final int UNPOWERED_PREVIEW_X = 57;
     private static final int UNPOWERED_PREVIEW_Y = 65;
     private static final int POWERED_PREVIEW_X = 63;
     private static final int POWERED_PREVIEW_Y = 76;
     private static final int POWER_PREVIEW_SIZE = 6;
-    
-    // Power label positioning
+
     private static final int UNPOWERED_LABEL_X = 68;
     private static final int UNPOWERED_LABEL_Y = 64;
     private static final int POWERED_LABEL_X = 74;
     private static final int POWERED_LABEL_Y = 75;
 
-    // Current dynamic state
+
     private FaceSelectionData.RawTextureSelection leftTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
     private FaceSelectionData.RawTextureSelection rightTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
 
-    // Dropdown popup management
+
     private boolean showingLeftDropdown = false;
     private boolean showingRightDropdown = false;
     private boolean showingPowerDropdown = false;
 
-    // Previous selections for change detection
+
     private ItemStack previousLeftItem = ItemStack.EMPTY;
     private ItemStack previousRightItem = ItemStack.EMPTY;
-    
-    // Previous selections for live preview change detection
+
     private String previousBaseTexture = null;
     private String previousToggleTexture = null;
     private SwitchesLeverBlockEntity.PowerMode previousPowerMode = null;
 
-    /**
-     * Creates a new Switch Texture Screen.
-     * 
-     * @param menu the texture menu container
-     * @param playerInventory the player's inventory
-     * @param title the screen title component
-     */
+
     public SwitchTextureScreen(@Nonnull SwitchTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
 
@@ -123,11 +107,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Get brightness multiplier for face-based shading.
-     * Final brightness values for professional 3D shading effect.
-     * 
-     * @param face the block face direction (can be null for general quads)
-     * @return brightness multiplier (1.0 = full bright, 0.4 = darker shadow)
+     * Gets brightness multiplier for face-based shading.
      */
     private float getFaceBrightnessMultiplier(@Nullable Direction face) {
         if (face == null) {
@@ -135,18 +115,15 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         }
         
         return switch (face) {
-            case UP -> 1.0f;      // Up - 100%
-            case DOWN -> 0.4f;    // Down - 40%
-            case NORTH -> 0.8f;   // North - 80%
-            case SOUTH -> 0.4f;   // South - 40%
-            case EAST -> 0.8f;    // East - 80%
-            case WEST -> 0.4f;    // West - 40%
+            case UP -> 1.0f;
+            case DOWN -> 0.4f;
+            case NORTH -> 0.8f;
+            case SOUTH -> 0.4f;
+            case EAST -> 0.8f;
+            case WEST -> 0.4f;
         };
     }
-    
-    /**
-     * Render quad with custom texture and brightness shading.
-     */
+
     private void renderQuadWithCustomTextureAndShading(@Nonnull BakedQuad originalQuad,
                                                         @Nonnull TextureAtlasSprite newSprite,
                                                         @Nonnull Matrix4f pose, @Nonnull Matrix3f normal,
@@ -160,10 +137,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int[] newVertexData = transformVertexDataWithShading(vertexData, originalSprite, newSprite, brightnessMultiplier);
         renderVertexData(newVertexData, pose, normal, vertexConsumer, packedLight, packedOverlay);
     }
-    
-    /**
-     * Render original quad with brightness shading.
-     */
+
     private void renderOriginalQuadWithShading(@Nonnull BakedQuad quad,
                                                 @Nonnull Matrix4f pose, @Nonnull Matrix3f normal,
                                                 @Nonnull VertexConsumer vertexConsumer,
@@ -177,10 +151,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     @Override
     protected void init() {
         super.init();
-        
-        // Complete menu initialization now that GUI is fully rendered
-        // This enables slot analysis for user interactions while preventing
-        // premature analysis during GUI setup that would overwrite persisted values
+
         menu.completeInitialization();
         
         updateUIState();
@@ -193,21 +164,18 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Updates UI state with intelligent change detection.
-     * <p>
-     * Monitors slot changes and manages dropdown states while preserving
-     * user selections and providing appropriate cleanup when blocks are removed.
+     * Updates UI state with change detection.
      */
     private void updateUIState() {
-        // Get current state from menu
+
         FaceSelectionData.RawTextureSelection newLeftSelection = menu.getToggleTextureSelection();
         FaceSelectionData.RawTextureSelection newRightSelection = menu.getBaseTextureSelection();
 
-        // Detect slot changes for cleanup only (auto-apply handled in menu)
+
         ItemStack currentLeftItem = newLeftSelection.sourceBlock();
         ItemStack currentRightItem = newRightSelection.sourceBlock();
 
-        // Handle left (toggle) slot changes
+
         if (!ItemStack.matches(previousLeftItem, currentLeftItem)) {
             if (currentLeftItem.isEmpty()) {
                 handleBlockRemoval(true);
@@ -215,7 +183,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             previousLeftItem = currentLeftItem.copy();
         }
 
-        // Handle right (base) slot changes
+
         if (!ItemStack.matches(previousRightItem, currentRightItem)) {
             if (currentRightItem.isEmpty()) {
                 handleBlockRemoval(false);
@@ -223,112 +191,84 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             previousRightItem = currentRightItem.copy();
         }
 
-        // Update state
+
         leftTextureSelection = newLeftSelection;
         rightTextureSelection = newRightSelection;
-        
-        // Check for texture/power changes that should update preview
+
+        @SuppressWarnings("unused")
         boolean previewNeedsUpdate = false;
-        
-        // Detect base texture changes
+
         if (!Objects.equals(previousBaseTexture, rightTextureSelection.previewTexture())) {
-            previewNeedsUpdate = true;
             previousBaseTexture = rightTextureSelection.previewTexture();
         }
-        
-        // Detect toggle texture changes
+
         if (!Objects.equals(previousToggleTexture, leftTextureSelection.previewTexture())) {
-            previewNeedsUpdate = true;
             previousToggleTexture = leftTextureSelection.previewTexture();
         }
-        
-        // Detect power mode changes
+
         if (previousPowerMode != menu.getPowerMode()) {
-            previewNeedsUpdate = true;
             previousPowerMode = menu.getPowerMode();
         }
-        
-        // Preview will update automatically on next renderBg() call if needed
+
     }
 
     /**
-     * Renders the live 3D preview in the GUI center using direct block rendering.
-     * This approach applies custom textures directly to the block model for accurate preview.
-     * 
-     * @param graphics the GUI graphics context
-     * @param guiLeft the GUI left offset
-     * @param guiTop the GUI top offset
+     * Renders the live 3D preview in the GUI center.
      */
     private void drawLive3DPreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         try {
-            // Get the actual switch block state from the world
+
             BlockState switchState = getCurrentBlockState();
-            
-            // Calculate center position for 2x scaled preview
+
             int centerX = guiLeft + PREVIEW_CENTER_X;
             int centerY = guiTop + PREVIEW_CENTER_Y;
-            
-            // Set up pose stack for 3D rendering with proper isometric view
+
             PoseStack poseStack = graphics.pose();
             poseStack.pushPose();
-            
-            // Position and scale the preview for 2x normal item size
+
             poseStack.translate(centerX, centerY, 100);
             poseStack.scale(PREVIEW_SCALE * 16, -PREVIEW_SCALE * 16, PREVIEW_SCALE * 16);
-            
-            // Apply inventory-style rotations and lighting
-            // Final angle refinements: X=10° for optimal vertical angle, Y=-215° for perfect front view
-            // Position moved for better GUI centering
-            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(1, 0, 0, 10f));    // X: Refined vertical angle
-            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(0, 1, 0, -215f));  // Y: Perfect front top-right corner
-            
-            // Center the block
+
+            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(1, 0, 0, 10f));
+            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(0, 1, 0, -215f));
+
             poseStack.translate(-0.5f, -0.5f, -0.5f);
-            
-            // Get buffer source for rendering with inventory-style lighting
+
             MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-            
-            // Render the block with custom textures and inventory-style lighting
+
             renderBlockWithCustomTextures(switchState, poseStack, bufferSource);
-            
-            // Finish rendering
+
             bufferSource.endBatch();
             
             poseStack.popPose();
             
         } catch (Exception e) {
-            // Graceful fallback to current static preview
+
             drawBasic3DPreview(graphics, guiLeft, guiTop);
         }
     }
     
     /**
-     * Gets the current block state from the world, including power state.
-     * FIXED: Force consistent GUI preview orientation regardless of world placement.
-     * 
-     * @return the current block state with proper powered/unpowered state and consistent GUI orientation
+     * Gets the current block state from the world.
      */
     @Nonnull
     private BlockState getCurrentBlockState() {
-        // Start with default block state
+
         BlockState defaultState = net.justsomeswitches.init.JustSomeSwitchesModBlocks.SWITCHES_LEVER.get().defaultBlockState();
-        
-        // Get the powered state from the actual world block if available
+
         boolean isPowered = false;
         if (menu.getBlockPos() != null && menu.getLevel() != null) {
             try {
                 BlockState worldState = menu.getLevel().getBlockState(menu.getBlockPos());
                 if (worldState.getBlock() == defaultState.getBlock()) {
-                    // Extract only the powered state, ignore placement orientation
+
                     isPowered = worldState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED);
                 }
             } catch (Exception e) {
-                // Fall back to unpowered state if world access fails
+                // Fall back to unpowered state
             }
         }
-        
-        // FIXED: Always use wall,facing=north orientation for consistent GUI preview
-        // This ensures the GUI 3D preview always looks the same regardless of actual placement
+
         return defaultState
                 .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE, 
                          net.minecraft.world.level.block.state.properties.AttachFace.WALL)
@@ -338,8 +278,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Renders the block with custom texture replacement applied.
-     * Uses similar logic to the BlockEntityRenderer for consistency.
+     * Renders the block with custom texture replacement.
      */
     private void renderBlockWithCustomTextures(@Nonnull BlockState blockState, 
                                                @Nonnull PoseStack poseStack,
@@ -348,21 +287,16 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
         BakedModel baseModel = blockRenderer.getBlockModel(blockState);
         VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.translucent());  // Try translucent for better lighting
-        
-        // Get current texture selections
+
         TextureAtlasSprite baseSprite = getCustomTextureSprite(rightTextureSelection);
         TextureAtlasSprite toggleSprite = getCustomTextureSprite(leftTextureSelection);
-        
-        // Get power category textures based on current mode
+
         TextureAtlasSprite unpoweredSprite = getPowerTextureSprite(false);
         TextureAtlasSprite poweredSprite = getPowerTextureSprite(true);
         
         RandomSource random = RandomSource.create();
-        // Back to original bright lighting for good visibility
-        int packedLight = net.minecraft.client.renderer.LightTexture.pack(15, 15);  // Original bright setting
-        int packedOverlay = 655360;  // No overlay
-        
-        // Process face-specific quads with brightness shading
+        int packedLight = net.minecraft.client.renderer.LightTexture.pack(15, 15);
+        int packedOverlay = 655360;
         for (Direction face : Direction.values()) {
             List<BakedQuad> quads = baseModel.getQuads(blockState, face, random, 
                 net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
@@ -370,8 +304,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             processCustomQuads(quads, poseStack, vertexConsumer, baseSprite, toggleSprite,
                     unpoweredSprite, poweredSprite, packedLight, packedOverlay);
         }
-        
-        // Process general quads with brightness shading
+
         List<BakedQuad> generalQuads = baseModel.getQuads(blockState, null, random, 
             net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
         processCustomQuads(generalQuads, poseStack, vertexConsumer, baseSprite, toggleSprite,
@@ -410,7 +343,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Process quads and apply custom texture replacement with face-based color shading.
+     * Process quads and apply custom texture replacement.
      */
     private void processCustomQuads(@Nonnull List<BakedQuad> quads, @Nonnull PoseStack poseStack,
                                     @Nonnull VertexConsumer vertexConsumer,
@@ -429,8 +362,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             
             TextureAtlasSprite replacementSprite = determineReplacementTexture(
                     originalSprite, baseSprite, toggleSprite, unpoweredSprite, poweredSprite);
-            
-            // Get face-based brightness multiplier for shading
+
             float brightnessMultiplier = getFaceBrightnessMultiplier(quad.getDirection());
             
             if (replacementSprite != null && replacementSprite != originalSprite) {
@@ -444,7 +376,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Determine which replacement texture to use based on original texture.
+     * Determine which replacement texture to use.
      */
     @Nullable
     private TextureAtlasSprite determineReplacementTexture(@Nonnull TextureAtlasSprite originalSprite,
@@ -454,8 +386,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                                                            @Nullable TextureAtlasSprite poweredSprite) {
         
         String originalName = getSafeSpriteName(originalSprite);
-        
-        // Power category textures take priority
+
         if (isPoweredTexture(originalName) && poweredSprite != null) {
             return poweredSprite;
         }
@@ -463,13 +394,11 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         if (isUnpoweredTexture(originalName) && unpoweredSprite != null) {
             return unpoweredSprite;
         }
-        
-        // Skip textures that shouldn't be replaced
+
         if (shouldExcludeFromReplacement(originalName)) {
             return null;
         }
-        
-        // Apply base/toggle texture replacements
+
         if (isBaseTexture(originalName) && baseSprite != null) {
             return baseSprite;
         }
@@ -481,9 +410,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         return null;
     }
     
-    /**
-     * Check if texture should be excluded from replacement.
-     */
+
     private boolean shouldExcludeFromReplacement(@Nonnull String textureName) {
         return textureName.contains("redstone") ||
                 textureName.contains("_on") ||
@@ -491,9 +418,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 textureName.contains("gray_concrete_powder");
     }
     
-    /**
-     * Check if this is a powered texture that should be replaced by power category.
-     */
+
     private boolean isPoweredTexture(@Nonnull String textureName) {
         return textureName.contains("redstone_block") ||
                 textureName.contains("switches_lever_powered") ||
@@ -501,9 +426,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 (textureName.contains("lever") && textureName.contains("on"));
     }
     
-    /**
-     * Check if this is an unpowered texture that should be replaced by power category.
-     */
+
     private boolean isUnpoweredTexture(@Nonnull String textureName) {
         return textureName.contains("gray_concrete_powder") ||
                 textureName.contains("switches_lever_unpowered") ||
@@ -511,18 +434,14 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 (textureName.contains("lever") && textureName.contains("off"));
     }
     
-    /**
-     * Check if this is a base texture (cobblestone/stone-like).
-     */
+
     private boolean isBaseTexture(@Nonnull String textureName) {
         return textureName.contains("cobblestone") ||
                 textureName.contains("stone") ||
                 (textureName.contains("concrete") && !textureName.contains("gray_concrete_powder"));
     }
     
-    /**
-     * Check if this is a toggle texture (wood/planks-like).
-     */
+
     private boolean isToggleTexture(@Nonnull String textureName) {
         return textureName.contains("planks") ||
                 textureName.contains("wood") ||
@@ -530,7 +449,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Transform vertex data to use new texture coordinates with brightness shading.
+     * Transform vertex data to use new texture coordinates.
      */
     @Nonnull
     private int[] transformVertexDataWithShading(@Nonnull int[] originalVertices,
@@ -542,8 +461,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         
         for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
             int baseIndex = vertexIndex * 8;
-            
-            // Transform texture coordinates
+
             float originalU = Float.intBitsToFloat(originalVertices[baseIndex + 4]);
             float originalV = Float.intBitsToFloat(originalVertices[baseIndex + 5]);
             
@@ -552,8 +470,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             
             newVertices[baseIndex + 4] = Float.floatToIntBits(newU);
             newVertices[baseIndex + 5] = Float.floatToIntBits(newV);
-            
-            // Apply brightness shading
+
             int originalColor = originalVertices[baseIndex + 3];
             int shadedColor = applyBrightnessShading(originalColor, brightnessMultiplier);
             newVertices[baseIndex + 3] = shadedColor;
@@ -563,7 +480,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Apply brightness shading to vertex data without texture changes.
+     * Apply brightness shading to vertex data.
      */
     @Nonnull
     private int[] applyShadingToVertexData(@Nonnull int[] originalVertices, float brightnessMultiplier) {
@@ -571,8 +488,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         
         for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
             int baseIndex = vertexIndex * 8;
-            
-            // Apply brightness shading
+
             int originalColor = originalVertices[baseIndex + 3];
             int shadedColor = applyBrightnessShading(originalColor, brightnessMultiplier);
             newVertices[baseIndex + 3] = shadedColor;
@@ -583,15 +499,13 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     
     /**
      * Apply brightness shading to color.
-     * Multiplies RGB channels by brightness multiplier for realistic 3D shading.
      */
     private int applyBrightnessShading(int originalColor, float brightnessMultiplier) {
         int alpha = (originalColor >> 24) & 0xFF;
         int red = (int)(((originalColor >> 16) & 0xFF) * brightnessMultiplier);
         int green = (int)(((originalColor >> 8) & 0xFF) * brightnessMultiplier);
         int blue = (int)((originalColor & 0xFF) * brightnessMultiplier);
-        
-        // Clamp values to valid range
+
         red = Math.max(0, Math.min(255, red));
         green = Math.max(0, Math.min(255, green));
         blue = Math.max(0, Math.min(255, blue));
@@ -600,7 +514,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Transform U coordinate from original texture space to new texture space.
+     * Transform U coordinate from original to new texture space.
      */
     private float transformU(float originalU, @Nonnull TextureAtlasSprite originalTexture,
                              @Nonnull TextureAtlasSprite newTexture) {
@@ -609,17 +523,14 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
     
     /**
-     * Transform V coordinate from original texture space to new texture space.
+     * Transform V coordinate from original to new texture space.
      */
     private float transformV(float originalV, @Nonnull TextureAtlasSprite originalTexture,
                              @Nonnull TextureAtlasSprite newTexture) {
         float relativeV = (originalV - originalTexture.getV0()) / (originalTexture.getV1() - originalTexture.getV0());
         return newTexture.getV0() + relativeV * (newTexture.getV1() - newTexture.getV0());
     }
-    
-    /**
-     * Render vertex data to vertex consumer.
-     */
+
     private void renderVertexData(@Nonnull int[] vertexData,
                                   @Nonnull Matrix4f pose, @Nonnull Matrix3f normal,
                                   @Nonnull VertexConsumer vertexConsumer,
@@ -999,14 +910,17 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             displayText = selection.selectedVariable();
 
             // Truncate text if too long for dropdown width
-            if (displayText.length() > 5) {
-                displayText = displayText.substring(0, 5);
+            if (displayText.length() > 7) {
+                displayText = displayText.substring(0, 7);
             }
         }
 
         // Only draw text if not empty
         if (!displayText.isEmpty()) {
-            graphics.drawString(this.font, displayText, x + 2, y + 2, textColor, false);
+            // Calculate vertically centered position
+            int fontHeight = this.font.lineHeight;
+            int centeredY = y + (FACE_DROPDOWN_HEIGHT - fontHeight) / 2;
+            graphics.drawString(this.font, displayText, x + 2, centeredY, textColor, false);
         }
     }
 
@@ -1149,7 +1063,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
     @Override
     public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+        // Use standard container screen background for lighter darkening (matches vanilla GUIs)
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
 
@@ -1210,12 +1124,17 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                 graphics.fill(x + 1, optionY, x + FACE_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
             }
 
-            // Draw variable name (raw JSON variable, no modification)
             String displayText = variable;
-            if (displayText.length() > 5) {
-                displayText = displayText.substring(0, 5);
+            if (displayText.length() > 7) {
+                displayText = displayText.substring(0, 7);
             }
-            graphics.drawString(this.font, displayText, x + 2, optionY + 2, 0xFF000000, false);
+            graphics.pose().pushPose();
+            graphics.pose().scale(0.8f, 0.8f, 1.0f);
+            // Calculate vertically centered position for popup text and move down 1 additional pixel
+            int fontHeight = this.font.lineHeight;
+            int centeredY = (int)((optionY + (12 - fontHeight) / 2.0 + 2) / 0.8f);
+            graphics.drawString(this.font, displayText, (int)((x + 2) / 0.8f), centeredY, 0xFF000000, false);
+            graphics.pose().popPose();
         }
 
         // Restore z-order
@@ -1264,20 +1183,26 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int arrowY = y + 4;
         
         if (showingPowerDropdown) {
-            // Up arrow (open state) - wide at top, narrow at bottom
-            graphics.fill(arrowX, arrowY, arrowX + 6, arrowY + 1, arrowColor);
-            graphics.fill(arrowX + 1, arrowY + 1, arrowX + 5, arrowY + 2, arrowColor);
-            graphics.fill(arrowX + 2, arrowY + 2, arrowX + 4, arrowY + 3, arrowColor);
-        } else {
-            // Down arrow (closed state) - narrow at top, wide at bottom
+            // Up arrow (open state) - narrow at top, wide at bottom
             graphics.fill(arrowX + 2, arrowY, arrowX + 4, arrowY + 1, arrowColor);
             graphics.fill(arrowX + 1, arrowY + 1, arrowX + 5, arrowY + 2, arrowColor);
             graphics.fill(arrowX, arrowY + 2, arrowX + 6, arrowY + 3, arrowColor);
+        } else {
+            // Down arrow (closed state) - wide at top, narrow at bottom
+            graphics.fill(arrowX, arrowY, arrowX + 6, arrowY + 1, arrowColor);
+            graphics.fill(arrowX + 1, arrowY + 1, arrowX + 5, arrowY + 2, arrowColor);
+            graphics.fill(arrowX + 2, arrowY + 2, arrowX + 4, arrowY + 3, arrowColor);
         }
         
         // Draw current power mode text (lowercase as specified)
         String displayText = formatPowerModeText(currentMode.name());
-        graphics.drawString(this.font, displayText, x + 2, y + 2, 0xFF404040, false);
+        graphics.pose().pushPose();
+        graphics.pose().scale(0.8f, 0.8f, 1.0f);
+        // Calculate vertically centered position, move 1 pixel right, and move down 1 additional pixel
+        int fontHeight = this.font.lineHeight;
+        int centeredY = (int)((y + (POWER_DROPDOWN_HEIGHT - fontHeight) / 2.0 + 2) / 0.8f);
+        graphics.drawString(this.font, displayText, (int)((x + 3) / 0.8f), centeredY, 0xFF404040, false);
+        graphics.pose().popPose();
     }
 
     /**
@@ -1317,7 +1242,13 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             
             // Draw mode name (lowercase as specified)
             String modeText = formatPowerModeText(mode.name());
-            graphics.drawString(this.font, modeText, x + 2, optionY + 2, 0xFF000000, false);
+            graphics.pose().pushPose();
+            graphics.pose().scale(0.8f, 0.8f, 1.0f);
+            // Calculate vertically centered position for popup text, move 1 pixel right, and move down 1 additional pixel
+            int fontHeight = this.font.lineHeight;
+            int centeredY = (int)((optionY + (12 - fontHeight) / 2.0 + 2) / 0.8f);
+            graphics.drawString(this.font, modeText, (int)((x + 3) / 0.8f), centeredY, 0xFF000000, false);
+            graphics.pose().popPose();
         }
         
         // Restore z-order
@@ -1437,11 +1368,17 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
      * Draws power category labels.
      */
     private void drawPowerLabels(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        // Draw "Unpowered" label
-        graphics.drawString(this.font, "Unpowered", guiLeft + UNPOWERED_LABEL_X, guiTop + UNPOWERED_LABEL_Y, 0xFF404040, false);
+        // Draw "Unpowered" label with 75% scale
+        graphics.pose().pushPose();
+        graphics.pose().scale(0.75f, 0.75f, 1.0f);
+        graphics.drawString(this.font, "Unpowered", (int)((guiLeft + UNPOWERED_LABEL_X) / 0.75f), (int)((guiTop + UNPOWERED_LABEL_Y) / 0.75f), 0xFF404040, false);
+        graphics.pose().popPose();
         
-        // Draw "Powered" label
-        graphics.drawString(this.font, "Powered", guiLeft + POWERED_LABEL_X, guiTop + POWERED_LABEL_Y, 0xFF404040, false);
+        // Draw "Powered" label with 75% scale
+        graphics.pose().pushPose();
+        graphics.pose().scale(0.75f, 0.75f, 1.0f);
+        graphics.drawString(this.font, "Powered", (int)((guiLeft + POWERED_LABEL_X) / 0.75f), (int)((guiTop + POWERED_LABEL_Y) / 0.75f), 0xFF404040, false);
+        graphics.pose().popPose();
     }
 
     /**

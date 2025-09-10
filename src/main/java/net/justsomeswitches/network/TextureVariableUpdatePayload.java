@@ -56,64 +56,45 @@ public record TextureVariableUpdatePayload(
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) {
-
                 return;
             }
             
+            @SuppressWarnings("resource")
             Level level = player.level();
             BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
             
             if (!(blockEntity instanceof SwitchesLeverBlockEntity switchEntity)) {
-
                 return;
             }
-            
-
             
             // Update the server-side BlockEntity directly
             switch (payload.category()) {
                 case "base" -> {
                     switchEntity.setBaseTextureVariable(payload.variable());
                     switchEntity.setBaseTexture(payload.texturePath());
-
+                    switchEntity.updateTextures();
                 }
                 case "toggle" -> {
                     switchEntity.setToggleTextureVariable(payload.variable());
                     switchEntity.setToggleTexture(payload.texturePath());
-
+                    switchEntity.updateTextures();
                 }
                 case "power" -> {
-                    // Parse power mode from variable name
                     try {
                         SwitchesLeverBlockEntity.PowerMode powerMode = SwitchesLeverBlockEntity.PowerMode.valueOf(payload.variable().toUpperCase());
                         switchEntity.setPowerMode(powerMode);
-
+                        switchEntity.updateTextures();
                     } catch (IllegalArgumentException e) {
-
-                        return;
+                        // Invalid power mode, ignore
                     }
                 }
                 default -> {
-
-                    return;
+                    // Unknown category, ignore
                 }
             }
-            
-            // Force save and sync to all clients
-            switchEntity.setChanged();
-            switchEntity.requestModelDataUpdate();
-            level.sendBlockUpdated(payload.blockPos(), level.getBlockState(payload.blockPos()), level.getBlockState(payload.blockPos()), 3);
             
 
         });
     }
-    
-    private static String getCurrentVariable(SwitchesLeverBlockEntity entity, String category) {
-        return switch (category) {
-            case "base" -> entity.getBaseTextureVariable();
-            case "toggle" -> entity.getToggleTextureVariable();
-            case "power" -> entity.getPowerMode().name().toLowerCase();
-            default -> "unknown";
-        };
-    }
+
 }

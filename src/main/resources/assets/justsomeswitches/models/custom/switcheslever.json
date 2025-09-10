@@ -1,6 +1,12 @@
 {
 	"credit": "Made with Blockbench",
 	"ambientocclusion": false,
+	"textures": {
+		"base": "minecraft:block/stone",
+		"toggle": "minecraft:block/oak_planks",
+		"powered": "minecraft:block/redstone_block",
+		"unpowered": "minecraft:block/gray_concrete_powder"
+	},
 
 	"elements": [
 		{
