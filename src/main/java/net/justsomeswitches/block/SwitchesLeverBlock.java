@@ -193,11 +193,11 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         Vec3 clickLocation = context.getClickLocation();
         BlockPos clickedPos = context.getClickedPos();
         
-        Vec3 relativeHit = getRelativeHitLocation(clickLocation, clickedPos, clickedFace);
+        Vec3 relativeHit = getRelativeHitLocation(clickLocation, clickedFace);
         BlockState proposedState = switch (clickedFace) {
             case UP -> getFloorPlacement(relativeHit, context);
             case DOWN -> getCeilingPlacement(relativeHit, context);
-            case NORTH, SOUTH, EAST, WEST -> getWallPlacement(clickedFace, relativeHit, context);
+            case NORTH, SOUTH, EAST, WEST -> getWallPlacement(clickedFace, relativeHit);
         };
 
         if (proposedState.canSurvive(context.getLevel(), context.getClickedPos())) {
@@ -210,8 +210,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     /**
      * Calculates relative hit position within block face.
      */
-    private Vec3 getRelativeHitLocation(Vec3 clickLocation, @SuppressWarnings("unused") BlockPos _clickedPos, Direction clickedFace) {
-
+    private Vec3 getRelativeHitLocation(Vec3 clickLocation, Direction clickedFace) {
         double fracX = clickLocation.x - Math.floor(clickLocation.x);
         double fracY = clickLocation.y - Math.floor(clickLocation.y);
         double fracZ = clickLocation.z - Math.floor(clickLocation.z);
@@ -314,24 +313,19 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     /**
      * Determines wall placement orientation.
      */
-    private BlockState getWallPlacement(Direction clickedFace, Vec3 relativeHit, @SuppressWarnings("unused") BlockPlaceContext _context) {
+    private BlockState getWallPlacement(Direction clickedFace, Vec3 relativeHit) {
         final double EDGE_THRESHOLD = 4.0 / 16.0;
-        String leverOrientation;
         
+        String leverOrientation;
         if (relativeHit.y < EDGE_THRESHOLD) {
-
             leverOrientation = "bottom";
         } else if (relativeHit.y > (1.0 - EDGE_THRESHOLD)) {
-
             leverOrientation = "top";
         } else if (relativeHit.x < EDGE_THRESHOLD) {
-
             leverOrientation = "left";
         } else if (relativeHit.x > (1.0 - EDGE_THRESHOLD)) {
-
             leverOrientation = "right";
         } else {
-
             leverOrientation = "center";
         }
         
@@ -399,18 +393,14 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
             blockEntity.protectNBTDuringStateChange();
         }
 
-
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
-
-
         level.setBlock(pos, newState, Block.UPDATE_ALL);
 
 
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
-
-
+        
         level.updateNeighborsAt(pos, this);
         Direction attachedDirection = getAttachedDirection(newState);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);

@@ -1,6 +1,7 @@
 package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -40,41 +41,54 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private static final ResourceLocation GUI_BACKGROUND = new ResourceLocation("justsomeswitches", "textures/gui/switch_texture_gui.png");
 
 
-    private static final int PREVIEW_CENTER_X = 82;
-    private static final int PREVIEW_CENTER_Y = 34;
+    // 3D Preview - no change
+    private static final int PREVIEW_CENTER_X = 81;
+    private static final int PREVIEW_CENTER_Y = 39;  // was 40, y -1 (NO CHANGE)
     private static final float PREVIEW_SCALE = 2.0f;
 
-
-    private static final int LEFT_FACE_X = 14;
-    private static final int LEFT_FACE_Y = 45;
-    private static final int RIGHT_FACE_X = 118;
-    private static final int RIGHT_FACE_Y = 45;
-    private static final int FACE_DROPDOWN_WIDTH = 44;
+    // Face selection dropdowns - additional adjustments
+    private static final int LEFT_FACE_X = 11;
+    private static final int LEFT_FACE_Y = 50;        // was 45, y +5, then -1, then +1
+    private static final int RIGHT_FACE_X = 119;
+    private static final int RIGHT_FACE_Y = 50;       // was 45, y +5, then -1, then +1
+    private static final int FACE_DROPDOWN_WIDTH = 46;
     private static final int FACE_DROPDOWN_HEIGHT = 12;
 
+    // Rotation dropdowns - additional adjustments
+    private static final int LEFT_ROTATION_X = 26;
+    private static final int LEFT_ROTATION_Y = 65;    // was 59, y +5, then -1, then +2
+    private static final int RIGHT_ROTATION_X = 119;
+    private static final int RIGHT_ROTATION_Y = 65;   // was 59, y +5, then -1, then +2
+    private static final int ROTATION_DROPDOWN_WIDTH = 31;
+    private static final int ROTATION_DROPDOWN_HEIGHT = 12;
 
-    private static final int LEFT_PREVIEW_X = 27;
-    private static final int LEFT_PREVIEW_Y = 63;
-    private static final int RIGHT_PREVIEW_X = 131;
-    private static final int RIGHT_PREVIEW_Y = 63;
+    // Texture previews - additional adjustments
+    private static final int LEFT_PREVIEW_X = 36;     // was 34, x +2
+    private static final int LEFT_PREVIEW_Y = 28;     // was 21, y +6, then +1
+    private static final int RIGHT_PREVIEW_X = 122;   // was 120, x +2
+    private static final int RIGHT_PREVIEW_Y = 28;    // was 21, y +6, then +1
     private static final int PREVIEW_SIZE = 18;
 
-
-    private static final int POWER_DROPDOWN_X = 64;
-    private static final int POWER_DROPDOWN_Y = 49;
-    private static final int POWER_DROPDOWN_WIDTH = 48;
+    // Power dropdown - additional adjustments
+    private static final int POWER_DROPDOWN_X = 65;
+    private static final int POWER_DROPDOWN_Y = 50;   // was 45, y +5, then -1, then +1
+    private static final int POWER_DROPDOWN_WIDTH = 46;
     private static final int POWER_DROPDOWN_HEIGHT = 12;
 
-    private static final int UNPOWERED_PREVIEW_X = 57;
-    private static final int UNPOWERED_PREVIEW_Y = 65;
-    private static final int POWERED_PREVIEW_X = 63;
-    private static final int POWERED_PREVIEW_Y = 76;
+    // Power previews - additional adjustments
+    private static final int UNPOWERED_PREVIEW_X = 64; // was 63, x +1
+    private static final int UNPOWERED_PREVIEW_Y = 64; // was 58, y +6, then +1, then -2, then +1
+    private static final int POWERED_PREVIEW_X = 69;   // was 68, x +1
+    private static final int POWERED_PREVIEW_Y = 73;   // was 67, y +6, then +1, then -2, then +1
     private static final int POWER_PREVIEW_SIZE = 6;
 
-    private static final int UNPOWERED_LABEL_X = 68;
-    private static final int UNPOWERED_LABEL_Y = 64;
-    private static final int POWERED_LABEL_X = 74;
-    private static final int POWERED_LABEL_Y = 75;
+    // Power labels - final adjustments
+    private static final int UNPOWERED_LABEL_X = 73;   // reverted back to 73
+    private static final int UNPOWERED_LABEL_Y = 64;   // was 65, y -1  
+    private static final int POWERED_LABEL_X = 78;     // no change
+    private static final int POWERED_LABEL_Y = 73;     // was 74, y -1
+
+
 
 
     private FaceSelectionData.RawTextureSelection leftTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
@@ -84,6 +98,10 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private boolean showingLeftDropdown = false;
     private boolean showingRightDropdown = false;
     private boolean showingPowerDropdown = false;
+    
+    // NEW: Rotation dropdown states
+    private boolean showingLeftRotationDropdown = false;
+    private boolean showingRightRotationDropdown = false;
 
 
     private ItemStack previousLeftItem = ItemStack.EMPTY;
@@ -106,38 +124,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         this.inventoryLabelY = 86;
     }
     
-    /**
-     * Gets brightness multiplier for face-based shading.
-     */
-    private float getFaceBrightnessMultiplier(@Nullable Direction face) {
-        if (face == null) {
-            return 0.4f;  // General quads - 40%
-        }
-        
-        return switch (face) {
-            case UP -> 1.0f;
-            case DOWN -> 0.4f;
-            case NORTH -> 0.8f;
-            case SOUTH -> 0.4f;
-            case EAST -> 0.8f;
-            case WEST -> 0.4f;
-        };
-    }
-
-    private void renderQuadWithCustomTextureAndShading(@Nonnull BakedQuad originalQuad,
-                                                        @Nonnull TextureAtlasSprite newSprite,
-                                                        @Nonnull Matrix4f pose, @Nonnull Matrix3f normal,
-                                                        @Nonnull VertexConsumer vertexConsumer,
-                                                        int packedLight, int packedOverlay,
-                                                        float brightnessMultiplier) {
-        
-        int[] vertexData = originalQuad.getVertices();
-        TextureAtlasSprite originalSprite = originalQuad.getSprite();
-        
-        int[] newVertexData = transformVertexDataWithShading(vertexData, originalSprite, newSprite, brightnessMultiplier);
-        renderVertexData(newVertexData, pose, normal, vertexConsumer, packedLight, packedOverlay);
-    }
-
     private void renderOriginalQuadWithShading(@Nonnull BakedQuad quad,
                                                 @Nonnull Matrix4f pose, @Nonnull Matrix3f normal,
                                                 @Nonnull VertexConsumer vertexConsumer,
@@ -146,306 +132,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         int[] vertexData = quad.getVertices();
         int[] shadedVertexData = applyShadingToVertexData(vertexData, brightnessMultiplier);
         renderVertexData(shadedVertexData, pose, normal, vertexConsumer, packedLight, packedOverlay);
-    }
-
-    @Override
-    protected void init() {
-        super.init();
-
-        menu.completeInitialization();
-        
-        updateUIState();
-    }
-
-    @Override
-    public void containerTick() {
-        super.containerTick();
-        updateUIState();
-    }
-
-    /**
-     * Updates UI state with change detection.
-     */
-    private void updateUIState() {
-
-        FaceSelectionData.RawTextureSelection newLeftSelection = menu.getToggleTextureSelection();
-        FaceSelectionData.RawTextureSelection newRightSelection = menu.getBaseTextureSelection();
-
-
-        ItemStack currentLeftItem = newLeftSelection.sourceBlock();
-        ItemStack currentRightItem = newRightSelection.sourceBlock();
-
-
-        if (!ItemStack.matches(previousLeftItem, currentLeftItem)) {
-            if (currentLeftItem.isEmpty()) {
-                handleBlockRemoval(true);
-            }
-            previousLeftItem = currentLeftItem.copy();
-        }
-
-
-        if (!ItemStack.matches(previousRightItem, currentRightItem)) {
-            if (currentRightItem.isEmpty()) {
-                handleBlockRemoval(false);
-            }
-            previousRightItem = currentRightItem.copy();
-        }
-
-
-        leftTextureSelection = newLeftSelection;
-        rightTextureSelection = newRightSelection;
-
-        @SuppressWarnings("unused")
-        boolean previewNeedsUpdate = false;
-
-        if (!Objects.equals(previousBaseTexture, rightTextureSelection.previewTexture())) {
-            previousBaseTexture = rightTextureSelection.previewTexture();
-        }
-
-        if (!Objects.equals(previousToggleTexture, leftTextureSelection.previewTexture())) {
-            previousToggleTexture = leftTextureSelection.previewTexture();
-        }
-
-        if (previousPowerMode != menu.getPowerMode()) {
-            previousPowerMode = menu.getPowerMode();
-        }
-
-    }
-
-    /**
-     * Renders the live 3D preview in the GUI center.
-     */
-    private void drawLive3DPreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        try {
-
-            BlockState switchState = getCurrentBlockState();
-
-            int centerX = guiLeft + PREVIEW_CENTER_X;
-            int centerY = guiTop + PREVIEW_CENTER_Y;
-
-            PoseStack poseStack = graphics.pose();
-            poseStack.pushPose();
-
-            poseStack.translate(centerX, centerY, 100);
-            poseStack.scale(PREVIEW_SCALE * 16, -PREVIEW_SCALE * 16, PREVIEW_SCALE * 16);
-
-            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(1, 0, 0, 10f));
-            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(0, 1, 0, -215f));
-
-            poseStack.translate(-0.5f, -0.5f, -0.5f);
-
-            MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-
-            renderBlockWithCustomTextures(switchState, poseStack, bufferSource);
-
-            bufferSource.endBatch();
-            
-            poseStack.popPose();
-            
-        } catch (Exception e) {
-
-            drawBasic3DPreview(graphics, guiLeft, guiTop);
-        }
-    }
-    
-    /**
-     * Gets the current block state from the world.
-     */
-    @Nonnull
-    private BlockState getCurrentBlockState() {
-
-        BlockState defaultState = net.justsomeswitches.init.JustSomeSwitchesModBlocks.SWITCHES_LEVER.get().defaultBlockState();
-
-        boolean isPowered = false;
-        if (menu.getBlockPos() != null && menu.getLevel() != null) {
-            try {
-                BlockState worldState = menu.getLevel().getBlockState(menu.getBlockPos());
-                if (worldState.getBlock() == defaultState.getBlock()) {
-
-                    isPowered = worldState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED);
-                }
-            } catch (Exception e) {
-                // Fall back to unpowered state
-            }
-        }
-
-        return defaultState
-                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE, 
-                         net.minecraft.world.level.block.state.properties.AttachFace.WALL)
-                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, 
-                         net.minecraft.core.Direction.NORTH)
-                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED, isPowered);
-    }
-    
-    /**
-     * Renders the block with custom texture replacement.
-     */
-    private void renderBlockWithCustomTextures(@Nonnull BlockState blockState, 
-                                               @Nonnull PoseStack poseStack,
-                                               @Nonnull MultiBufferSource bufferSource) {
-        
-        BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
-        BakedModel baseModel = blockRenderer.getBlockModel(blockState);
-        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.translucent());  // Try translucent for better lighting
-
-        TextureAtlasSprite baseSprite = getCustomTextureSprite(rightTextureSelection);
-        TextureAtlasSprite toggleSprite = getCustomTextureSprite(leftTextureSelection);
-
-        TextureAtlasSprite unpoweredSprite = getPowerTextureSprite(false);
-        TextureAtlasSprite poweredSprite = getPowerTextureSprite(true);
-        
-        RandomSource random = RandomSource.create();
-        int packedLight = net.minecraft.client.renderer.LightTexture.pack(15, 15);
-        int packedOverlay = 655360;
-        for (Direction face : Direction.values()) {
-            List<BakedQuad> quads = baseModel.getQuads(blockState, face, random, 
-                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
-            
-            processCustomQuads(quads, poseStack, vertexConsumer, baseSprite, toggleSprite,
-                    unpoweredSprite, poweredSprite, packedLight, packedOverlay);
-        }
-
-        List<BakedQuad> generalQuads = baseModel.getQuads(blockState, null, random, 
-            net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
-        processCustomQuads(generalQuads, poseStack, vertexConsumer, baseSprite, toggleSprite,
-                unpoweredSprite, poweredSprite, packedLight, packedOverlay);
-    }
-    
-    /**
-     * Gets custom texture sprite for current selection.
-     */
-    @Nullable
-    private TextureAtlasSprite getCustomTextureSprite(@Nonnull FaceSelectionData.RawTextureSelection selection) {
-        if (!selection.hasPreview()) {
-            return null;
-        }
-        
-        String texturePath = selection.previewTexture();
-        if (texturePath == null || texturePath.isEmpty()) {
-            return null;
-        }
-        
-        return getTextureSprite(texturePath);
-    }
-    
-    /**
-     * Gets power category texture sprite based on power state.
-     */
-    @Nullable
-    private TextureAtlasSprite getPowerTextureSprite(boolean powered) {
-        String texturePath = powered ? menu.getPoweredTexturePreview() : menu.getUnpoweredTexturePreview();
-        
-        if (texturePath == null || texturePath.isEmpty()) {
-            return null;
-        }
-        
-        return getTextureSprite(texturePath);
-    }
-    
-    /**
-     * Process quads and apply custom texture replacement.
-     */
-    private void processCustomQuads(@Nonnull List<BakedQuad> quads, @Nonnull PoseStack poseStack,
-                                    @Nonnull VertexConsumer vertexConsumer,
-                                    @Nullable TextureAtlasSprite baseSprite,
-                                    @Nullable TextureAtlasSprite toggleSprite,
-                                    @Nullable TextureAtlasSprite unpoweredSprite,
-                                    @Nullable TextureAtlasSprite poweredSprite,
-                                    int packedLight, int packedOverlay) {
-        
-        var lastPose = poseStack.last();
-        Matrix4f pose = lastPose.pose();
-        Matrix3f normal = lastPose.normal();
-        
-        for (BakedQuad quad : quads) {
-            TextureAtlasSprite originalSprite = quad.getSprite();
-            
-            TextureAtlasSprite replacementSprite = determineReplacementTexture(
-                    originalSprite, baseSprite, toggleSprite, unpoweredSprite, poweredSprite);
-
-            float brightnessMultiplier = getFaceBrightnessMultiplier(quad.getDirection());
-            
-            if (replacementSprite != null && replacementSprite != originalSprite) {
-                renderQuadWithCustomTextureAndShading(quad, replacementSprite, pose, normal,
-                        vertexConsumer, packedLight, packedOverlay, brightnessMultiplier);
-            } else {
-                renderOriginalQuadWithShading(quad, pose, normal, vertexConsumer, 
-                        packedLight, packedOverlay, brightnessMultiplier);
-            }
-        }
-    }
-    
-    /**
-     * Determine which replacement texture to use.
-     */
-    @Nullable
-    private TextureAtlasSprite determineReplacementTexture(@Nonnull TextureAtlasSprite originalSprite,
-                                                           @Nullable TextureAtlasSprite baseSprite,
-                                                           @Nullable TextureAtlasSprite toggleSprite,
-                                                           @Nullable TextureAtlasSprite unpoweredSprite,
-                                                           @Nullable TextureAtlasSprite poweredSprite) {
-        
-        String originalName = getSafeSpriteName(originalSprite);
-
-        if (isPoweredTexture(originalName) && poweredSprite != null) {
-            return poweredSprite;
-        }
-        
-        if (isUnpoweredTexture(originalName) && unpoweredSprite != null) {
-            return unpoweredSprite;
-        }
-
-        if (shouldExcludeFromReplacement(originalName)) {
-            return null;
-        }
-
-        if (isBaseTexture(originalName) && baseSprite != null) {
-            return baseSprite;
-        }
-        
-        if (isToggleTexture(originalName) && toggleSprite != null) {
-            return toggleSprite;
-        }
-        
-        return null;
-    }
-    
-
-    private boolean shouldExcludeFromReplacement(@Nonnull String textureName) {
-        return textureName.contains("redstone") ||
-                textureName.contains("_on") ||
-                textureName.contains("_off") ||
-                textureName.contains("gray_concrete_powder");
-    }
-    
-
-    private boolean isPoweredTexture(@Nonnull String textureName) {
-        return textureName.contains("redstone_block") ||
-                textureName.contains("switches_lever_powered") ||
-                textureName.contains("powered") ||
-                (textureName.contains("lever") && textureName.contains("on"));
-    }
-    
-
-    private boolean isUnpoweredTexture(@Nonnull String textureName) {
-        return textureName.contains("gray_concrete_powder") ||
-                textureName.contains("switches_lever_unpowered") ||
-                textureName.contains("unpowered") ||
-                (textureName.contains("lever") && textureName.contains("off"));
-    }
-    
-
-    private boolean isBaseTexture(@Nonnull String textureName) {
-        return textureName.contains("cobblestone") ||
-                textureName.contains("stone") ||
-                (textureName.contains("concrete") && !textureName.contains("gray_concrete_powder"));
-    }
-    
-
-    private boolean isToggleTexture(@Nonnull String textureName) {
-        return textureName.contains("planks") ||
-                textureName.contains("wood") ||
-                (textureName.contains("log") && !shouldExcludeFromReplacement(textureName));
     }
     
     /**
@@ -566,6 +252,246 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                     .endVertex();
         }
     }
+    
+    // Note: determineReplacementTexture method removed - texture processing now handled by Dynamic Model
+    
+    // Note: texture identification methods removed - texture processing now handled by Dynamic Model
+    
+    // Note: renderQuadWithCustomTextureAndShading method removed - texture processing now handled by Dynamic Model
+    
+    // Note: custom texture sprite methods removed - texture processing now handled by Dynamic Model
+    
+    // Note: processCustomQuads method removed - texture processing now handled by Dynamic Model
+    
+    /**
+     * Gets the current block state from the world.
+     */
+    @Nonnull
+    private BlockState getCurrentBlockState() {
+
+        BlockState defaultState = net.justsomeswitches.init.JustSomeSwitchesModBlocks.SWITCHES_LEVER.get().defaultBlockState();
+
+        boolean isPowered = false;
+        if (menu.getBlockPos() != null && menu.getLevel() != null) {
+            try {
+                BlockState worldState = menu.getLevel().getBlockState(menu.getBlockPos());
+                if (worldState.getBlock() == defaultState.getBlock()) {
+
+                    isPowered = worldState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED);
+                }
+            } catch (Exception e) {
+                // Fall back to unpowered state
+            }
+        }
+
+        return defaultState
+                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ATTACH_FACE, 
+                         net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, 
+                         net.minecraft.core.Direction.NORTH)
+                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.POWERED, isPowered);
+    }
+    
+    /**
+     * Renders the block using the Dynamic Model with proper texture rotation support.
+     */
+    private void renderBlockWithCustomTextures(@Nonnull BlockState blockState, 
+                                               @Nonnull PoseStack poseStack,
+                                               @Nonnull MultiBufferSource bufferSource) {
+        
+        BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
+        BakedModel baseModel = blockRenderer.getBlockModel(blockState);
+        VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.translucent());
+
+        // Create comprehensive ModelData with all current GUI state including rotation
+        net.neoforged.neoforge.client.model.data.ModelData.Builder modelDataBuilder = 
+            net.neoforged.neoforge.client.model.data.ModelData.builder();
+        
+        // Add texture rotation states
+        modelDataBuilder.with(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.BASE_ROTATION, 
+                             menu.getBaseTextureRotation().name());
+        modelDataBuilder.with(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.TOGGLE_ROTATION, 
+                             menu.getToggleTextureRotation().name());
+        
+        // Add current texture paths from GUI selections
+        FaceSelectionData.RawTextureSelection baseSelection = rightTextureSelection;
+        FaceSelectionData.RawTextureSelection toggleSelection = leftTextureSelection;
+        
+        if (baseSelection.hasPreview() && baseSelection.previewTexture() != null) {
+            modelDataBuilder.with(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.BASE_TEXTURE, 
+                                 baseSelection.previewTexture());
+        }
+        
+        if (toggleSelection.hasPreview() && toggleSelection.previewTexture() != null) {
+            modelDataBuilder.with(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.TOGGLE_TEXTURE, 
+                                 toggleSelection.previewTexture());
+        }
+        
+        // Add power mode state
+        modelDataBuilder.with(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.POWER_MODE, 
+                             menu.getPowerMode().name());
+        
+        // Add wall orientation (center for GUI preview)
+        modelDataBuilder.with(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.WALL_ORIENTATION, "center");
+        
+        // Add face selection state
+        String faceSelection = baseSelection.selectedVariable() + "," + toggleSelection.selectedVariable();
+        modelDataBuilder.with(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.FACE_SELECTION, faceSelection);
+        
+        net.neoforged.neoforge.client.model.data.ModelData modelData = modelDataBuilder.build();
+        
+        RandomSource random = RandomSource.create();
+        int packedLight = net.minecraft.client.renderer.LightTexture.pack(15, 15);
+        int packedOverlay = 655360;
+        
+        // Let the Dynamic Model handle all texture processing including rotation
+        for (Direction face : Direction.values()) {
+            List<BakedQuad> quads = baseModel.getQuads(blockState, face, random, modelData, null);
+            renderQuadsDirectly(quads, poseStack, vertexConsumer, packedLight, packedOverlay);
+        }
+
+        List<BakedQuad> generalQuads = baseModel.getQuads(blockState, null, random, modelData, null);
+        renderQuadsDirectly(generalQuads, poseStack, vertexConsumer, packedLight, packedOverlay);
+    }
+    
+    /**
+     * Renders quads directly from the Dynamic Model without additional texture processing.
+     * The Dynamic Model has already applied all texture replacements and rotations.
+     */
+    private void renderQuadsDirectly(@Nonnull List<BakedQuad> quads, @Nonnull PoseStack poseStack,
+                                     @Nonnull VertexConsumer vertexConsumer,
+                                     int packedLight, int packedOverlay) {
+        
+        var lastPose = poseStack.last();
+        Matrix4f pose = lastPose.pose();
+        Matrix3f normal = lastPose.normal();
+        
+        for (BakedQuad quad : quads) {
+            float brightnessMultiplier = getFaceBrightnessMultiplier(quad.getDirection());
+            renderOriginalQuadWithShading(quad, pose, normal, vertexConsumer, 
+                    packedLight, packedOverlay, brightnessMultiplier);
+        }
+    }
+    
+    /**
+     * Gets brightness multiplier for face-based shading.
+     */
+    private float getFaceBrightnessMultiplier(@Nullable Direction face) {
+        if (face == null) {
+            return 0.4f;  // General quads - 40%
+        }
+        
+        return switch (face) {
+            case UP -> 1.0f;
+            case DOWN -> 0.4f;
+            case NORTH -> 0.8f;
+            case SOUTH -> 0.4f;
+            case EAST -> 0.8f;
+            case WEST -> 0.4f;
+        };
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+
+        menu.completeInitialization();
+        
+        updateUIState();
+    }
+
+    @Override
+    public void containerTick() {
+        super.containerTick();
+        updateUIState();
+    }
+
+    /**
+     * Updates UI state with change detection.
+     */
+    private void updateUIState() {
+
+        FaceSelectionData.RawTextureSelection newLeftSelection = menu.getToggleTextureSelection();
+        FaceSelectionData.RawTextureSelection newRightSelection = menu.getBaseTextureSelection();
+
+
+        ItemStack currentLeftItem = newLeftSelection.sourceBlock();
+        ItemStack currentRightItem = newRightSelection.sourceBlock();
+
+
+        if (!ItemStack.matches(previousLeftItem, currentLeftItem)) {
+            if (currentLeftItem.isEmpty()) {
+                handleBlockRemoval(true);
+            }
+            previousLeftItem = currentLeftItem.copy();
+        }
+
+
+        if (!ItemStack.matches(previousRightItem, currentRightItem)) {
+            if (currentRightItem.isEmpty()) {
+                handleBlockRemoval(false);
+            }
+            previousRightItem = currentRightItem.copy();
+        }
+
+
+        leftTextureSelection = newLeftSelection;
+        rightTextureSelection = newRightSelection;
+
+        @SuppressWarnings("unused")
+        boolean previewNeedsUpdate = false;
+
+        if (!Objects.equals(previousBaseTexture, rightTextureSelection.previewTexture())) {
+            previousBaseTexture = rightTextureSelection.previewTexture();
+        }
+
+        if (!Objects.equals(previousToggleTexture, leftTextureSelection.previewTexture())) {
+            previousToggleTexture = leftTextureSelection.previewTexture();
+        }
+
+        if (previousPowerMode != menu.getPowerMode()) {
+            previousPowerMode = menu.getPowerMode();
+        }
+
+    }
+
+    /**
+     * Renders the live 3D preview in the GUI center using the Dynamic Model.
+     * This ensures texture rotation is properly applied by leveraging the existing model system.
+     */
+    private void drawLive3DPreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
+        try {
+            BlockState switchState = getCurrentBlockState();
+
+            int centerX = guiLeft + PREVIEW_CENTER_X;
+            int centerY = guiTop + PREVIEW_CENTER_Y;
+
+            PoseStack poseStack = graphics.pose();
+            poseStack.pushPose();
+
+            poseStack.translate(centerX, centerY, 100);
+            poseStack.scale(PREVIEW_SCALE * 16, -PREVIEW_SCALE * 16, PREVIEW_SCALE * 16);
+
+            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(1, 0, 0, 10f));
+            poseStack.mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(0, 1, 0, -215f));
+
+            poseStack.translate(-0.5f, -0.5f, -0.5f);
+
+            MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+
+            // Use the Dynamic Model system which handles texture rotation correctly
+            renderBlockWithCustomTextures(switchState, poseStack, bufferSource);
+
+            bufferSource.endBatch();
+            
+            poseStack.popPose();
+            
+        } catch (Exception e) {
+            // Fallback to basic 3D preview without custom textures
+            drawBasic3DPreview(graphics, guiLeft, guiTop);
+        }
+    }
+
 
     /**
      * Handles cleanup when a texture block is removed from a slot.
@@ -576,6 +502,8 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Close any open dropdowns
         showingLeftDropdown = false;
         showingRightDropdown = false;
+        showingLeftRotationDropdown = false;
+        showingRightRotationDropdown = false;
 
         // Reset selection to defaults (handled by menu auto-apply)
         if (isLeft) {
@@ -586,17 +514,40 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Enhanced mouse click handling for dropdown interactions.
-     * <p>
-     * Manages dropdown opening/closing and option selection with proper
-     * bounds checking and immediate texture application.
+     * Handles mouse click events for dropdown interactions.
      */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int guiLeft = (this.width - this.imageWidth) / 2;
         int guiTop = (this.height - this.imageHeight) / 2;
 
-        // Handle dropdown clicks with proper bounds checking
+        // Handle dropdown selection clicks FIRST to prioritize popup interactions
+        if (showingLeftDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, true)) {
+            return true;
+        }
+
+        if (showingRightDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, false)) {
+            return true;
+        }
+
+        // Handle power dropdown selection clicks
+        if (showingPowerDropdown && handlePowerDropdownSelection(mouseX, mouseY, guiLeft, guiTop)) {
+            return true;
+        }
+
+        // Handle base rotation dropdown selection clicks
+        if (showingRightRotationDropdown && handleBaseRotationDropdownSelection(mouseX, mouseY, guiLeft, guiTop)) {
+            return true;
+        }
+
+        // Handle toggle rotation dropdown selection clicks
+        if (showingLeftRotationDropdown && handleToggleRotationDropdownSelection(mouseX, mouseY, guiLeft, guiTop)) {
+            return true;
+        }
+
+
+
+        // Handle dropdown button clicks AFTER popup selections to avoid conflicts
         if (isWithinDropdownBounds(mouseX, mouseY, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y)) {
             if (leftTextureSelection.enabled()) {
                 toggleLeftDropdown();
@@ -617,25 +568,32 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             return true;
         }
 
-        // Handle dropdown selection clicks
-        if (showingLeftDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, true)) {
-            return true;
+        // Handle toggle rotation dropdown click (only when any block in toggle texture slot)
+        if (isWithinRotationDropdownBounds(mouseX, mouseY, guiLeft + LEFT_ROTATION_X, guiTop + LEFT_ROTATION_Y)) {
+            if (hasToggleTextureBlock()) {
+                toggleToggleRotationDropdown();
+                return true;
+            }
         }
 
-        if (showingRightDropdown && handleDropdownSelection(mouseX, mouseY, guiLeft, guiTop, false)) {
-            return true;
+        // Handle base rotation dropdown click (only when any block in base texture slot)
+        if (isWithinRotationDropdownBounds(mouseX, mouseY, guiLeft + RIGHT_ROTATION_X, guiTop + RIGHT_ROTATION_Y)) {
+            if (hasBaseTextureBlock()) {
+                toggleBaseRotationDropdown();
+                return true;
+            }
         }
 
-        // Handle power dropdown selection clicks
-        if (showingPowerDropdown && handlePowerDropdownSelection(mouseX, mouseY, guiLeft, guiTop)) {
-            return true;
-        }
+
 
         // Close dropdowns if clicking elsewhere
-        if (showingLeftDropdown || showingRightDropdown || showingPowerDropdown) {
+        if (showingLeftDropdown || showingRightDropdown || showingPowerDropdown || 
+            showingLeftRotationDropdown || showingRightRotationDropdown) {
             showingLeftDropdown = false;
             showingRightDropdown = false;
             showingPowerDropdown = false;
+            showingLeftRotationDropdown = false;
+            showingRightRotationDropdown = false;
             return true;
         }
 
@@ -643,26 +601,21 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Optimized bounds checking for dropdown areas.
-     * <p>
-     * Uses constants directly to eliminate redundant parameter warnings.
-     * 
-     * @param mouseX the mouse X coordinate
-     * @param mouseY the mouse Y coordinate
-     * @param x the dropdown X position
-     * @param y the dropdown Y position
-     * @return true if mouse is within dropdown bounds
+     * Bounds checking for dropdown areas.
      */
     private boolean isWithinDropdownBounds(double mouseX, double mouseY, int x, int y) {
         return mouseX >= x && mouseX < x + FACE_DROPDOWN_WIDTH && mouseY >= y && mouseY < y + FACE_DROPDOWN_HEIGHT;
     }
 
-    /**
-     * Optimized bounds checking for power dropdown area.
-     */
     private boolean isWithinPowerDropdownBounds(double mouseX, double mouseY, int x, int y) {
         return mouseX >= x && mouseX < x + POWER_DROPDOWN_WIDTH && mouseY >= y && mouseY < y + POWER_DROPDOWN_HEIGHT;
     }
+
+    private boolean isWithinRotationDropdownBounds(double mouseX, double mouseY, int x, int y) {
+        return mouseX >= x && mouseX < x + ROTATION_DROPDOWN_WIDTH && mouseY >= y && mouseY < y + ROTATION_DROPDOWN_HEIGHT;
+    }
+
+
 
     /**
      * Toggles the left (toggle) dropdown state.
@@ -671,6 +624,8 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         showingLeftDropdown = !showingLeftDropdown;
         showingRightDropdown = false;
         showingPowerDropdown = false;
+        showingLeftRotationDropdown = false;
+        showingRightRotationDropdown = false;
     }
 
     /**
@@ -680,6 +635,8 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         showingRightDropdown = !showingRightDropdown;
         showingLeftDropdown = false;
         showingPowerDropdown = false;
+        showingLeftRotationDropdown = false;
+        showingRightRotationDropdown = false;
     }
 
     /**
@@ -689,17 +646,36 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         showingPowerDropdown = !showingPowerDropdown;
         showingLeftDropdown = false;
         showingRightDropdown = false;
+        showingLeftRotationDropdown = false;
+        showingRightRotationDropdown = false;
     }
 
     /**
-     * Handles dropdown option selection with immediate texture application.
-     * 
-     * @param mouseX the mouse X coordinate
-     * @param mouseY the mouse Y coordinate
-     * @param guiLeft the GUI left offset
-     * @param guiTop the GUI top offset
-     * @param isLeft true for left dropdown, false for right dropdown
-     * @return true if a selection was made
+     * Toggles the toggle rotation dropdown state.
+     */
+    private void toggleToggleRotationDropdown() {
+        showingLeftRotationDropdown = !showingLeftRotationDropdown;
+        showingLeftDropdown = false;
+        showingRightDropdown = false;
+        showingPowerDropdown = false;
+        showingRightRotationDropdown = false;
+    }
+
+    /**
+     * Toggles the base rotation dropdown state.
+     */
+    private void toggleBaseRotationDropdown() {
+        showingRightRotationDropdown = !showingRightRotationDropdown;
+        showingLeftDropdown = false;
+        showingRightDropdown = false;
+        showingPowerDropdown = false;
+        showingLeftRotationDropdown = false;
+    }
+
+
+
+    /**
+     * Handles dropdown option selection.
      */
     private boolean handleDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop, boolean isLeft) {
         FaceSelectionData.RawTextureSelection selection = isLeft ? leftTextureSelection : rightTextureSelection;
@@ -711,9 +687,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         for (int i = 0; i < variables.size(); i++) {
             int optionY = dropdownY + (i * 12);
             if (isWithinDropdownBounds(mouseX, mouseY, dropdownX, optionY)) {
-                // Selection made - triggers immediate apply in menu
                 String selectedVariable = variables.get(i);
-
                 if (isLeft) {
                     menu.setToggleTextureVariable(selectedVariable);
                     showingLeftDropdown = false;
@@ -721,7 +695,6 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
                     menu.setBaseTextureVariable(selectedVariable);
                     showingRightDropdown = false;
                 }
-
                 return true;
             }
         }
@@ -730,7 +703,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Handles power dropdown option selection with immediate power mode application.
+     * Handles power dropdown option selection.
      */
     private boolean handlePowerDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop) {
         SwitchesLeverBlockEntity.PowerMode[] modes = SwitchesLeverBlockEntity.PowerMode.values();
@@ -741,10 +714,52 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         for (int i = 0; i < modes.length; i++) {
             int optionY = dropdownY + (i * 12);
             if (isWithinPowerDropdownBounds(mouseX, mouseY, dropdownX, optionY)) {
-                // Selection made - triggers immediate apply in menu
-                SwitchesLeverBlockEntity.PowerMode selectedMode = modes[i];
-                menu.setPowerMode(selectedMode);
+                menu.setPowerMode(modes[i]);
                 showingPowerDropdown = false;
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Handles toggle rotation dropdown option selection.
+     */
+    private boolean handleToggleRotationDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop) {
+        TextureRotation[] rotations = TextureRotation.values();
+        
+        int dropdownX = guiLeft + LEFT_ROTATION_X;
+        int dropdownY = guiTop + LEFT_ROTATION_Y + ROTATION_DROPDOWN_HEIGHT;
+        
+        for (int i = 0; i < rotations.length; i++) {
+            int optionY = dropdownY + (i * 12);
+            if (isWithinRotationDropdownBounds(mouseX, mouseY, dropdownX, optionY)) {
+                menu.setToggleTextureRotation(rotations[i]);
+                showingLeftRotationDropdown = false;
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+
+
+    /**
+     * Handles base rotation dropdown option selection.
+     */
+    private boolean handleBaseRotationDropdownSelection(double mouseX, double mouseY, int guiLeft, int guiTop) {
+        TextureRotation[] rotations = TextureRotation.values();
+        
+        int dropdownX = guiLeft + RIGHT_ROTATION_X;
+        int dropdownY = guiTop + RIGHT_ROTATION_Y + ROTATION_DROPDOWN_HEIGHT;
+        
+        for (int i = 0; i < rotations.length; i++) {
+            int optionY = dropdownY + (i * 12);
+            if (isWithinRotationDropdownBounds(mouseX, mouseY, dropdownX, optionY)) {
+                menu.setBaseTextureRotation(rotations[i]);
+                showingRightRotationDropdown = false;
                 return true;
             }
         }
@@ -774,39 +789,23 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Renders a basic 3D switch preview in the center of the GUI.
-     * <p>
-     * Shows the default switch ItemStack at 2x scale with proper error handling
-     * and fallback to text display if 3D rendering fails.
-     * 
-     * @param graphics the GUI graphics context
-     * @param guiLeft the GUI left offset
-     * @param guiTop the GUI top offset
+     * Renders a basic 3D switch preview.
      */
     private void drawBasic3DPreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
         try {
-            // Create basic switch ItemStack (no custom textures, no NBT)
             ItemStack switchStack = new ItemStack(
-                    net.justsomeswitches.init.JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get()
-            );
+                    net.justsomeswitches.init.JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get());
 
-            // Calculate center position for 2x scaled item
             int centerX = guiLeft + PREVIEW_CENTER_X;
             int centerY = guiTop + PREVIEW_CENTER_Y;
 
-            // Render 3D switch preview at 2x scale
             graphics.pose().pushPose();
             graphics.pose().translate(centerX, centerY, 100);
             graphics.pose().scale(PREVIEW_SCALE, PREVIEW_SCALE, 1.0f);
-            graphics.pose().translate(-8, -8, 0); // Center the 16x16 item
-
-            // Render the basic switch ItemStack (default textures)
+            graphics.pose().translate(-8, -8, 0);
             graphics.renderItem(switchStack, 0, 0);
-
             graphics.pose().popPose();
-
         } catch (Exception e) {
-            // Fallback to text if 3D rendering fails
             drawFallbackText(graphics, guiLeft, guiTop);
         }
     }
@@ -830,20 +829,30 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     }
 
     /**
-     * Draws dropdown buttons for face selection.
+     * Draws dropdown buttons for face selection and rotation.
      * 
      * @param graphics the GUI graphics context
      * @param guiLeft the GUI left offset
      * @param guiTop the GUI top offset
      */
     private void drawCleanArchitectureDropdowns(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        // Left (toggle) variable dropdown
+        // Left (toggle) face selection dropdown
         drawCleanDropdownButton(graphics, guiLeft + LEFT_FACE_X, guiTop + LEFT_FACE_Y,
                 leftTextureSelection, showingLeftDropdown);
 
-        // Right (base) variable dropdown
+        // Right (base) face selection dropdown
         drawCleanDropdownButton(graphics, guiLeft + RIGHT_FACE_X, guiTop + RIGHT_FACE_Y,
                 rightTextureSelection, showingRightDropdown);
+
+        // NEW: Left (toggle) rotation dropdown - blank placeholder
+        drawRotationDropdownButton(graphics, guiLeft + LEFT_ROTATION_X, guiTop + LEFT_ROTATION_Y, 
+                showingLeftRotationDropdown, true);
+
+        // NEW: Right (base) rotation dropdown - blank placeholder
+        drawRotationDropdownButton(graphics, guiLeft + RIGHT_ROTATION_X, guiTop + RIGHT_ROTATION_Y, 
+                showingRightRotationDropdown, false);
+
+
     }
 
     /**
@@ -917,112 +926,260 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
 
         // Only draw text if not empty
         if (!displayText.isEmpty()) {
-            // Calculate vertically centered position
+            // Use same text scaling and positioning as power dropdown
+            graphics.pose().pushPose();
+            graphics.pose().scale(0.8f, 0.8f, 1.0f);
+            // Calculate vertically centered position with same formula as power dropdown
             int fontHeight = this.font.lineHeight;
-            int centeredY = y + (FACE_DROPDOWN_HEIGHT - fontHeight) / 2;
-            graphics.drawString(this.font, displayText, x + 2, centeredY, textColor, false);
+            int centeredY = (int)((y + (FACE_DROPDOWN_HEIGHT - fontHeight) / 2.0 + 2) / 0.8f);
+            graphics.drawString(this.font, displayText, (int)((x + 3) / 0.8f), centeredY, textColor, false);
+            graphics.pose().popPose();
         }
     }
 
     /**
-     * Draws 2D texture previews with comprehensive null safety.
-     * <p>
-     * Enhanced version with proper null checking to prevent argument
-     * warnings and ensure stable preview rendering.
+     * Checks if base texture slot has a block (regardless of face selection availability).
+     */
+    private boolean hasBaseTextureBlock() {
+        return rightTextureSelection.hasPreview() && 
+               !rightTextureSelection.sourceBlock().isEmpty();
+    }
+
+    /**
+     * Checks if toggle texture slot has a block (regardless of face selection availability).
+     */
+    private boolean hasToggleTextureBlock() {
+        return leftTextureSelection.hasPreview() && 
+               !leftTextureSelection.sourceBlock().isEmpty();
+    }
+
+    /**
+     * Draws a rotation dropdown button.
      * 
      * @param graphics the GUI graphics context
-     * @param guiLeft the GUI left offset
-     * @param guiTop the GUI top offset
+     * @param x the button X position
+     * @param y the button Y position
+     * @param isOpen whether the dropdown is currently open
+     * @param isLeft true for left (toggle) rotation, false for right (base) rotation
+     */
+    private void drawRotationDropdownButton(@Nonnull GuiGraphics graphics, int x, int y, boolean isOpen, boolean isLeft) {
+        if (isLeft) {
+            // Left (toggle) rotation dropdown - functional when any block in toggle texture slot
+            if (hasToggleTextureBlock()) {
+                drawToggleRotationDropdown(graphics, x, y, isOpen);
+            } else {
+                drawDisabledRotationDropdown(graphics, x, y);
+            }
+        } else {
+            // Right (base) rotation dropdown - functional when any block in base texture slot
+            if (hasBaseTextureBlock()) {
+                drawBaseRotationDropdown(graphics, x, y, isOpen);
+            } else {
+                drawDisabledRotationDropdown(graphics, x, y);
+            }
+        }
+    }
+    
+    /**
+     * Draws the disabled toggle rotation dropdown (placeholder).
+     */
+    private void drawDisabledRotationDropdown(@Nonnull GuiGraphics graphics, int x, int y) {
+        // Draw dropdown background (disabled/grayed out as placeholder)
+        int bgColor = 0xFF888888;
+
+        // Draw dropdown background
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, bgColor);
+
+        // Draw disabled border
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + 1, 0xFF666666);
+        graphics.fill(x, y, x + 1, y + ROTATION_DROPDOWN_HEIGHT, 0xFF666666);
+        graphics.fill(x, y + ROTATION_DROPDOWN_HEIGHT - 1, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, 0xFF999999);
+        graphics.fill(x + ROTATION_DROPDOWN_WIDTH - 1, y, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, 0xFF999999);
+
+        // Draw dropdown arrow (disabled)
+        int arrowColor = 0xFF666666;
+        int arrowX = x + ROTATION_DROPDOWN_WIDTH - 8;
+        int arrowY = y + 4;
+
+        // Down arrow (closed state)
+        graphics.fill(arrowX, arrowY, arrowX + 4, arrowY + 1, arrowColor);          // Top: wide
+        graphics.fill(arrowX + 1, arrowY + 1, arrowX + 3, arrowY + 2, arrowColor);  // Middle
+        graphics.fill(arrowX + 2, arrowY + 2, arrowX + 2, arrowY + 3, arrowColor);  // Bottom: narrow
+
+        // Leave text area blank (placeholder)
+    }
+    
+    /**
+     * Draws the functional toggle rotation dropdown.
+     */
+    private void drawToggleRotationDropdown(@Nonnull GuiGraphics graphics, int x, int y, boolean isOpen) {
+        TextureRotation currentRotation = menu.getToggleTextureRotation();
+        
+        // Draw dropdown background (enabled)
+        int bgColor = 0xFFC6C6C6;
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, bgColor);
+        
+        // Draw dropdown border
+        int lightColor = isOpen ? 0xFF555555 : 0xFFFFFFFF;
+        int darkColor = isOpen ? 0xFFFFFFFF : 0xFF555555;
+        
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + 1, lightColor);
+        graphics.fill(x, y, x + 1, y + ROTATION_DROPDOWN_HEIGHT, lightColor);
+        graphics.fill(x, y + ROTATION_DROPDOWN_HEIGHT - 1, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, darkColor);
+        graphics.fill(x + ROTATION_DROPDOWN_WIDTH - 1, y, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, darkColor);
+        
+        // Draw dropdown arrow
+        int arrowColor = 0xFF000000;
+        int arrowX = x + ROTATION_DROPDOWN_WIDTH - 8;
+        int arrowY = y + 4;
+        
+        if (isOpen) {
+            // Up arrow (open state)
+            graphics.fill(arrowX + 1, arrowY, arrowX + 3, arrowY + 1, arrowColor);
+            graphics.fill(arrowX, arrowY + 1, arrowX + 4, arrowY + 2, arrowColor);
+            graphics.fill(arrowX, arrowY + 2, arrowX + 4, arrowY + 3, arrowColor);
+        } else {
+            // Down arrow (closed state)
+            graphics.fill(arrowX, arrowY, arrowX + 4, arrowY + 1, arrowColor);
+            graphics.fill(arrowX, arrowY + 1, arrowX + 4, arrowY + 2, arrowColor);
+            graphics.fill(arrowX + 1, arrowY + 2, arrowX + 3, arrowY + 3, arrowColor);
+        }
+        
+        // Draw current rotation text (70% scale, 6 characters max)
+        String displayText = currentRotation.getDisplayName();
+        if (displayText.length() > 6) {
+            displayText = displayText.substring(0, 6);
+        }
+        
+        graphics.pose().pushPose();
+        graphics.pose().scale(0.70f, 0.70f, 1.0f);
+        // Calculate vertically centered position
+        int fontHeight = this.font.lineHeight;
+        int centeredY = (int)((y + (ROTATION_DROPDOWN_HEIGHT - fontHeight) / 2.0 + 2) / 0.70f);
+        graphics.drawString(this.font, displayText, (int)((x + 3) / 0.70f), centeredY, 0xFF404040, false);
+        graphics.pose().popPose();
+    }
+
+    /**
+     * Draws the functional base rotation dropdown.
+     */
+    private void drawBaseRotationDropdown(@Nonnull GuiGraphics graphics, int x, int y, boolean isOpen) {
+        TextureRotation currentRotation = menu.getBaseTextureRotation();
+        
+        // Draw dropdown background (enabled)
+        int bgColor = 0xFFC6C6C6;
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, bgColor);
+        
+        // Draw dropdown border
+        int lightColor = isOpen ? 0xFF555555 : 0xFFFFFFFF;
+        int darkColor = isOpen ? 0xFFFFFFFF : 0xFF555555;
+        
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + 1, lightColor);
+        graphics.fill(x, y, x + 1, y + ROTATION_DROPDOWN_HEIGHT, lightColor);
+        graphics.fill(x, y + ROTATION_DROPDOWN_HEIGHT - 1, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, darkColor);
+        graphics.fill(x + ROTATION_DROPDOWN_WIDTH - 1, y, x + ROTATION_DROPDOWN_WIDTH, y + ROTATION_DROPDOWN_HEIGHT, darkColor);
+        
+        // Draw dropdown arrow
+        int arrowColor = 0xFF000000;
+        int arrowX = x + ROTATION_DROPDOWN_WIDTH - 8;
+        int arrowY = y + 4;
+        
+        if (isOpen) {
+            // Up arrow (open state)
+            graphics.fill(arrowX + 1, arrowY, arrowX + 3, arrowY + 1, arrowColor);
+            graphics.fill(arrowX, arrowY + 1, arrowX + 4, arrowY + 2, arrowColor);
+            graphics.fill(arrowX, arrowY + 2, arrowX + 4, arrowY + 3, arrowColor);
+        } else {
+            // Down arrow (closed state)
+            graphics.fill(arrowX, arrowY, arrowX + 4, arrowY + 1, arrowColor);
+            graphics.fill(arrowX, arrowY + 1, arrowX + 4, arrowY + 2, arrowColor);
+            graphics.fill(arrowX + 1, arrowY + 2, arrowX + 3, arrowY + 3, arrowColor);
+        }
+        
+        // Draw current rotation text (70% scale, 6 characters max)
+        String displayText = currentRotation.getDisplayName();
+        if (displayText.length() > 6) {
+            displayText = displayText.substring(0, 6);
+        }
+        
+        graphics.pose().pushPose();
+        graphics.pose().scale(0.70f, 0.70f, 1.0f);
+        // Calculate vertically centered position
+        int fontHeight = this.font.lineHeight;
+        int centeredY = (int)((y + (ROTATION_DROPDOWN_HEIGHT - fontHeight) / 2.0 + 2) / 0.70f);
+        graphics.drawString(this.font, displayText, (int)((x + 3) / 0.70f), centeredY, 0xFF404040, false);
+        graphics.pose().popPose();
+    }
+
+
+
+    /**
+     * Draws 2D texture previews with null safety.
      */
     private void drawSafeTexturePreview(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        // Draw left (toggle) texture preview with null safety
+        // Draw left (toggle) texture preview with rotation support
         if (leftTextureSelection.hasPreview()) {
             String leftPreviewTexture = leftTextureSelection.previewTexture();
             if (leftPreviewTexture != null && !leftPreviewTexture.isEmpty()) {
-                drawTexturePreviewBox(graphics, guiLeft + LEFT_PREVIEW_X, guiTop + LEFT_PREVIEW_Y, leftPreviewTexture);
+                TextureRotation toggleRotation = menu.getToggleTextureRotation();
+                drawTexturePreviewBox(graphics, guiLeft + LEFT_PREVIEW_X, guiTop + LEFT_PREVIEW_Y, leftPreviewTexture, toggleRotation);
             }
         }
 
-        // Draw right (base) texture preview with null safety
+        // Draw right (base) texture preview with rotation support
         if (rightTextureSelection.hasPreview()) {
             String rightPreviewTexture = rightTextureSelection.previewTexture();
             if (rightPreviewTexture != null && !rightPreviewTexture.isEmpty()) {
-                drawTexturePreviewBox(graphics, guiLeft + RIGHT_PREVIEW_X, guiTop + RIGHT_PREVIEW_Y, rightPreviewTexture);
+                TextureRotation baseRotation = menu.getBaseTextureRotation();
+                drawTexturePreviewBox(graphics, guiLeft + RIGHT_PREVIEW_X, guiTop + RIGHT_PREVIEW_Y, rightPreviewTexture, baseRotation);
             }
         }
     }
 
     /**
-     * Draws an individual 2D texture preview box with proper resource management.
-     * <p>
-     * Enhanced with proper resource handling to prevent SpriteContents
-     * resource leaks and ensure safe texture access.
-     * 
-     * @param graphics the GUI graphics context
-     * @param x the preview box X position
-     * @param y the preview box Y position
-     * @param texturePath the texture path to render (guaranteed non-null)
+     * Draws a 2D texture preview box.
      */
-    private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String texturePath) {
+    private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull String texturePath, @Nullable TextureRotation rotation) {
         try {
-            // Get texture sprite with proper resource management
             TextureAtlasSprite sprite = getTextureSprite(texturePath);
-
-            if (sprite != null) {
-                // Safe sprite contents access with proper resource handling
-                String spriteName = getSafeSpriteName(sprite);
-                
-                if (!spriteName.contains("missingno")) {
-                    // Draw preview background
-                    graphics.fill(x - 1, y - 1, x + PREVIEW_SIZE + 1, y + PREVIEW_SIZE + 1, 0xFF000000);
-                    graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFFFFFF);
-
-                    // Draw texture sprite
-                    graphics.blit(x, y, 0, PREVIEW_SIZE, PREVIEW_SIZE, sprite);
+            if (sprite != null && !getSafeSpriteName(sprite).contains("missingno")) {
+                graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFFFFFF);
+                if (rotation != null && rotation != TextureRotation.NORMAL) {
+                    drawRotatedTexturePreview(graphics, x, y, sprite, rotation);
                 } else {
-                    // Draw missing texture indicator
-                    graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF00FF);
+                    graphics.blit(x, y, 0, PREVIEW_SIZE, PREVIEW_SIZE, sprite);
                 }
             } else {
-                // Draw missing texture indicator
                 graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF00FF);
             }
         } catch (Exception e) {
-            // Draw error indicator
             graphics.fill(x, y, x + PREVIEW_SIZE, y + PREVIEW_SIZE, 0xFFFF0000);
         }
     }
-
+    
     /**
-     * Safely retrieves sprite name with proper resource management.
-     * <p>
-     * Eliminates SpriteContents resource warnings by ensuring proper
-     * access patterns and exception handling.
-     * 
-     * @param sprite the texture atlas sprite
-     * @return the sprite name, or "missingno" if access fails
+     * Draws a rotated texture preview using transformation matrices.
      */
-    @Nonnull
-    private String getSafeSpriteName(@Nonnull TextureAtlasSprite sprite) {
-        try {
-            // Safe access to sprite contents with proper resource management
-            try (var contents = sprite.contents()) {
-                return contents.name().toString();
-            }
-        } catch (Exception e) {
-            // Return safe fallback on any resource access error
-            return "missingno";
-        }
+    private void drawRotatedTexturePreview(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull TextureAtlasSprite sprite, @Nonnull TextureRotation rotation) {
+        graphics.pose().pushPose();
+        
+        // Translate to center of preview area
+        graphics.pose().translate(x + PREVIEW_SIZE / 2f, y + PREVIEW_SIZE / 2f, 0);
+        
+        // Apply rotation
+        graphics.pose().mulPose(new org.joml.Quaternionf().fromAxisAngleDeg(0, 0, 1, rotation.getDegrees()));
+        
+        // Translate back and draw
+        graphics.pose().translate(-PREVIEW_SIZE / 2f, -PREVIEW_SIZE / 2f, 0);
+        graphics.blit(0, 0, 0, PREVIEW_SIZE, PREVIEW_SIZE, sprite);
+        
+        graphics.pose().popPose();
     }
 
+
+
     /**
-     * Gets texture sprite for 2D preview rendering with proper resource management.
-     * <p>
-     * Enhanced with comprehensive fallback patterns and proper exception
-     * handling to ensure stable texture loading.
-     * 
-     * @param texturePath the texture path to load
-     * @return the texture sprite, or null if unavailable
+     * Gets texture sprite for 2D preview rendering.
      */
     @Nullable
     private TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
@@ -1061,6 +1218,22 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         }
     }
 
+    /**
+     * Safely retrieves sprite name.
+     */
+    @Nonnull
+    private String getSafeSpriteName(@Nonnull TextureAtlasSprite sprite) {
+        try {
+            // Safe access to sprite contents with proper resource management
+            try (var contents = sprite.contents()) {
+                return contents.name().toString();
+            }
+        } catch (Exception e) {
+            // Return safe fallback on any resource access error
+            return "missingno";
+        }
+    }
+
     @Override
     public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Use standard container screen background for lighter darkening (matches vanilla GUIs)
@@ -1082,6 +1255,16 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         if (showingPowerDropdown) {
             drawPowerDropdownPopup(graphics, guiLeft + POWER_DROPDOWN_X, guiTop + POWER_DROPDOWN_Y + POWER_DROPDOWN_HEIGHT);
         }
+
+        if (showingLeftRotationDropdown) {
+            drawToggleRotationDropdownPopup(graphics, guiLeft + LEFT_ROTATION_X, guiTop + LEFT_ROTATION_Y + ROTATION_DROPDOWN_HEIGHT);
+        }
+
+        if (showingRightRotationDropdown) {
+            drawBaseRotationDropdownPopup(graphics, guiLeft + RIGHT_ROTATION_X, guiTop + RIGHT_ROTATION_Y + ROTATION_DROPDOWN_HEIGHT);
+        }
+
+
     }
 
     /**
@@ -1130,16 +1313,116 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             }
             graphics.pose().pushPose();
             graphics.pose().scale(0.8f, 0.8f, 1.0f);
-            // Calculate vertically centered position for popup text and move down 1 additional pixel
+            // Calculate vertically centered position for popup text with same positioning as power dropdown
             int fontHeight = this.font.lineHeight;
             int centeredY = (int)((optionY + (12 - fontHeight) / 2.0 + 2) / 0.8f);
-            graphics.drawString(this.font, displayText, (int)((x + 2) / 0.8f), centeredY, 0xFF000000, false);
+            graphics.drawString(this.font, displayText, (int)((x + 3) / 0.8f), centeredY, 0xFF000000, false);
             graphics.pose().popPose();
         }
 
         // Restore z-order
         graphics.pose().popPose();
     }
+
+    /**
+     * Draws toggle rotation dropdown popup menu.
+     */
+    private void drawToggleRotationDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y) {
+        TextureRotation[] rotations = TextureRotation.values();
+        TextureRotation currentRotation = menu.getToggleTextureRotation();
+        int popupHeight = rotations.length * 12;
+        
+        // Elevate z-order to render above other elements
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 400);
+        
+        // Draw popup background
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + popupHeight, 0xFFC6C6C6);
+        
+        // Draw popup border
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + 1, 0xFF000000);
+        graphics.fill(x, y, x + 1, y + popupHeight, 0xFF000000);
+        graphics.fill(x + ROTATION_DROPDOWN_WIDTH - 1, y, x + ROTATION_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+        graphics.fill(x, y + popupHeight, x + ROTATION_DROPDOWN_WIDTH, y + popupHeight + 1, 0xFF000000);
+        
+        // Draw rotation options
+        for (int i = 0; i < rotations.length; i++) {
+            TextureRotation rotation = rotations[i];
+            int optionY = y + (i * 12);
+            
+            // Highlight selected rotation
+            if (rotation == currentRotation) {
+                graphics.fill(x + 1, optionY, x + ROTATION_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
+            }
+            
+            // Draw rotation name (6 characters max, 70% scale like dropdown button)
+            String rotationText = rotation.getDisplayName();
+            if (rotationText.length() > 6) {
+                rotationText = rotationText.substring(0, 6);
+            }
+            
+            graphics.pose().pushPose();
+            graphics.pose().scale(0.70f, 0.70f, 1.0f);
+            int fontHeight = this.font.lineHeight;
+            int centeredY = (int)((optionY + (12 - fontHeight) / 2.0 + 2) / 0.70f);
+            graphics.drawString(this.font, rotationText, (int)((x + 3) / 0.70f), centeredY, 0xFF000000, false);
+            graphics.pose().popPose();
+        }
+        
+        // Restore z-order
+        graphics.pose().popPose();
+    }
+
+    /**
+     * Draws base rotation dropdown popup menu.
+     */
+    private void drawBaseRotationDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y) {
+        TextureRotation[] rotations = TextureRotation.values();
+        TextureRotation currentRotation = menu.getBaseTextureRotation();
+        int popupHeight = rotations.length * 12;
+        
+        // Elevate z-order to render above other elements
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 400);
+        
+        // Draw popup background
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + popupHeight, 0xFFC6C6C6);
+        
+        // Draw popup border
+        graphics.fill(x, y, x + ROTATION_DROPDOWN_WIDTH, y + 1, 0xFF000000);
+        graphics.fill(x, y, x + 1, y + popupHeight, 0xFF000000);
+        graphics.fill(x + ROTATION_DROPDOWN_WIDTH - 1, y, x + ROTATION_DROPDOWN_WIDTH, y + popupHeight, 0xFF000000);
+        graphics.fill(x, y + popupHeight, x + ROTATION_DROPDOWN_WIDTH, y + popupHeight + 1, 0xFF000000);
+        
+        // Draw rotation options
+        for (int i = 0; i < rotations.length; i++) {
+            TextureRotation rotation = rotations[i];
+            int optionY = y + (i * 12);
+            
+            // Highlight selected rotation
+            if (rotation == currentRotation) {
+                graphics.fill(x + 1, optionY, x + ROTATION_DROPDOWN_WIDTH - 1, optionY + 12, 0xFF8888FF);
+            }
+            
+            // Draw rotation name (6 characters max, 70% scale like dropdown button)
+            String rotationText = rotation.getDisplayName();
+            if (rotationText.length() > 6) {
+                rotationText = rotationText.substring(0, 6);
+            }
+            
+            graphics.pose().pushPose();
+            graphics.pose().scale(0.70f, 0.70f, 1.0f);
+            int fontHeight = this.font.lineHeight;
+            int centeredY = (int)((optionY + (12 - fontHeight) / 2.0 + 2) / 0.70f);
+            graphics.drawString(this.font, rotationText, (int)((x + 3) / 0.70f), centeredY, 0xFF000000, false);
+            graphics.pose().popPose();
+        }
+        
+        // Restore z-order
+        graphics.pose().popPose();
+    }
+
+
 
     // ========================================
     // POWER CATEGORY GUI ELEMENTS
@@ -1289,8 +1572,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
             if (sprite != null) {
                 String spriteName = getSafeSpriteName(sprite);
                 if (!spriteName.contains("missingno")) {
-                    // Draw preview background (black border, white fill)
-                    graphics.fill(x - 1, y - 1, x + POWER_PREVIEW_SIZE + 1, y + POWER_PREVIEW_SIZE + 1, 0xFF000000);
+                    // Draw preview background (no black border)
                     graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFFFFFFF);
                     
                     // Draw the specific 2x2 UV area scaled to fill the 6x6 preview
@@ -1325,8 +1607,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
      */
     private void drawUVSpecificPreview(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull TextureAtlasSprite sprite) {
         try {
-            // Draw preview background
-            graphics.fill(x - 1, y - 1, x + POWER_PREVIEW_SIZE + 1, y + POWER_PREVIEW_SIZE + 1, 0xFF000000);
+            // Draw preview background (no black border)
             graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFFFFFFF);
 
             // Simplified UV coordinate mapping - both powered and unpowered use same location:
@@ -1359,8 +1640,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
      * Draws an empty preview box.
      */
     private void drawEmptyPreviewBox(@Nonnull GuiGraphics graphics, int x, int y) {
-        // Draw black border, white fill
-        graphics.fill(x - 1, y - 1, x + POWER_PREVIEW_SIZE + 1, y + POWER_PREVIEW_SIZE + 1, 0xFF000000);
+        // Draw white fill (no black border)
         graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFFFFFFF);
     }
 

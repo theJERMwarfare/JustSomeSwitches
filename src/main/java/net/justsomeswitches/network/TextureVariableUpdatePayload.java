@@ -2,6 +2,7 @@ package net.justsomeswitches.network;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -88,6 +89,25 @@ public record TextureVariableUpdatePayload(
                         // Invalid power mode, ignore
                     }
                 }
+                case "base_rotation" -> {
+                    try {
+                        TextureRotation rotation = TextureRotation.valueOf(payload.variable().toUpperCase());
+                        switchEntity.setBaseTextureRotation(rotation);
+                        switchEntity.updateTextures();
+                    } catch (IllegalArgumentException e) {
+                        // Invalid rotation, ignore
+                    }
+                }
+                case "toggle_rotation" -> {
+                    try {
+                        TextureRotation rotation = TextureRotation.valueOf(payload.variable().toUpperCase());
+                        switchEntity.setToggleTextureRotation(rotation);
+                        switchEntity.updateTextures();
+                    } catch (IllegalArgumentException e) {
+                        // Invalid rotation, ignore
+                    }
+                }
+
                 default -> {
                     // Unknown category, ignore
                 }

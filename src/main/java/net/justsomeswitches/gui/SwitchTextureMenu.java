@@ -2,6 +2,7 @@ package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.network.NetworkHandler;
+import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -30,11 +31,11 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private static final int TOGGLE_TEXTURE_SLOT = 0;
     private static final int BASE_TEXTURE_SLOT = 1;
 
-  
-    private static final int TOGGLE_SLOT_X = 28;
-    private static final int TOGGLE_SLOT_Y = 24;
-    private static final int BASE_SLOT_X = 132;
-    private static final int BASE_SLOT_Y = 24;
+    // GUI layout constants
+    private static final int TOGGLE_SLOT_X = 13;
+    private static final int TOGGLE_SLOT_Y = 29;
+    private static final int BASE_SLOT_X = 147;
+    private static final int BASE_SLOT_Y = 29;
     private static final int PLAYER_INV_Y = 98;
     private static final int HOTBAR_Y = 156;
 
@@ -48,6 +49,8 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private String baseTextureVariable = "all";
     private String toggleTextureVariable = "all";
     private SwitchesLeverBlockEntity.PowerMode powerMode = SwitchesLeverBlockEntity.PowerMode.DEFAULT;
+    private TextureRotation baseTextureRotation = TextureRotation.NORMAL;
+    private TextureRotation toggleTextureRotation = TextureRotation.NORMAL;
 
     private boolean isInitializing = true;
 
@@ -273,28 +276,20 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * Handles toggle dropdown selection change.
      */
     public void setToggleTextureVariable(@Nonnull String variable) {
-        if (blockEntity == null) {
-            return;
-        }
-
+        if (blockEntity == null) return;
+        
         ItemStack toggleItem = textureItemHandler.getStackInSlot(TOGGLE_TEXTURE_SLOT);
-        if (toggleItem.isEmpty()) {
-            return;
-        }
-
+        if (toggleItem.isEmpty()) return;
 
         String texturePath = FaceSelectionData.getTextureForVariable(toggleItem, variable);
         if (texturePath != null) {
-
             this.toggleTextureVariable = variable;
-            
-            if (level.isClientSide) {
-                NetworkHandler.sendTextureVariableUpdate(blockPos, "toggle", variable, texturePath);
-            } else {
-                blockEntity.setToggleTextureVariable(variable);
-                blockEntity.setToggleTexture(texturePath);
-                blockEntity.updateTextures();
-            }
+            sendOrApplyUpdate("toggle", variable, texturePath,
+                    () -> {
+                        blockEntity.setToggleTextureVariable(variable);
+                        blockEntity.setToggleTexture(texturePath);
+                        blockEntity.updateTextures();
+                    });
         }
     }
 
@@ -302,28 +297,20 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * Handles base dropdown selection change.
      */
     public void setBaseTextureVariable(@Nonnull String variable) {
-        if (blockEntity == null) {
-            return;
-        }
-
+        if (blockEntity == null) return;
+        
         ItemStack baseItem = textureItemHandler.getStackInSlot(BASE_TEXTURE_SLOT);
-        if (baseItem.isEmpty()) {
-            return;
-        }
-
+        if (baseItem.isEmpty()) return;
 
         String texturePath = FaceSelectionData.getTextureForVariable(baseItem, variable);
         if (texturePath != null) {
-
             this.baseTextureVariable = variable;
-            
-            if (level.isClientSide) {
-                NetworkHandler.sendTextureVariableUpdate(blockPos, "base", variable, texturePath);
-            } else {
-                blockEntity.setBaseTextureVariable(variable);
-                blockEntity.setBaseTexture(texturePath);
-                blockEntity.updateTextures();
-            }
+            sendOrApplyUpdate("base", variable, texturePath,
+                    () -> {
+                        blockEntity.setBaseTextureVariable(variable);
+                        blockEntity.setBaseTexture(texturePath);
+                        blockEntity.updateTextures();
+                    });
         }
     }
 
@@ -333,14 +320,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     @Nonnull
     public FaceSelectionData.RawTextureSelection getToggleTextureSelection() {
         ItemStack toggleItem = textureItemHandler.getStackInSlot(TOGGLE_TEXTURE_SLOT);
-
-        if (blockEntity != null) {
-            String blockEntityVariable = blockEntity.getToggleTextureVariable();
-            if (!blockEntityVariable.equals(this.toggleTextureVariable)) {
-                this.toggleTextureVariable = blockEntityVariable;
-            }
-        }
-        
+        syncLocalVariableFromBlockEntity(true);
         return FaceSelectionData.createRawTextureSelection(toggleItem, toggleTextureVariable);
     }
 
@@ -350,14 +330,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     @Nonnull
     public FaceSelectionData.RawTextureSelection getBaseTextureSelection() {
         ItemStack baseItem = textureItemHandler.getStackInSlot(BASE_TEXTURE_SLOT);
-
-        if (blockEntity != null) {
-            String blockEntityVariable = blockEntity.getBaseTextureVariable();
-            if (!blockEntityVariable.equals(this.baseTextureVariable)) {
-                this.baseTextureVariable = blockEntityVariable;
-            }
-        }
-        
+        syncLocalVariableFromBlockEntity(false);
         return FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
     }
 
@@ -365,19 +338,14 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * Handles power mode selection change.
      */
     public void setPowerMode(@Nonnull SwitchesLeverBlockEntity.PowerMode mode) {
-        if (blockEntity == null) {
-            return;
-        }
-
-
-        this.powerMode = mode;
+        if (blockEntity == null) return;
         
-        if (level.isClientSide) {
-            NetworkHandler.sendTextureVariableUpdate(blockPos, "power", mode.name().toLowerCase(), "");
-        } else {
-            blockEntity.setPowerMode(mode);
-            blockEntity.updateTextures();
-        }
+        this.powerMode = mode;
+        sendOrApplyUpdate("power", mode.name().toLowerCase(), "",
+                () -> {
+                    blockEntity.setPowerMode(mode);
+                    blockEntity.updateTextures();
+                });
     }
 
     /**
@@ -385,16 +353,63 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      */
     @Nonnull
     public SwitchesLeverBlockEntity.PowerMode getPowerMode() {
-
         if (blockEntity != null) {
-            SwitchesLeverBlockEntity.PowerMode blockEntityMode = blockEntity.getPowerMode();
-            if (blockEntityMode != this.powerMode) {
-                this.powerMode = blockEntityMode;
-            }
+            this.powerMode = blockEntity.getPowerMode();
         }
-        
         return this.powerMode;
     }
+
+    /**
+     * Handles base texture rotation selection change.
+     */
+    public void setBaseTextureRotation(@Nonnull TextureRotation rotation) {
+        if (blockEntity == null) return;
+        
+        this.baseTextureRotation = rotation;
+        sendOrApplyUpdate("base_rotation", rotation.name().toLowerCase(), "",
+                () -> {
+                    blockEntity.setBaseTextureRotation(rotation);
+                    blockEntity.updateTextures();
+                });
+    }
+
+    /**
+     * Gets current base texture rotation for GUI rendering.
+     */
+    @Nonnull
+    public TextureRotation getBaseTextureRotation() {
+        if (blockEntity != null) {
+            this.baseTextureRotation = blockEntity.getBaseTextureRotation();
+        }
+        return this.baseTextureRotation;
+    }
+
+    /**
+     * Handles toggle texture rotation selection change.
+     */
+    public void setToggleTextureRotation(@Nonnull TextureRotation rotation) {
+        if (blockEntity == null) return;
+        
+        this.toggleTextureRotation = rotation;
+        sendOrApplyUpdate("toggle_rotation", rotation.name().toLowerCase(), "",
+                () -> {
+                    blockEntity.setToggleTextureRotation(rotation);
+                    blockEntity.updateTextures();
+                });
+    }
+
+    /**
+     * Gets current toggle texture rotation for GUI rendering.
+     */
+    @Nonnull
+    public TextureRotation getToggleTextureRotation() {
+        if (blockEntity != null) {
+            this.toggleTextureRotation = blockEntity.getToggleTextureRotation();
+        }
+        return this.toggleTextureRotation;
+    }
+
+
 
 
     @Nonnull
@@ -414,13 +429,36 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * Completes initialization after GUI is fully rendered.
      */
     public void completeInitialization() {
-
         this.isInitializing = false;
         this.isLoadingSlots = false;
         this.isSynchronizing = false;
 
         expectedToggleItem = textureItemHandler.getStackInSlot(TOGGLE_TEXTURE_SLOT).copy();
         expectedBaseItem = textureItemHandler.getStackInSlot(BASE_TEXTURE_SLOT).copy();
+    }
+
+    /**
+     * Synchronizes local variables with BlockEntity state.
+     */
+    private void syncLocalVariableFromBlockEntity(boolean isToggle) {
+        if (blockEntity == null) return;
+        
+        if (isToggle) {
+            this.toggleTextureVariable = blockEntity.getToggleTextureVariable();
+        } else {
+            this.baseTextureVariable = blockEntity.getBaseTextureVariable();
+        }
+    }
+
+    /**
+     * Unified method for sending network updates or applying changes directly.
+     */
+    private void sendOrApplyUpdate(String category, String variable, String texturePath, Runnable serverAction) {
+        if (level.isClientSide) {
+            NetworkHandler.sendTextureVariableUpdate(blockPos, category, variable, texturePath);
+        } else {
+            serverAction.run();
+        }
     }
 
 
@@ -431,6 +469,8 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
             this.baseTextureVariable = blockEntity.getBaseTextureVariable();
             this.toggleTextureVariable = blockEntity.getToggleTextureVariable();
             this.powerMode = blockEntity.getPowerMode();
+            this.baseTextureRotation = blockEntity.getBaseTextureRotation();
+            this.toggleTextureRotation = blockEntity.getToggleTextureRotation();
         }
     }
 

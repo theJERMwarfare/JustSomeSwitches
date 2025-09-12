@@ -1,6 +1,7 @@
 package net.justsomeswitches.blockentity;
 
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
+import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -57,6 +58,12 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     private String baseTextureVariable = "all";
     private String toggleTextureVariable = "all";
 
+    // Texture rotation support
+    private TextureRotation baseTextureRotation = TextureRotation.NORMAL;
+    private TextureRotation toggleTextureRotation = TextureRotation.NORMAL;
+    private static final String BASE_ROTATION_KEY = "base_texture_rotation";
+    private static final String TOGGLE_ROTATION_KEY = "toggle_texture_rotation";
+
 
     private ItemStack guiToggleItem = ItemStack.EMPTY;
     private ItemStack guiBaseItem = ItemStack.EMPTY;
@@ -97,12 +104,15 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
 
+    // ModelData properties for custom rendering
     public static final ModelProperty<String> TOGGLE_TEXTURE = new ModelProperty<>();
     public static final ModelProperty<String> BASE_TEXTURE = new ModelProperty<>();
     public static final ModelProperty<String> FACE_SELECTION = new ModelProperty<>();
     public static final ModelProperty<Boolean> INVERTED = new ModelProperty<>();
     public static final ModelProperty<String> POWER_MODE = new ModelProperty<>();
     public static final ModelProperty<String> WALL_ORIENTATION = new ModelProperty<>();
+    public static final ModelProperty<String> BASE_ROTATION = new ModelProperty<>();
+    public static final ModelProperty<String> TOGGLE_ROTATION = new ModelProperty<>();
     /**
      * Provides model data for custom rendering.
      */
@@ -117,6 +127,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
                 .with(INVERTED, false)
                 .with(POWER_MODE, powerMode.name())
                 .with(WALL_ORIENTATION, wallOrientation)
+                .with(BASE_ROTATION, baseTextureRotation.name())
+                .with(TOGGLE_ROTATION, toggleTextureRotation.name())
                 .build();
     }
 
@@ -147,10 +159,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
 
     /**
-     * Client-side tick method. Parameters required by NeoForge BlockEntity tick signature.
+     * Client-side tick method for NBT protection handling.
      */
-    @SuppressWarnings("unused")
-    public static void clientTick(@SuppressWarnings("unused") Level level, @SuppressWarnings("unused") BlockPos pos, @SuppressWarnings("unused") BlockState state, SwitchesLeverBlockEntity blockEntity) {
+    public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
         if (blockEntity.isInBlockStateChange) {
             blockEntity.endNBTProtection();
             blockEntity.requestModelDataUpdate();
@@ -191,7 +202,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
 
-    @SuppressWarnings("UnusedReturnValue")
     public boolean setBaseTexture(@Nonnull String texturePath) {
         if (!texturePath.equals(this.baseTexturePath)) {
             this.baseTexturePath = texturePath;
@@ -201,7 +211,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return false;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
     public boolean setToggleTexture(@Nonnull String texturePath) {
         if (!texturePath.equals(this.toggleTexturePath)) {
             this.toggleTexturePath = texturePath;
@@ -211,7 +220,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return false;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
     public boolean setBaseTextureVariable(@Nonnull String variable) {
         if (!variable.equals(this.baseTextureVariable)) {
             this.baseTextureVariable = variable;
@@ -221,7 +229,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         return false;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
     public boolean setToggleTextureVariable(@Nonnull String variable) {
         if (!variable.equals(this.toggleTextureVariable)) {
             this.toggleTextureVariable = variable;
@@ -235,6 +242,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
     @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
     @Nonnull public PowerMode getPowerMode() { return powerMode; }
+    @Nonnull public TextureRotation getBaseTextureRotation() { return baseTextureRotation; }
+    @Nonnull public TextureRotation getToggleTextureRotation() { return toggleTextureRotation; }
 
     public void resetBaseTexture() {
         setBaseTexture(DEFAULT_BASE_TEXTURE);
@@ -265,7 +274,6 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     }
 
 
-    @SuppressWarnings("UnusedReturnValue")
     public boolean setPowerMode(@Nonnull PowerMode mode) {
         if (mode != this.powerMode) {
             this.powerMode = mode;
@@ -274,6 +282,26 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         }
         return false;
     }
+
+    public boolean setBaseTextureRotation(@Nonnull TextureRotation rotation) {
+        if (rotation != this.baseTextureRotation) {
+            this.baseTextureRotation = rotation;
+            markDirtyAndSync();
+            return true;
+        }
+        return false;
+    }
+
+    public boolean setToggleTextureRotation(@Nonnull TextureRotation rotation) {
+        if (rotation != this.toggleTextureRotation) {
+            this.toggleTextureRotation = rotation;
+            markDirtyAndSync();
+            return true;
+        }
+        return false;
+    }
+
+
 
 
     @Nonnull
@@ -341,6 +369,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
         nbt.putString(WALL_ORIENTATION_KEY, wallOrientation);
 
+        // Save texture rotations
+        nbt.putString(BASE_ROTATION_KEY, baseTextureRotation.name());
+        nbt.putString(TOGGLE_ROTATION_KEY, toggleTextureRotation.name());
+
 
         if (!guiToggleItem.isEmpty()) {
             nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
@@ -405,17 +437,32 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         String loadedWallOrientation = nbt.getString(WALL_ORIENTATION_KEY);
         this.wallOrientation = loadedWallOrientation.isEmpty() ? "center" : loadedWallOrientation;
 
+        // Load texture rotations with safe parsing
+        this.baseTextureRotation = parseTextureRotation(nbt.getString(BASE_ROTATION_KEY));
+        this.toggleTextureRotation = parseTextureRotation(nbt.getString(TOGGLE_ROTATION_KEY));
 
-        if (nbt.contains("gui_toggle_item")) {
-            this.guiToggleItem = ItemStack.of(nbt.getCompound("gui_toggle_item"));
-        } else {
-            this.guiToggleItem = ItemStack.EMPTY;
+
+
+
+        // Load GUI items
+        this.guiToggleItem = nbt.contains("gui_toggle_item") ?
+                ItemStack.of(nbt.getCompound("gui_toggle_item")) : ItemStack.EMPTY;
+        this.guiBaseItem = nbt.contains("gui_base_item") ?
+                ItemStack.of(nbt.getCompound("gui_base_item")) : ItemStack.EMPTY;
+    }
+
+    /**
+     * Safely parses TextureRotation from NBT string.
+     */
+    @Nonnull
+    private TextureRotation parseTextureRotation(@Nonnull String rotationString) {
+        if (rotationString.isEmpty()) {
+            return TextureRotation.NORMAL;
         }
-
-        if (nbt.contains("gui_base_item")) {
-            this.guiBaseItem = ItemStack.of(nbt.getCompound("gui_base_item"));
-        } else {
-            this.guiBaseItem = ItemStack.EMPTY;
+        try {
+            return TextureRotation.valueOf(rotationString);
+        } catch (IllegalArgumentException e) {
+            return TextureRotation.NORMAL;
         }
     }
 
@@ -439,6 +486,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         nbt.putString(TOGGLE_VARIABLE_KEY, toggleTextureVariable);
         nbt.putString(POWER_MODE_KEY, powerMode.name());
         nbt.putString(WALL_ORIENTATION_KEY, wallOrientation);
+        nbt.putString(BASE_ROTATION_KEY, baseTextureRotation.name());
+        nbt.putString(TOGGLE_ROTATION_KEY, toggleTextureRotation.name());
 
 
         if (!guiToggleItem.isEmpty()) {
