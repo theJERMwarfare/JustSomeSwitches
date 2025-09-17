@@ -379,11 +379,12 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Nonnull
     public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player,
                                  @Nonnull InteractionHand hand, @Nonnull BlockHitResult hit) {
-        if (!player.getItemInHand(hand).isEmpty() && player.getItemInHand(hand).getItem() instanceof net.minecraft.world.item.BlockItem blockItem) {
-            if (blockItem.getBlock() == this) {
-                return InteractionResult.PASS;
-            }
+        // Handle shift-clicking behavior for block placement
+        if (player.isShiftKeyDown()) {
+            return InteractionResult.PASS; // Allow item placement when shift-clicking
         }
+        
+        // Handle regular interaction (toggle lever)
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }

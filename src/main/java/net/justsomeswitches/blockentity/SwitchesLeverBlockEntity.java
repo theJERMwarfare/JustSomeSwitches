@@ -113,6 +113,12 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public static final ModelProperty<String> WALL_ORIENTATION = new ModelProperty<>();
     public static final ModelProperty<String> BASE_ROTATION = new ModelProperty<>();
     public static final ModelProperty<String> TOGGLE_ROTATION = new ModelProperty<>();
+    
+    // Ghost preview properties for Custom Model Loader extension
+    public static final ModelProperty<Boolean> GHOST_MODE = new ModelProperty<>();
+    public static final ModelProperty<Float> GHOST_ALPHA = new ModelProperty<>();
+    public static final ModelProperty<BlockState> GHOST_STATE = new ModelProperty<>();
+
     /**
      * Provides model data for custom rendering.
      */
@@ -161,7 +167,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     /**
      * Client-side tick method for NBT protection handling.
      */
-    public static void clientTick(Level level, BlockPos pos, BlockState state, SwitchesLeverBlockEntity blockEntity) {
+    public static void clientTick(@SuppressWarnings("unused") Level level, @SuppressWarnings("unused") BlockPos pos, @SuppressWarnings("unused") BlockState state, SwitchesLeverBlockEntity blockEntity) {
         if (blockEntity.isInBlockStateChange) {
             blockEntity.endNBTProtection();
             blockEntity.requestModelDataUpdate();

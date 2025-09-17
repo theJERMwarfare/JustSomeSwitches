@@ -53,6 +53,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         if ("center".equals(wallOrientation)) {
             return baseQuads;
         }
+        
         net.minecraft.core.Direction wallFace;
         try {
             wallFace = state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING);
@@ -65,6 +66,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         if (wallOrientationMatrix.equals(new Matrix4f().identity())) {
             return baseQuads;
         }
+        
         List<BakedQuad> rotatedQuads = new ArrayList<>();
         for (BakedQuad quad : baseQuads) {
             BakedQuad rotatedQuad = transformQuadWithMatrix(quad, wallOrientationMatrix);
@@ -84,7 +86,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 return wallOrientation;
             }
         } catch (Exception e) {
-            // Ignore exception
+            // Silently handle errors
         }
         
         return "center";
@@ -180,9 +182,9 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
     public SwitchesLeverDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
-                             @Nonnull Map<String, Matrix4f> orientationTransforms,
-                             @Nonnull Map<String, String> jsonVariables,
-                             @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
+                             @SuppressWarnings("unused") @Nonnull Map<String, Matrix4f> orientationTransforms,
+                             @SuppressWarnings("unused") @Nonnull Map<String, String> jsonVariables,
+                             @SuppressWarnings("unused") @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
                              @Nonnull BakedModel vanillaLeverModel,
                              @Nonnull ItemOverrides itemOverrides) {
         this.textureSprites = new HashMap<>(textureSprites);
@@ -190,25 +192,23 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         this.itemOverrides = itemOverrides;
     }
     /**
-     * Validates and corrects ModelData before rendering.
+     * Validates ModelData before rendering.
      */
-    @Nullable
-    private ModelData validateAndCorrectModelData(@Nonnull ModelData extraData) {
+    private boolean hasValidModelData(@Nonnull ModelData extraData) {
         if (extraData == ModelData.EMPTY) {
-            return null;
+            return false;
         }
         
-        // Check for any texture data including power mode
-        String toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
-        String baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
-        String powerMode = extraData.get(SwitchesLeverBlockEntity.POWER_MODE);
+        // Ghost preview mode is always valid
+        Boolean ghostMode = extraData.get(SwitchesLeverBlockEntity.GHOST_MODE);
+        if (ghostMode != null && ghostMode) {
+            return true;
+        }
         
-        // Valid if we have any texture customization or power mode
-        boolean hasValidData = (toggleTexture != null) || 
-                              (baseTexture != null) || 
-                              (powerMode != null);
-        
-        return hasValidData ? extraData : null;
+        // Check for any texture customization or power mode
+        return extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE) != null ||
+               extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE) != null ||
+               extraData.get(SwitchesLeverBlockEntity.POWER_MODE) != null;
     }
 
     @Override
@@ -217,15 +217,12 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                    @Nonnull RandomSource rand, @Nonnull ModelData extraData, 
                                    @Nullable RenderType renderType) {
 
-        ModelData validatedModelData = validateAndCorrectModelData(extraData);
-        boolean hasValidModelData = (validatedModelData != null);
-        
-        if (!hasValidModelData) {
+        if (!hasValidModelData(extraData)) {
             return vanillaLeverModel.getQuads(state, side, rand, ModelData.EMPTY, renderType);
         }
 
 
-        ModelCacheKey cacheKey = createCacheKey(state, side, validatedModelData, renderType);
+        ModelCacheKey cacheKey = createCacheKey(state, side, extraData, renderType);
 
 
         List<BakedQuad> cachedQuads = getCachedQuads(cacheKey);
@@ -233,7 +230,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             return cachedQuads;
         }
 
-        List<BakedQuad> generatedQuads = generateSwitchQuads(state, side, validatedModelData, rand, renderType);
+        List<BakedQuad> generatedQuads = generateSwitchQuads(state, side, extraData, rand, renderType);
         cacheGeneratedQuads(cacheKey, generatedQuads);
 
         // Periodic cache cleanup
@@ -297,7 +294,12 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                                @Nonnull ModelData extraData, @Nonnull RandomSource rand,
                                                @Nullable RenderType renderType) {
 
+        // Check for ghost preview mode first (simplified processing)
+        if (isGhostPreviewMode(extraData)) {
+            return generateGhostPreviewQuads(state, side, extraData, rand, renderType);
+        }
 
+        // Regular texture customization processing for placed blocks
         boolean hasTextureData = false;
         String toggleTexture = null;
         String baseTexture = null;
@@ -343,6 +345,40 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
         return texturedQuads;
     }
+    
+    /**
+     * Generates quads specifically for ghost preview (default lever with correct orientation).
+     */
+    @Nonnull
+    private List<BakedQuad> generateGhostPreviewQuads(@Nullable BlockState state, @Nullable Direction side,
+                                                     @Nonnull ModelData extraData, @Nonnull RandomSource rand,
+                                                     @Nullable RenderType renderType) {
+        
+        // Get base vanilla lever quads (no texture customization)
+        List<BakedQuad> baseQuads = vanillaLeverModel.getQuads(state, side, rand, 
+                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, renderType);
+        
+        if (baseQuads.isEmpty()) {
+            return baseQuads;
+        }
+
+        // Apply wall orientation if needed (ghost preview shows correct orientation)
+        if (state != null && isWallPlacement(state)) {
+            return applyWallOrientationRotations(baseQuads, state, extraData);
+        }
+        
+        return baseQuads;
+    }
+    
+    /**
+     * Checks if ghost preview mode is enabled in ModelData.
+     */
+    private boolean isGhostPreviewMode(@Nonnull ModelData extraData) {
+        Boolean ghostMode = extraData.get(SwitchesLeverBlockEntity.GHOST_MODE);
+        return ghostMode != null && ghostMode;
+    }
+
+
 
     /**
      * Applies custom texture replacement to quads.
@@ -371,9 +407,9 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     private BakedQuad processQuadWithCustomTextures(@Nonnull BakedQuad originalQuad,
                                                    @Nullable String toggleTexture,
                                                    @Nullable String baseTexture,
-                                                   @Nullable String faceSelection,
+                                                   @SuppressWarnings("unused") @Nullable String faceSelection,
                                                    @Nullable String powerMode,
-                                                   @Nullable BlockState state,
+                                                   @SuppressWarnings("unused") @Nullable BlockState state,
                                                    @Nonnull ModelData extraData) {
 
         TextureAtlasSprite originalSprite = originalQuad.getSprite();
@@ -664,7 +700,6 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
             net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
             try {
-                @SuppressWarnings("deprecation")
                 TextureAtlasSprite atlasSprite = minecraft.getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
                     .apply(textureLocation);
                 if (atlasSprite != null) {
@@ -688,13 +723,31 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     private ModelCacheKey createCacheKey(@Nullable BlockState state, @Nullable Direction side,
                                         @Nonnull ModelData extraData, @Nullable RenderType renderType) {
 
+        // Simplified cache key for ghost preview (no texture customization)
+        Boolean ghostMode = extraData.get(SwitchesLeverBlockEntity.GHOST_MODE);
+        if (ghostMode != null && ghostMode) {
+            Float ghostOpacity = extraData.get(SwitchesLeverBlockEntity.GHOST_ALPHA);
+            String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
+            
+            return new ModelCacheKey(
+                state != null ? state.toString() : "null",
+                side,
+                null, null, null, // No texture parameters for ghost preview
+                wallOrientation,
+                null, null, // No rotation parameters for ghost preview
+                ghostMode,
+                ghostOpacity,
+                renderType
+            );
+        }
+        
+        // Full cache key for regular texture customization
         String toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
         String baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
         String powerMode = extraData.get(SwitchesLeverBlockEntity.POWER_MODE);
         String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
         String baseRotation = extraData.get(SwitchesLeverBlockEntity.BASE_ROTATION);
         String toggleRotation = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
-
 
         return new ModelCacheKey(
                 state != null ? state.toString() : "null",
@@ -705,6 +758,8 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 wallOrientation,
                 baseRotation,
                 toggleRotation,
+                false, // Not ghost mode
+                null, // No ghost opacity
                 renderType
         );
     }
@@ -745,6 +800,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
     @Override
     @Nonnull
+    @SuppressWarnings("deprecation")
     public TextureAtlasSprite getParticleIcon() {
 
         TextureAtlasSprite stoneTexture = textureSprites.get("base_default");
@@ -773,6 +829,8 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         private final String wallOrientation;
         private final String baseRotation;
         private final String toggleRotation;
+        private final Boolean ghostMode;
+        private final Float ghostOpacity;
 
         private final RenderType renderType;
         private final int hashCode;
@@ -781,6 +839,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                             @Nullable String toggleTexture, @Nullable String baseTexture,
                             @Nullable String powerMode, @Nullable String wallOrientation,
                             @Nullable String baseRotation, @Nullable String toggleRotation,
+                            @Nullable Boolean ghostMode, @Nullable Float ghostOpacity,
                             @Nullable RenderType renderType) {
             this.blockStateString = blockStateString;
             this.side = side;
@@ -790,10 +849,12 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             this.wallOrientation = wallOrientation;
             this.baseRotation = baseRotation;
             this.toggleRotation = toggleRotation;
+            this.ghostMode = ghostMode;
+            this.ghostOpacity = ghostOpacity;
 
             this.renderType = renderType;
 
-            this.hashCode = Objects.hash(blockStateString, side, toggleTexture, baseTexture, powerMode, wallOrientation, baseRotation, toggleRotation, renderType);
+            this.hashCode = Objects.hash(blockStateString, side, toggleTexture, baseTexture, powerMode, wallOrientation, baseRotation, toggleRotation, ghostMode, ghostOpacity, renderType);
         }
 
         public boolean isDefaultTextures() {
@@ -821,6 +882,8 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                    Objects.equals(wallOrientation, other.wallOrientation) &&
                    Objects.equals(baseRotation, other.baseRotation) &&
                    Objects.equals(toggleRotation, other.toggleRotation) &&
+                   Objects.equals(ghostMode, other.ghostMode) &&
+                   Objects.equals(ghostOpacity, other.ghostOpacity) &&
                    Objects.equals(renderType, other.renderType);
         }
 

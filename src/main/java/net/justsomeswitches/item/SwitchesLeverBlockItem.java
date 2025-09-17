@@ -29,10 +29,19 @@ public class SwitchesLeverBlockItem extends BlockItem {
         BlockPos clickedPos = context.getClickedPos();
         BlockState clickedState = level.getBlockState(clickedPos);
 
+        // When clicking on a Switches Lever, check the block's response
         if (clickedState.getBlock() instanceof SwitchesLeverBlock && context.getPlayer() != null) {
             net.minecraft.world.phys.BlockHitResult hitResult = new net.minecraft.world.phys.BlockHitResult(
                 context.getClickLocation(), context.getClickedFace(), clickedPos, context.isInside());
-            return clickedState.use(level, context.getPlayer(), context.getHand(), hitResult);
+            
+            InteractionResult blockResult = clickedState.use(level, context.getPlayer(), context.getHand(), hitResult);
+            
+            // If block returns PASS, proceed with item placement logic
+            // If block returns SUCCESS/CONSUME, respect that and don't place
+            if (blockResult != InteractionResult.PASS) {
+                return blockResult;
+            }
+            // Continue to placement logic below when block returns PASS
         }
 
         Direction clickedFace = context.getClickedFace();
