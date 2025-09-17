@@ -13,7 +13,7 @@ import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.event.TickEvent;
 
 /**
- * Client-side setup and registration for Just Some Switches mod
+ * Client-side setup and registration for Just Some Switches mod*
  *
  * Features:
  * - GUI screen registration for switch texture customization

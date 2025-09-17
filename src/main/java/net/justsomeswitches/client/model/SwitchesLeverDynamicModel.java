@@ -25,7 +25,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Dynamic model for lever blocks with custom texture support.
+ * Dynamic model for lever blocks with custom texture support.*
  */
 public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     /**

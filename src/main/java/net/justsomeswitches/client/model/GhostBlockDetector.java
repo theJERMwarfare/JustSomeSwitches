@@ -85,7 +85,7 @@ public class GhostBlockDetector {
             return;
         }
         
-        // CRITICAL: Validate reach distance and hit result validity
+        // Validate reach distance and hit result
         if (!isValidHitResult(blockHit, player)) {
             clearGhostPreview();
             return;
@@ -112,7 +112,7 @@ public class GhostBlockDetector {
     }
     
     /**
-     * Validates that the hit result is within reach distance and represents current crosshair position.
+     * Validates hit result is within reach distance.
      */
     private boolean isValidHitResult(@Nonnull BlockHitResult hit, @Nonnull Player player) {
         // Check hit result type first (fastest check)
@@ -126,7 +126,7 @@ public class GhostBlockDetector {
         double distanceToHit = eyePosition.distanceTo(hitLocation);
         double maxReachDistance = getPlayerReachDistance(player);
         
-        return distanceToHit <= maxReachDistance + 0.5; // Generous tolerance for edge cases
+        return distanceToHit <= maxReachDistance + 0.5; // Allow slight tolerance
     }
     
     /**
@@ -234,7 +234,7 @@ public class GhostBlockDetector {
                 }
             }
         } catch (Exception e) {
-            // Silently handle wall orientation calculation errors
+            // Handle calculation errors gracefully
         }
         
         return "center"; // Default for non-wall placements

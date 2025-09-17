@@ -31,7 +31,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Lever block with custom textures and intelligent placement.
+ * Lever block with custom textures and intelligent placement.*
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 

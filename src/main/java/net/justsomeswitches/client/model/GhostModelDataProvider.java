@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Bridge between ghost detection and model rendering.
+ * Bridge between ghost detection and model rendering.*
  * 
  * This class handles:
  * - Creating ModelData for ghost rendering

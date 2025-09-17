@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import javax.annotation.Nonnull;
 
 /**
- * Block item for switches lever with proper placement handling.
+ * Block item for switches lever with proper placement handling.*
  */
 public class SwitchesLeverBlockItem extends BlockItem {
 

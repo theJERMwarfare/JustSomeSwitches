@@ -68,8 +68,7 @@ public class GhostWorldRenderer {
             // Extract normal data
             int normalData = vertices[baseIndex + 6];
             
-            // Use white color with ghost alpha for reliable transparency
-            // This approach is commonly used for ghost rendering in Minecraft mods
+            // Use white color with ghost alpha for transparency
             buffer.vertex(poseStack.last().pose(), x, y, z)
                   .color(255, 255, 255, ghostAlpha) // White with ghost alpha
                   .uv(u, v)
@@ -196,7 +195,7 @@ public class GhostWorldRenderer {
             }
             
         } catch (Exception e) {
-            // Silently handle rendering errors to prevent crashes
+            // Handle rendering errors gracefully
         } finally {
             // Restore OpenGL state
             com.mojang.blaze3d.systems.RenderSystem.disableBlend();
@@ -352,11 +351,7 @@ public class GhostWorldRenderer {
         // - Right half of texture (u > 0.5) 
         // - Specific corners or regions
         
-        // For debugging - you can log UV coordinates to identify powered texture range:
-        // System.out.println("UV: " + u + ", " + v);
-        
-        // Conservative approach: don't filter based on UV unless we're certain
-        // Focus on texture name filtering for now
+        // Conservative approach: focus on texture name filtering
         return false;
     }
     
