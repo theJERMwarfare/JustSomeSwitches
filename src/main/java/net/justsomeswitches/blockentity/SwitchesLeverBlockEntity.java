@@ -247,6 +247,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     @Nonnull public String getBaseTextureVariable() { return baseTextureVariable; }
     @Nonnull public String getToggleTextureVariable() { return toggleTextureVariable; }
+    @Nonnull public String getBaseTexturePath() { return baseTexturePath; }
+    @Nonnull public String getToggleTexturePath() { return toggleTexturePath; }
     @Nonnull public PowerMode getPowerMode() { return powerMode; }
     @Nonnull public TextureRotation getBaseTextureRotation() { return baseTextureRotation; }
     @Nonnull public TextureRotation getToggleTextureRotation() { return toggleTextureRotation; }

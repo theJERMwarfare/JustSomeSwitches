@@ -1,0 +1,429 @@
+package net.justsomeswitches.item;
+
+import net.justsomeswitches.gui.SwitchesTextureMenu;
+import net.justsomeswitches.block.SwitchesLeverBlock;
+import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.item.service.CopyPasteService;
+import net.justsomeswitches.network.NetworkHandler;
+import net.justsomeswitches.network.WrenchActionPayload;
+import net.justsomeswitches.util.NBTHelper;
+import net.justsomeswitches.util.WrenchConstants;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.ChatFormatting;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import org.lwjgl.glfw.GLFW;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.List;
+
+/**
+ * Optimized switches wrench with copy/paste functionality
+ * Core logic extracted to service classes for better maintainability
+ */
+public class SwitchesWrenchItem extends Item {
+
+    public SwitchesWrenchItem(@Nonnull Properties properties) {
+        super(properties);
+    }
+
+    @Override
+    @Nonnull
+    public InteractionResult useOn(@Nonnull UseOnContext context) {
+        Player player = context.getPlayer();
+        if (player == null || !player.isShiftKeyDown()) {
+            return InteractionResult.PASS;
+        }
+
+        Block block = context.getLevel().getBlockState(context.getClickedPos()).getBlock();
+        if (!isSwitchBlock(block)) {
+            return InteractionResult.FAIL;
+        }
+
+        KeyAction keyAction = detectKeyAction();
+        return switch (keyAction) {
+            case COPY -> handleCopyOperation(context);
+            case PASTE -> handlePasteOperation(context);
+            case NONE -> handleStandardGUI(context);
+        };
+    }
+    
+    /**
+     * Handle right-clicking air with shift to clear stored settings
+     */
+    @Override
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level, Player player, net.minecraft.world.InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        
+        if (player.isShiftKeyDown() && CopyPasteService.hasCopiedSettings(stack)) {
+            CopyPasteService.clearAllSettings(stack);
+            showActionBarMessage(player, WrenchConstants.MSG_SETTINGS_CLEARED, ActionBarMessageType.SUCCESS);
+            return net.minecraft.world.InteractionResultHolder.success(stack);
+        }
+        
+        return net.minecraft.world.InteractionResultHolder.pass(stack);
+    }
+
+    private enum KeyAction {
+        COPY, PASTE, NONE
+    }
+    
+    private KeyAction detectKeyAction() {
+        if (!net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
+            return KeyAction.NONE;
+        }
+        
+        return detectKeyActionClient();
+    }
+    
+    @OnlyIn(Dist.CLIENT)
+    private KeyAction detectKeyActionClient() {
+        long windowHandle = Minecraft.getInstance().getWindow().getWindow();
+        
+        boolean altPressed = GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS ||
+                            GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_RIGHT_ALT) == GLFW.GLFW_PRESS;
+        boolean cPressed = GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_C) == GLFW.GLFW_PRESS;
+        
+        if (altPressed && cPressed) {
+            return KeyAction.COPY;
+        }
+        
+        if (altPressed && !cPressed) {
+            return KeyAction.PASTE;
+        }
+        
+        return KeyAction.NONE;
+    }
+    
+    private boolean isSwitchBlock(@Nonnull Block block) {
+        return block instanceof SwitchesLeverBlock;
+    }
+    
+    private InteractionResult handleStandardGUI(@Nonnull UseOnContext context) {
+        return openGUIOnServer(context.getLevel(), context.getPlayer(), context.getClickedPos(), 
+                              this::openTextureCustomizationGUI);
+    }
+    
+    private InteractionResult handleCopyOperation(@Nonnull UseOnContext context) {
+        Level level = context.getLevel();
+        BlockPos blockPos = context.getClickedPos();
+        Player player = context.getPlayer();
+        ItemStack stack = context.getItemInHand();
+        
+        if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
+            return InteractionResult.FAIL;
+        }
+        
+        if (!blockEntity.hasCustomTextures()) {
+            showActionBarMessage(player, WrenchConstants.MSG_NO_SETTINGS_TO_COPY, ActionBarMessageType.ERROR);
+            return InteractionResult.SUCCESS;
+        }
+        
+        if (CopyPasteService.hasCopiedSettings(stack)) {
+            if (CopyPasteService.hasIdenticalSettings(stack, blockEntity)) {
+                showActionBarMessage(player, WrenchConstants.MSG_SETTINGS_ALREADY_COPIED, ActionBarMessageType.INFO);
+                return InteractionResult.SUCCESS;
+            }
+            
+            return openGUIOnServer(level, player, blockPos, this::openCopyOverwriteGUI);
+        }
+        
+        return openGUIOnServer(level, player, blockPos, this::openCopyTextureGUI);
+    }
+    
+    private InteractionResult handlePasteOperation(@Nonnull UseOnContext context) {
+        ItemStack stack = context.getItemInHand();
+        if (!CopyPasteService.hasCopiedSettings(stack)) {
+            showActionBarMessage(context.getPlayer(), WrenchConstants.MSG_SETTINGS_NOT_COPIED, ActionBarMessageType.INFO);
+            return InteractionResult.SUCCESS;
+        }
+        
+        Level level = context.getLevel();
+        BlockPos blockPos = context.getClickedPos();
+        if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity)) {
+            return InteractionResult.FAIL;
+        }
+        
+        if (level.isClientSide) {
+            NetworkHandler.sendWrenchAction(blockPos, 
+                WrenchActionPayload.WrenchAction.PASTE, 
+                context.getPlayer().getUsedItemHand());
+        }
+        
+        return InteractionResult.SUCCESS;
+    }
+
+    private InteractionResult openGUIOnServer(@Nonnull Level level, @Nonnull Player player, 
+                                             @Nonnull BlockPos blockPos, @Nonnull GUIOpener guiOpener) {
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+            guiOpener.openGUI(serverPlayer, blockPos);
+            return InteractionResult.SUCCESS;
+        }
+        return level.isClientSide ? InteractionResult.SUCCESS : InteractionResult.FAIL;
+    }
+    
+    @FunctionalInterface
+    private interface GUIOpener {
+        void openGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos);
+    }
+
+    private void showActionBarMessage(Player player, String message, ActionBarMessageType type) {
+        if (player.level().isClientSide) {
+            net.minecraft.network.chat.Component styledMessage = formatActionBarMessage(message, type);
+            player.displayClientMessage(styledMessage, true);
+        }
+    }
+    
+    private net.minecraft.network.chat.Component formatActionBarMessage(String message, ActionBarMessageType type) {
+        return switch (type) {
+            case SUCCESS -> Component.literal(message).withStyle(net.minecraft.ChatFormatting.GREEN);
+            case ERROR -> Component.literal(message).withStyle(net.minecraft.ChatFormatting.RED);
+            case INFO -> Component.literal(message).withStyle(net.minecraft.ChatFormatting.BLUE);
+        };
+    }
+    
+    private enum ActionBarMessageType {
+        SUCCESS, ERROR, INFO
+    }
+
+    // ========================================
+    // GUI Opening Methods
+    // ========================================
+
+    private void openTextureCustomizationGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
+        MenuProvider menuProvider = new MenuProvider() {
+            @Override
+            @Nonnull
+            public Component getDisplayName() {
+                return Component.translatable("gui.justsomeswitches.switch_texture.title");
+            }
+
+            @Override
+            @Nullable
+            public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
+                return new SwitchesTextureMenu(containerId, playerInventory, blockPos);
+            }
+        };
+
+        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
+    }
+    
+    private void openCopyTextureGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
+        MenuProvider menuProvider = new MenuProvider() {
+            @Override
+            @Nonnull
+            public Component getDisplayName() {
+                return Component.literal(WrenchConstants.GUI_COPY_TEXTURE_TITLE);
+            }
+
+            @Override
+            @Nullable
+            public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
+                return new net.justsomeswitches.gui.WrenchCopyMenu(containerId, playerInventory, blockPos);
+            }
+        };
+
+        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
+    }
+    
+    private void openOverwriteTextureGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
+        MenuProvider menuProvider = new MenuProvider() {
+            @Override
+            @Nonnull
+            public Component getDisplayName() {
+                return Component.literal(WrenchConstants.GUI_SETTINGS_ALREADY_STORED);
+            }
+
+            @Override
+            @Nullable
+            public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
+                return new net.justsomeswitches.gui.WrenchOverwriteMenu(containerId, playerInventory, blockPos);
+            }
+        };
+
+        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
+    }
+    
+    private void openCopyOverwriteGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
+        MenuProvider menuProvider = new MenuProvider() {
+            @Override
+            @Nonnull
+            public Component getDisplayName() {
+                return Component.literal(WrenchConstants.GUI_DIFFERENT_SETTINGS_FOUND);
+            }
+
+            @Override
+            @Nullable
+            public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
+                return new net.justsomeswitches.gui.WrenchCopyOverwriteMenu(containerId, playerInventory, blockPos);
+            }
+        };
+
+        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
+    }
+    
+    // ========================================
+    // Server-Side Methods (for network handlers)
+    // ========================================
+    
+    /**
+     * Server-side paste operation - delegated to service
+     */
+    public CopyPasteService.PasteResult applySettingsFromWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity, Player player) {
+        return CopyPasteService.applySettingsFromWrench(stack, blockEntity, player);
+    }
+    
+    /**
+     * Server-side partial paste operation - delegated to service
+     */
+    public CopyPasteService.PasteResult applyPartialSettingsFromWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity, Player player) {
+        return CopyPasteService.applyPartialSettingsFromWrench(stack, blockEntity, player);
+    }
+    
+    /**
+     * Server-side copy operation - delegated to service
+     */
+    public void copySelectedSettingsToWrench(ItemStack stack, SwitchesLeverBlockEntity blockEntity,
+                                            boolean copyToggleBlock, boolean copyToggleFace, boolean copyToggleRotation,
+                                            boolean copyIndicators, boolean copyBaseBlock, boolean copyBaseFace,
+                                            boolean copyBaseRotation) {
+        CopyPasteService.copySelectedSettings(stack, blockEntity, copyToggleBlock, copyToggleFace, 
+                                            copyToggleRotation, copyIndicators, copyBaseBlock, 
+                                            copyBaseFace, copyBaseRotation);
+    }
+    
+    public boolean hasCopiedSettingsServer(ItemStack stack) {
+        return CopyPasteService.hasCopiedSettings(stack);
+    }
+    
+    public boolean hasIdenticalSettingsServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity) {
+        return CopyPasteService.hasIdenticalSettings(stack, blockEntity);
+    }
+    
+    public CopyPasteService.PasteResult checkInventoryForPasteServer(ItemStack stack, Player player) {
+        List<String> missingBlocks = CopyPasteService.validateRequiredBlocks(stack, player);
+        if (!missingBlocks.isEmpty()) {
+            return new CopyPasteService.PasteResult(false, WrenchConstants.MSG_MISSING_BLOCKS_GUI, missingBlocks);
+        }
+        return new CopyPasteService.PasteResult(true, "All blocks available");
+    }
+    
+    public void copySettingsToWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity) {
+        CopyPasteService.copySettingsToWrench(stack, blockEntity);
+    }
+    
+    public void clearAllSettingsServer(ItemStack stack) {
+        CopyPasteService.clearAllSettings(stack);
+    }
+    
+    // ========================================
+    // Tooltip Methods
+    // ========================================
+    
+    @Override
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
+        
+        if (CopyPasteService.hasCopiedSettings(stack)) {
+            addStoredSettingsTooltip(stack, tooltip);
+        }
+        
+        addControlsTooltip(tooltip);
+    }
+    
+    private void addStoredSettingsTooltip(@Nonnull ItemStack stack, @Nonnull List<Component> tooltip) {
+        tooltip.add(Component.literal("⚙ Settings Stored").withStyle(ChatFormatting.YELLOW));
+        tooltip.add(Component.empty());
+        
+        NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
+        CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
+        if (settingsTag != null) {
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_BLOCK_KEY, "Toggle Block: ", true);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_FACE_KEY, "Toggle Face: ", false);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_BLOCK_KEY, "Base Block: ", true);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_FACE_KEY, "Base Face: ", false);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_ROTATION_KEY, "Toggle Rotation: ", false);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_ROTATION_KEY, "Base Rotation: ", false);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.POWER_MODE_KEY, "Indicators: ", false);
+            
+            if (tooltip.size() > WrenchConstants.TOOLTIP_MAX_LINES) {
+                tooltip.add(Component.literal("...").withStyle(ChatFormatting.GRAY));
+            }
+        }
+        
+        tooltip.add(Component.empty());
+        tooltip.add(Component.literal("Note: Only applies to placed Switches blocks")
+                   .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GRAY));
+    }
+    
+    private void addSettingIfPresent(@Nonnull List<Component> tooltip, @Nonnull CompoundTag settingsTag, 
+                                   @Nonnull String key, @Nonnull String prefix, boolean isItem) {
+        if (settingsTag.contains(key)) {
+            String value;
+            if (isItem) {
+                // Remove brackets around item names for cleaner display
+                value = ItemStack.of(settingsTag.getCompound(key)).getDisplayName().getString();
+            } else {
+                String rawValue = settingsTag.getString(key);
+                value = formatSettingValue(key, rawValue);
+            }
+            tooltip.add(Component.literal(prefix + value).withStyle(ChatFormatting.GRAY));
+        }
+    }
+    
+    /**
+     * Formats setting values for better tooltip display
+     */
+    @Nonnull
+    private String formatSettingValue(@Nonnull String key, @Nonnull String rawValue) {
+        // Format rotation values to show degrees
+        if (key.equals(WrenchConstants.TOGGLE_ROTATION_KEY) || key.equals(WrenchConstants.BASE_ROTATION_KEY)) {
+            try {
+                net.justsomeswitches.util.TextureRotation rotation = 
+                    net.justsomeswitches.util.TextureRotation.valueOf(rawValue);
+                return rotation.getDegrees() + "°";
+            } catch (IllegalArgumentException e) {
+                return rawValue;
+            }
+        }
+        
+        // Format power mode values with proper capitalization
+        if (key.equals(WrenchConstants.POWER_MODE_KEY)) {
+            return switch (rawValue.toUpperCase()) {
+                case "DEFAULT" -> "Default";
+                case "ALT" -> "Alt";
+                case "NONE" -> "None";
+                default -> capitalizeFirst(rawValue.toLowerCase());
+            };
+        }
+        
+        return rawValue;
+    }
+    
+    @Nonnull
+    private String capitalizeFirst(@Nonnull String text) {
+        return text.isEmpty() ? text : text.substring(0, 1).toUpperCase() + text.substring(1);
+    }
+    
+    private void addControlsTooltip(@Nonnull List<Component> tooltip) {
+        tooltip.add(Component.literal("Shift + Right-Click: Open Texture Customization GUI").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Shift + ALT + C + Right-Click: Copy Texture Settings").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Shift + ALT + Right-Click: Paste Texture Settings").withStyle(ChatFormatting.DARK_GRAY));
+    }
+}

@@ -6,8 +6,8 @@ package net.justsomeswitches.util;
  */
 public enum TextureRotation {
     NORMAL("Normal", 0),
-    RIGHT("Right", -90), 
-    LEFT("Left", 90),
+    RIGHT("Right", 90), 
+    LEFT("Left", -90),
     INVERT("Invert", 180);
     
     private final String displayName;
@@ -57,13 +57,13 @@ public enum TextureRotation {
                 rotatedU = centeredU;
                 rotatedV = centeredV;
                 break;
-            case RIGHT: // -90° rotation
-                rotatedU = centeredV;
-                rotatedV = -centeredU;
-                break;
-            case LEFT: // 90° rotation  
+            case RIGHT: // 90° rotation
                 rotatedU = -centeredV;
                 rotatedV = centeredU;
+                break;
+            case LEFT: // -90° rotation  
+                rotatedU = centeredV;
+                rotatedV = -centeredU;
                 break;
             case INVERT: // 180° rotation
                 rotatedU = -centeredU;

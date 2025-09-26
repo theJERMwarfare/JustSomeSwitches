@@ -1,0 +1,100 @@
+package net.justsomeswitches.gui;
+
+import net.justsomeswitches.network.NetworkHandler;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+
+import javax.annotation.Nonnull;
+
+/**
+ * Client-side GUI for wrench overwrite confirmation
+ * Shows "Settings Already Stored" with Overwrite/Cancel buttons
+ */
+public class WrenchOverwriteScreen extends AbstractContainerScreen<WrenchOverwriteMenu> {
+    
+    private static final ResourceLocation BACKGROUND_TEXTURE = 
+        new ResourceLocation("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
+    private static final int GUI_WIDTH = 200;
+    private static final int GUI_HEIGHT = 94;
+    
+    public WrenchOverwriteScreen(WrenchOverwriteMenu menu, Inventory playerInventory, Component title) {
+        super(menu, playerInventory, title);
+        this.imageWidth = GUI_WIDTH;
+        this.imageHeight = GUI_HEIGHT;
+    }
+    
+    @Override
+    protected void init() {
+        super.init();
+        
+        this.leftPos = (this.width - this.imageWidth) / 2;
+        this.topPos = (this.height - this.imageHeight) / 2;
+        
+        // Paste New button
+        addRenderableWidget(Button.builder(Component.literal("Paste New"), this::onOverwriteClicked)
+                .bounds(leftPos + 20, topPos + 58, 70, 20)
+                .build());
+        
+        // Cancel button
+        addRenderableWidget(Button.builder(Component.literal("Cancel"), this::onCancelClicked)
+                .bounds(leftPos + 111, topPos + 58, 70, 20)
+                .build());
+    }
+    
+    @Override
+    protected void renderBg(@Nonnull GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        // Draw background using texture
+        graphics.blit(BACKGROUND_TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+    }
+    
+    @Override
+    protected void renderLabels(@Nonnull GuiGraphics graphics, int mouseX, int mouseY) {
+        // Title - y12 (moved down 1 pixel, no drop shadow)
+        Component titleText = Component.literal("Switch Has Texture Settings");
+        int titleWidth = font.width(titleText);
+        graphics.drawString(font, titleText, (imageWidth - titleWidth) / 2, 12, 0x404040, false);
+        
+        // Question - y32 with drop shadow (moved down 3 pixels) at 70% scale
+        graphics.pose().pushPose();
+        graphics.pose().scale(0.7f, 0.7f, 1.0f);
+        Component questionText = Component.literal("Paste new texture settings?");
+        int questionWidth = font.width(questionText);
+        int questionX = (int)((imageWidth - questionWidth * 0.7f) / 2 / 0.7f);
+        // Drop shadow (button text color)
+        graphics.drawString(font, questionText, questionX + 1, (int)((32 + 1) / 0.7f), 0xFF555555, false);
+        // Main text
+        graphics.drawString(font, questionText, questionX, (int)(32 / 0.7f), 0xFFFFFF, false);
+        graphics.pose().popPose();
+        
+        // Warning text - y48 with drop shadow (moved down 6 pixels) at 70% scale
+        graphics.pose().pushPose();
+        graphics.pose().scale(0.7f, 0.7f, 1.0f);
+        Component warningText = Component.literal("(Existing blocks will be returned)");
+        int warningWidth = font.width(warningText);
+        int warningX = (int)((imageWidth - warningWidth * 0.7f) / 2 / 0.7f);
+        // Drop shadow (button text color)
+        graphics.drawString(font, warningText, warningX + 1, (int)((48 + 1) / 0.7f), 0xFF555555, false);
+        // Main text
+        graphics.drawString(font, warningText, warningX, (int)(48 / 0.7f), 0xFFFFCC00, false);
+        graphics.pose().popPose();
+    }
+    
+    private void onOverwriteClicked(Button button) {
+        BlockPos blockPos = menu.getBlockPos();
+        NetworkHandler.sendWrenchOverwrite(blockPos, true);
+        onClose();
+    }
+    
+    private void onCancelClicked(Button button) {
+        BlockPos blockPos = menu.getBlockPos();
+        NetworkHandler.sendWrenchOverwrite(blockPos, false);
+        onClose();
+    }
+    
+    // isPauseScreen() uses default implementation
+}

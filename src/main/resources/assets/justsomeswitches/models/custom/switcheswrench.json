@@ -1,8 +1,8 @@
 {
 	"credit": "Made with Blockbench",
 	"textures": {
-		"wrench": "block/switches_texture_wrench",
-		"particle": "block/switches_texture_wrench"
+		"wrench": "block/switches_wrench",
+		"particle": "block/switches_wrench"
 	},
 	"elements": [
 		{

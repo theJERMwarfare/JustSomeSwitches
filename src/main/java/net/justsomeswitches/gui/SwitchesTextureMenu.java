@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 /**
  * Texture customization menu for switches.
  */
-public class SwitchTextureMenu extends AbstractContainerMenu {
+public class SwitchesTextureMenu extends AbstractContainerMenu {
 
     private static final int TEXTURE_SLOT_COUNT = 2;
     private static final int TOGGLE_TEXTURE_SLOT = 0;
@@ -62,7 +62,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
     private ItemStack expectedBaseItem = ItemStack.EMPTY;
 
 
-    public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
+    public SwitchesTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nullable BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), containerId);
 
         this.blockPos = blockPos;
@@ -116,7 +116,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
      * Used by the menu registration system.
      */
     @SuppressWarnings("unused")
-    public SwitchTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull FriendlyByteBuf extraData) {
+    public SwitchesTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull FriendlyByteBuf extraData) {
         this(containerId, playerInventory, extraData.readBlockPos());
     }
 
@@ -687,7 +687,7 @@ public class SwitchTextureMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPlace(@Nonnull ItemStack stack) {
 
-            return SwitchTextureMenu.this.isValidTextureItem(stack);
+            return SwitchesTextureMenu.this.isValidTextureItem(stack);
         }
 
         @Override

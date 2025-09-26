@@ -32,7 +32,7 @@ import java.util.Objects;
 /**
  * Switch texture screen for customization GUI.
  */
-public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMenu> {
+public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextureMenu> {
 
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 176;
@@ -112,7 +112,7 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
     private SwitchesLeverBlockEntity.PowerMode previousPowerMode = null;
 
 
-    public SwitchTextureScreen(@Nonnull SwitchTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
+    public SwitchesTextureScreen(@Nonnull SwitchesTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
 
         this.imageWidth = GUI_WIDTH;
@@ -508,8 +508,10 @@ public class SwitchTextureScreen extends AbstractContainerScreen<SwitchTextureMe
         // Reset selection to defaults (handled by menu auto-apply)
         if (isLeft) {
             menu.setToggleTextureVariable("all");
+            menu.setToggleTextureRotation(TextureRotation.NORMAL); // Reset rotation to 0°
         } else {
             menu.setBaseTextureVariable("all");
+            menu.setBaseTextureRotation(TextureRotation.NORMAL); // Reset rotation to 0°
         }
     }
 

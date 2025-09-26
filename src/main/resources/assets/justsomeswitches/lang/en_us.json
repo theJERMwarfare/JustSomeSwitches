@@ -27,7 +27,7 @@
   "item.justsomeswitches.switches_rocker": "Switches Rocker",
   "item.justsomeswitches.switches_button": "Switches Button",
   "item.justsomeswitches.switches_slide": "Switches Slide",
-  "item.justsomeswitches.switches_texture_wrench": "Switches Texture Wrench",
+  "item.justsomeswitches.switches_wrench": "Switches Wrench",
 
   "_comment3": "Creative tab:",
   "itemGroup.justsomeswitches": "Just Some Switches",

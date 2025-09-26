@@ -10,7 +10,7 @@ import net.justsomeswitches.block.BasicButtonsBlock;
 import net.justsomeswitches.block.BasicButtonsInvertedBlock;
 import net.justsomeswitches.block.BasicSlideBlock;
 import net.justsomeswitches.block.BasicSlideInvertedBlock;
-import net.justsomeswitches.item.SwitchTextureWrenchItem;
+import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.item.SwitchesLeverBlockItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
@@ -179,11 +179,11 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /**
-     * Switches Texture Wrench - tool used to customize switch textures
+     * Switches Wrench - tool used to customize switches and manage functionality
      * Opens texture customization GUI when shift-right-clicking on switches
      */
-    public static final DeferredHolder<Item, SwitchTextureWrenchItem> SWITCHES_TEXTURE_WRENCH =
-            ITEMS.register("switches_texture_wrench", () -> new SwitchTextureWrenchItem(
+    public static final DeferredHolder<Item, SwitchesWrenchItem> SWITCHES_WRENCH =
+            ITEMS.register("switches_wrench", () -> new SwitchesWrenchItem(
                     new Item.Properties()
                             .stacksTo(1)    // Only allow 1 in a stack (like tools)
             ));
