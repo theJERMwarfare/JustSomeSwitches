@@ -12,17 +12,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import javax.annotation.Nonnull;
 
-/**
- * Container menu for the Wrench Copy Settings GUI
- * Handles server-side logic for copy operation with selective settings
- */
+/** Container menu for wrench copy settings GUI with selective copy logic. */
 public class WrenchCopyMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     private final ContainerLevelAccess levelAccess;
     private SwitchesLeverBlockEntity blockEntity;
     
-    // Copy selection state - tracks which settings are selected for copying
     private boolean copyToggleBlock = true;
     private boolean copyToggleFace = true;
     private boolean copyToggleRotation = true;
@@ -31,24 +27,19 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     private boolean copyBaseFace = true;
     private boolean copyBaseRotation = true;
     
-    /**
-     * Client-side constructor (required by NeoForge framework)
-     */
+    /** Client-side constructor required by NeoForge framework. */
     @SuppressWarnings("unused")
     public WrenchCopyMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
         this(containerId, playerInventory, extraData.readBlockPos());
     }
     
-    /**
-     * Server-side constructor
-     */
+    /** Server-side constructor. */
     public WrenchCopyMenu(int containerId, Inventory playerInventory, BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.WRENCH_COPY.get(), containerId);
         
         this.blockPos = blockPos != null ? blockPos : BlockPos.ZERO;
         this.levelAccess = ContainerLevelAccess.create(playerInventory.player.level(), this.blockPos);
         
-        // Initialize block entity reference with null safety
         this.levelAccess.execute((level, pos) -> {
             try {
                 BlockEntity entity = level.getBlockEntity(pos);
@@ -56,7 +47,6 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
                     this.blockEntity = leverEntity;
                 }
             } catch (Exception e) {
-                // Graceful fallback - block entity will remain null
                 this.blockEntity = null;
             }
         });
@@ -65,7 +55,6 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     @Override
     @Nonnull
     public ItemStack quickMoveStack(@Nonnull Player player, int index) {
-        // No slot interactions in copy GUI
         return ItemStack.EMPTY;
     }
     
@@ -81,10 +70,6 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
                    player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0;
         }, true);
     }
-    
-    // ========================================
-    // COPY SELECTION STATE MANAGEMENT
-    // ========================================
     
     public boolean getCopyToggleBlock() { return copyToggleBlock; }
     public boolean getCopyToggleFace() { return copyToggleFace; }
@@ -102,9 +87,7 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     public void setCopyBaseFace(boolean value) { this.copyBaseFace = value; }
     public void setCopyBaseRotation(boolean value) { this.copyBaseRotation = value; }
     
-    /**
-     * Sets all copy selections to the specified value
-     */
+    /** Sets all copy selections to the specified value. */
     public void setAllCopySelections(boolean value) {
         copyToggleBlock = value;
         copyToggleFace = value;
@@ -115,10 +98,6 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
         copyBaseRotation = value;
     }
     
-    // ========================================
-    // BLOCK ENTITY DATA ACCESS
-    // ========================================
-    
     @SuppressWarnings("unused")
     public BlockPos getBlockPos() {
         return blockPos;
@@ -128,144 +107,108 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
         return blockEntity;
     }
     
-    /**
-     * Gets display text for toggle block (for preview)
-     */
+    /** Returns display text for toggle block preview. */
     public String getToggleBlockDisplay() {
         if (blockEntity == null) return "Default";
         ItemStack item = blockEntity.getGuiToggleItem();
         return item.isEmpty() ? "Default" : item.getDisplayName().getString();
     }
     
-    /**
-     * Gets display text for base block (for preview)
-     */
+    /** Returns display text for base block preview. */
     public String getBaseBlockDisplay() {
         if (blockEntity == null) return "Default";
         ItemStack item = blockEntity.getGuiBaseItem();
         return item.isEmpty() ? "Default" : item.getDisplayName().getString();
     }
     
-    /**
-     * Gets display text for toggle face (for preview)
-     */
+    /** Returns display text for toggle face preview. */
     public String getToggleFaceDisplay() {
         if (blockEntity == null) return "all";
         return blockEntity.getToggleTextureVariable();
     }
     
-    /**
-     * Gets display text for base face (for preview)
-     */
+    /** Returns display text for base face preview. */
     public String getBaseFaceDisplay() {
         if (blockEntity == null) return "all";
         return blockEntity.getBaseTextureVariable();
     }
     
-    /**
-     * Gets display text for toggle rotation (for preview)
-     */
+    /** Returns display text for toggle rotation preview. */
     public String getToggleRotationDisplay() {
         if (blockEntity == null) return "None";
         return blockEntity.getToggleTextureRotation().getDisplayName();
     }
     
-    /**
-     * Gets display text for base rotation (for preview)
-     */
+    /** Returns display text for base rotation preview. */
     public String getBaseRotationDisplay() {
         if (blockEntity == null) return "None";
         return blockEntity.getBaseTextureRotation().getDisplayName();
     }
     
-    /**
-     * Gets display text for indicators (for preview)
-     */
+    /** Returns display text for indicators preview. */
     public String getIndicatorsDisplay() {
         if (blockEntity == null) return "Default";
         return blockEntity.getPowerMode().name().toLowerCase();
     }
     
-    /**
-     * Gets the toggle block ItemStack for preview
-     */
+    /** Returns toggle block ItemStack for preview. */
     public ItemStack getToggleBlockItemStack() {
         if (blockEntity == null) return ItemStack.EMPTY;
         return blockEntity.getGuiToggleItem();
     }
     
-    /**
-     * Gets the base block ItemStack for preview
-     */
+    /** Returns base block ItemStack for preview. */
     public ItemStack getBaseBlockItemStack() {
         if (blockEntity == null) return ItemStack.EMPTY;
         return blockEntity.getGuiBaseItem();
     }
     
-    /**
-     * Gets the toggle texture path for face preview
-     */
+    /** Returns toggle texture path for face preview. */
     public String getToggleTexturePathForPreview() {
         if (blockEntity == null) return null;
         String texturePath = blockEntity.getToggleTexturePath();
-        // Return null for default textures to show "Default" preview
         return texturePath.equals(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE) ? null : texturePath;
     }
     
-    /**
-     * Gets the base texture path for face preview
-     */
+    /** Returns base texture path for face preview. */
     public String getBaseTexturePathForPreview() {
         if (blockEntity == null) return null;
         String texturePath = blockEntity.getBaseTexturePath();
-        // Return null for default textures to show "Default" preview
         return texturePath.equals(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE) ? null : texturePath;
     }
     
-    /**
-     * Gets toggle texture rotation
-     */
+    /** Returns toggle texture rotation. */
     public net.justsomeswitches.util.TextureRotation getToggleTextureRotation() {
         if (blockEntity == null) return net.justsomeswitches.util.TextureRotation.NORMAL;
         return blockEntity.getToggleTextureRotation();
     }
     
-    /**
-     * Gets base texture rotation
-     */
+    /** Returns base texture rotation. */
     public net.justsomeswitches.util.TextureRotation getBaseTextureRotation() {
         if (blockEntity == null) return net.justsomeswitches.util.TextureRotation.NORMAL;
         return blockEntity.getBaseTextureRotation();
     }
     
-    /**
-     * Gets power mode for indicator previews
-     */
+    /** Returns power mode for indicator previews. */
     @SuppressWarnings("unused")
     public net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.PowerMode getPowerMode() {
         if (blockEntity == null) return net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.PowerMode.DEFAULT;
         return blockEntity.getPowerMode();
     }
     
-    /**
-     * Gets unpowered texture for indicators
-     */
+    /** Returns unpowered texture for indicators. */
     public String getUnpoweredTexture() {
         if (blockEntity == null) return "";
         return blockEntity.getUnpoweredTexture();
     }
     
-    /**
-     * Gets powered texture for indicators
-     */
+    /** Returns powered texture for indicators. */
     public String getPoweredTexture() {
         if (blockEntity == null) return "";
         return blockEntity.getPoweredTexture();
     }
     
-    /**
-     * Checks if the source block has any custom textures
-     */
+    /** Checks if source block has custom textures. */
     @SuppressWarnings("unused")
     public boolean hasCustomTextures() {
         if (blockEntity == null) return false;

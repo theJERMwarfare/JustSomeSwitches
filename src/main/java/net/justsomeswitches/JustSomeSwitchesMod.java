@@ -8,24 +8,19 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 
-/**
- * Main mod class for Just Some Switches
- *
- * Adds customizable switch variants that behave like vanilla levers
- * with enhanced functionality and custom textures.
- */
+/** Main mod class for Just Some Switches. Adds customizable switch variants that behave like vanilla levers. */
 @Mod(JustSomeSwitchesMod.MODID)
 public class JustSomeSwitchesMod {
 
     public static final String MODID = "justsomeswitches";
-    /**
-     * Main mod constructor
-     *
-     * @param modContainer The mod container provided by NeoForge
-     */
+    public static final Logger LOGGER = LoggerFactory.getLogger(JustSomeSwitchesMod.class);
+
+    /** Initializes mod by registering all components to the mod event bus. */
     @SuppressWarnings("DataFlowIssue")
     public JustSomeSwitchesMod(@Nonnull ModContainer modContainer) {
         @Nonnull IEventBus modEventBus = modContainer.getEventBus();
@@ -39,10 +34,6 @@ public class JustSomeSwitchesMod {
         modEventBus.addListener(this::commonSetup);
     }
 
-    /**
-     * Common setup event
-     */
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // Currently unused
     }
 }

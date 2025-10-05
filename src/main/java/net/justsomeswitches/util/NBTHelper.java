@@ -15,18 +15,18 @@ public class NBTHelper {
         // Utility class
     }
     
-    /**
-     * Cached NBT tag access - avoids repeated getTag() calls
-     */
+    /** Cached NBT tag access to avoid repeated getTag() calls. */
     public static class NBTCache {
         private final ItemStack stack;
         private CompoundTag cachedTag;
         private boolean tagCached = false;
         
+        /** Creates NBT cache for the given ItemStack. */
         public NBTCache(@Nonnull ItemStack stack) {
             this.stack = stack;
         }
         
+        /** Returns cached NBT tag or null if none exists. */
         @Nullable
         public CompoundTag getTag() {
             if (!tagCached) {
@@ -36,17 +36,20 @@ public class NBTHelper {
             return cachedTag;
         }
         
+        /** Returns nested compound tag for key or null if not found. */
         @Nullable
         public CompoundTag getCompound(@Nonnull String key) {
             CompoundTag tag = getTag();
             return (tag != null && tag.contains(key)) ? tag.getCompound(key) : null;
         }
         
+        /** Returns boolean value for key or false if not found. */
         public boolean getBoolean(@Nonnull String key) {
             CompoundTag tag = getTag();
             return tag != null && tag.getBoolean(key);
         }
         
+        /** Removes the specified key from the NBT tag. */
         public void remove(@Nonnull String key) {
             CompoundTag tag = getTag();
             if (tag != null) {
@@ -54,14 +57,9 @@ public class NBTHelper {
             }
         }
         
-        // Cache invalidation handled automatically
     }
     
-    // Removed unused copyNBTData method
-    
-    /**
-     * Batch NBT operations for efficiency
-     */
+    /** Applies multiple NBT operations in a single batch. */
     public static void batchNBTOperations(@Nonnull ItemStack stack, @Nonnull NBTOperation... operations) {
         if (operations.length == 0) return;
         
@@ -71,8 +69,10 @@ public class NBTHelper {
         }
     }
     
+    /** Functional interface for NBT operations. */
     @FunctionalInterface
     public interface NBTOperation {
+        /** Applies operation to the given NBT tag. */
         void apply(@Nonnull CompoundTag tag);
     }
 }

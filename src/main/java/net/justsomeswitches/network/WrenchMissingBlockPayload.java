@@ -3,6 +3,7 @@ package net.justsomeswitches.network;
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.item.service.CopyPasteService;
+import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -52,8 +53,33 @@ public record WrenchMissingBlockPayload(
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) return;
             
+            // Security validation - Rate limiting
+            if (SecurityUtils.isRateLimited(player)) {
+                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
+                    "WrenchMissingBlock packet rate limit exceeded");
+                return;
+            }
+            
+            // Security validation - Block position bounds
+            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
+                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
+                    "Invalid block position: " + payload.blockPos());
+                return;
+            }
+            
             Level level = player.level();
             BlockPos blockPos = payload.blockPos();
+            
+            // Security validation - Player permissions
+            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
+                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
+                    "Player cannot interact with block at: " + blockPos);
+                return;
+            }
+            
+            // Log security event for audit
+            SecurityUtils.logSecurityEvent(player, "WRENCH_MISSING_BLOCK", blockPos, 
+                "Apply: " + payload.apply());
             
             // Find the wrench in player's hands
             ItemStack wrenchStack = null;

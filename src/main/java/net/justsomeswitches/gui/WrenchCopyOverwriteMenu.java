@@ -9,19 +9,17 @@ import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nonnull;
 
-/**
- * Container menu for wrench copy overwrite confirmation GUI
- * Handles the "Replace stored settings?" dialog when copying to a wrench with different stored settings
- */
+/** Container menu for wrench copy overwrite confirmation GUI. */
 public class WrenchCopyOverwriteMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     
-    public WrenchCopyOverwriteMenu(int containerId, Inventory playerInventory, BlockPos blockPos) {
+    public WrenchCopyOverwriteMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.WRENCH_COPY_OVERWRITE.get(), containerId);
         this.blockPos = blockPos;
     }
     
+    @SuppressWarnings("unused") // Required for network registration
     public WrenchCopyOverwriteMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory, buf.readBlockPos());
     }
@@ -34,12 +32,11 @@ public class WrenchCopyOverwriteMenu extends AbstractContainerMenu {
     @Override
     @Nonnull
     public ItemStack quickMoveStack(@Nonnull Player player, int index) {
-        return ItemStack.EMPTY; // No slots to move items between
+        return ItemStack.EMPTY;
     }
     
     @Override
     public boolean stillValid(@Nonnull Player player) {
-        // Always valid since it's just a confirmation dialog
         return true;
     }
 }

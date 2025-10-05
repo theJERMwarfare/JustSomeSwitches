@@ -33,10 +33,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-/**
- * Optimized switches wrench with copy/paste functionality
- * Core logic extracted to service classes for better maintainability
- */
+/** Optimized switches wrench with copy/paste functionality. */
 public class SwitchesWrenchItem extends Item {
 
     public SwitchesWrenchItem(@Nonnull Properties properties) {
@@ -64,9 +61,7 @@ public class SwitchesWrenchItem extends Item {
         };
     }
     
-    /**
-     * Handle right-clicking air with shift to clear stored settings
-     */
+    /** Handle right-clicking air with shift to clear stored settings. */
     @Override
     public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level, Player player, net.minecraft.world.InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -202,10 +197,6 @@ public class SwitchesWrenchItem extends Item {
         SUCCESS, ERROR, INFO
     }
 
-    // ========================================
-    // GUI Opening Methods
-    // ========================================
-
     private void openTextureCustomizationGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
         MenuProvider menuProvider = new MenuProvider() {
             @Override
@@ -215,6 +206,7 @@ public class SwitchesWrenchItem extends Item {
             }
 
             @Override
+            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
             @Nullable
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
                 return new SwitchesTextureMenu(containerId, playerInventory, blockPos);
@@ -233,6 +225,7 @@ public class SwitchesWrenchItem extends Item {
             }
 
             @Override
+            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
             @Nullable
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
                 return new net.justsomeswitches.gui.WrenchCopyMenu(containerId, playerInventory, blockPos);
@@ -242,6 +235,7 @@ public class SwitchesWrenchItem extends Item {
         player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
     
+    @SuppressWarnings("unused") // May be used in future functionality
     private void openOverwriteTextureGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
         MenuProvider menuProvider = new MenuProvider() {
             @Override
@@ -251,6 +245,7 @@ public class SwitchesWrenchItem extends Item {
             }
 
             @Override
+            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
             @Nullable
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
                 return new net.justsomeswitches.gui.WrenchOverwriteMenu(containerId, playerInventory, blockPos);
@@ -269,6 +264,7 @@ public class SwitchesWrenchItem extends Item {
             }
 
             @Override
+            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
             @Nullable
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
                 return new net.justsomeswitches.gui.WrenchCopyOverwriteMenu(containerId, playerInventory, blockPos);
@@ -278,27 +274,20 @@ public class SwitchesWrenchItem extends Item {
         player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
     
-    // ========================================
-    // Server-Side Methods (for network handlers)
-    // ========================================
-    
-    /**
-     * Server-side paste operation - delegated to service
-     */
+    /** Server-side paste operation - delegated to service. */
+    @SuppressWarnings("unused") // Called from network handlers
     public CopyPasteService.PasteResult applySettingsFromWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity, Player player) {
         return CopyPasteService.applySettingsFromWrench(stack, blockEntity, player);
     }
     
-    /**
-     * Server-side partial paste operation - delegated to service
-     */
+    /** Server-side partial paste operation - delegated to service. */
+    @SuppressWarnings("unused") // Called from network handlers
     public CopyPasteService.PasteResult applyPartialSettingsFromWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity, Player player) {
         return CopyPasteService.applyPartialSettingsFromWrench(stack, blockEntity, player);
     }
     
-    /**
-     * Server-side copy operation - delegated to service
-     */
+    /** Server-side copy operation - delegated to service. */
+    @SuppressWarnings("unused") // Called from network handlers
     public void copySelectedSettingsToWrench(ItemStack stack, SwitchesLeverBlockEntity blockEntity,
                                             boolean copyToggleBlock, boolean copyToggleFace, boolean copyToggleRotation,
                                             boolean copyIndicators, boolean copyBaseBlock, boolean copyBaseFace,
@@ -308,14 +297,17 @@ public class SwitchesWrenchItem extends Item {
                                             copyBaseFace, copyBaseRotation);
     }
     
+    @SuppressWarnings("unused") // Called from network handlers
     public boolean hasCopiedSettingsServer(ItemStack stack) {
         return CopyPasteService.hasCopiedSettings(stack);
     }
     
+    @SuppressWarnings("unused") // Called from network handlers
     public boolean hasIdenticalSettingsServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity) {
         return CopyPasteService.hasIdenticalSettings(stack, blockEntity);
     }
     
+    @SuppressWarnings("unused") // Called from network handlers
     public CopyPasteService.PasteResult checkInventoryForPasteServer(ItemStack stack, Player player) {
         List<String> missingBlocks = CopyPasteService.validateRequiredBlocks(stack, player);
         if (!missingBlocks.isEmpty()) {
@@ -324,17 +316,15 @@ public class SwitchesWrenchItem extends Item {
         return new CopyPasteService.PasteResult(true, "All blocks available");
     }
     
+    @SuppressWarnings("unused") // Called from network handlers
     public void copySettingsToWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity) {
         CopyPasteService.copySettingsToWrench(stack, blockEntity);
     }
     
+    @SuppressWarnings("unused") // Called from network handlers
     public void clearAllSettingsServer(ItemStack stack) {
         CopyPasteService.clearAllSettings(stack);
     }
-    
-    // ========================================
-    // Tooltip Methods
-    // ========================================
     
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
@@ -387,9 +377,7 @@ public class SwitchesWrenchItem extends Item {
         }
     }
     
-    /**
-     * Formats setting values for better tooltip display
-     */
+    /** Formats setting values for better tooltip display. */
     @Nonnull
     private String formatSettingValue(@Nonnull String key, @Nonnull String rawValue) {
         // Format rotation values to show degrees

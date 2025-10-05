@@ -11,11 +11,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nonnull;
 
-/**
- * Custom slot for texture blocks that only accepts solid, full-cube blocks
- * ---
- * Phase 4B Enhancement: Comprehensive block validation with silent operation
- */
+/** Custom slot for texture blocks accepting only solid full-cube blocks. */
 public class TextureSlot extends Slot {
 
     public TextureSlot(@Nonnull Container container, int slot, int x, int y) {
@@ -24,37 +20,32 @@ public class TextureSlot extends Slot {
 
     @Override
     public boolean mayPlace(@Nonnull ItemStack itemStack) {
-        // Only accept block items
         if (!(itemStack.getItem() instanceof BlockItem blockItem)) {
             return false;
         }
 
         Block block = blockItem.getBlock();
 
-        // Get the default block state for validation
         BlockState defaultState = block.defaultBlockState();
 
-        // Check if it's a full block (no complex shapes)
         if (!isFullBlock(defaultState)) {
             return false;
         }
 
-        // Reject transparent blocks
         if (!defaultState.canOcclude()) {
             return false;
         }
 
-        // Check redstone connection capability with proper parameters
         try {
+            //noinspection DataFlowIssue - Intentional null for redstone connectivity check
             if (defaultState.canRedstoneConnectTo(null, null, Direction.NORTH) ||
                     defaultState.hasAnalogOutputSignal()) {
                 return false;
             }
         } catch (Exception e) {
-            // If redstone check fails, continue with other validation
+            // Intentionally ignore - some blocks don't support redstone checks
         }
 
-        // Reject blocks that have special behaviors
         String blockName = block.getDescriptionId().toLowerCase();
         return !blockName.contains("stairs") &&
                 !blockName.contains("slab") &&
@@ -74,45 +65,39 @@ public class TextureSlot extends Slot {
                 !blockName.contains("dropper");
     }
 
-    /**
-     * Check if block has a full cube shape
-     */
+    /** Checks if block has a full cube shape. */
     private boolean isFullBlock(@Nonnull BlockState state) {
         try {
+            //noinspection DataFlowIssue - Intentional null for shape check without world context
             VoxelShape shape = state.getShape(null, null);
 
-            // Check if the shape bounds match a full block (0,0,0 to 1,1,1)
             var bounds = shape.bounds();
             return bounds.minX <= 0.001 && bounds.minY <= 0.001 && bounds.minZ <= 0.001 &&
                     bounds.maxX >= 0.999 && bounds.maxY >= 0.999 && bounds.maxZ >= 0.999;
         } catch (Exception e) {
-            // If we can't determine the shape, reject it to be safe
+            // Intentionally ignore - some blocks require world context for shape
             return false;
         }
     }
 
     @Override
     public int getMaxStackSize() {
-        return 1; // Only allow 1 block per slot
+        return 1;
     }
 
     @Override
     public void setChanged() {
         super.setChanged();
-        // Silent operation - no debug output
     }
 
     @Override
     @Nonnull
     public ItemStack remove(int amount) {
-        ItemStack result = super.remove(amount);
-        // Silent operation - no debug output
-        return result;
+        return super.remove(amount);
     }
 
     @Override
     public void set(@Nonnull ItemStack stack) {
         super.set(stack);
-        // Silent operation - no debug output
     }
 }

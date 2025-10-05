@@ -111,18 +111,13 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
     }
 
 
-    /**
-     * Constructor for client-side deserialization from network packets.
-     * Used by the menu registration system.
-     */
+    /** Client-side constructor for network deserialization. */
     @SuppressWarnings("unused")
     public SwitchesTextureMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull FriendlyByteBuf extraData) {
         this(containerId, playerInventory, extraData.readBlockPos());
     }
 
-    /**
-     * Toggle texture category handler.
-     */
+    /** Toggle texture category handler. */
     private void onToggleSlotChanged() {
         if (blockEntity == null) return;
 
@@ -157,9 +152,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         analyzeToggleBlock(toggleItem);
     }
 
-    /**
-     * Base texture category handler.
-     */
+    /** Base texture category handler. */
     private void onBaseSlotChanged() {
         if (blockEntity == null) return;
 
@@ -194,9 +187,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         analyzeBaseBlock(baseItem);
     }
 
-    /**
-     * Analyzes toggle block and sets intelligent default.
-     */
+    /** Analyzes toggle block and sets intelligent default. */
     private void analyzeToggleBlock(@Nonnull ItemStack toggleItem) {
 
         blockEntity.setSyncSuppressed(true);
@@ -233,9 +224,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Analyzes base block and sets intelligent default.
-     */
+    /** Analyzes base block and sets intelligent default. */
     private void analyzeBaseBlock(@Nonnull ItemStack baseItem) {
 
         blockEntity.setSyncSuppressed(true);
@@ -272,9 +261,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Handles toggle dropdown selection change.
-     */
+    /** Handles toggle dropdown selection change. */
     public void setToggleTextureVariable(@Nonnull String variable) {
         if (blockEntity == null) return;
         
@@ -293,9 +280,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Handles base dropdown selection change.
-     */
+    /** Handles base dropdown selection change. */
     public void setBaseTextureVariable(@Nonnull String variable) {
         if (blockEntity == null) return;
         
@@ -314,9 +299,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Gets current toggle selection state for GUI rendering.
-     */
+    /** Returns current toggle selection state for GUI rendering. */
     @Nonnull
     public FaceSelectionData.RawTextureSelection getToggleTextureSelection() {
         ItemStack toggleItem = textureItemHandler.getStackInSlot(TOGGLE_TEXTURE_SLOT);
@@ -324,9 +307,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return FaceSelectionData.createRawTextureSelection(toggleItem, toggleTextureVariable);
     }
 
-    /**
-     * Gets current base selection state for GUI rendering.
-     */
+    /** Returns current base selection state for GUI rendering. */
     @Nonnull
     public FaceSelectionData.RawTextureSelection getBaseTextureSelection() {
         ItemStack baseItem = textureItemHandler.getStackInSlot(BASE_TEXTURE_SLOT);
@@ -334,9 +315,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
     }
 
-    /**
-     * Handles power mode selection change.
-     */
+    /** Handles power mode selection change. */
     public void setPowerMode(@Nonnull SwitchesLeverBlockEntity.PowerMode mode) {
         if (blockEntity == null) return;
         
@@ -348,9 +327,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
                 });
     }
 
-    /**
-     * Gets current power mode for GUI rendering.
-     */
+    /** Returns current power mode for GUI rendering. */
     @Nonnull
     public SwitchesLeverBlockEntity.PowerMode getPowerMode() {
         if (blockEntity != null) {
@@ -359,9 +336,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return this.powerMode;
     }
 
-    /**
-     * Handles base texture rotation selection change.
-     */
+    /** Handles base texture rotation selection change. */
     public void setBaseTextureRotation(@Nonnull TextureRotation rotation) {
         if (blockEntity == null) return;
         
@@ -373,9 +348,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
                 });
     }
 
-    /**
-     * Gets current base texture rotation for GUI rendering.
-     */
+    /** Returns current base texture rotation for GUI rendering. */
     @Nonnull
     public TextureRotation getBaseTextureRotation() {
         if (blockEntity != null) {
@@ -384,9 +357,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return this.baseTextureRotation;
     }
 
-    /**
-     * Handles toggle texture rotation selection change.
-     */
+    /** Handles toggle texture rotation selection change. */
     public void setToggleTextureRotation(@Nonnull TextureRotation rotation) {
         if (blockEntity == null) return;
         
@@ -398,9 +369,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
                 });
     }
 
-    /**
-     * Gets current toggle texture rotation for GUI rendering.
-     */
+    /** Returns current toggle texture rotation for GUI rendering. */
     @Nonnull
     public TextureRotation getToggleTextureRotation() {
         if (blockEntity != null) {
@@ -425,9 +394,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return blockEntity.getPoweredTexture();
     }
 
-    /**
-     * Completes initialization after GUI is fully rendered.
-     */
+    /** Completes initialization after GUI is fully rendered. */
     public void completeInitialization() {
         this.isInitializing = false;
         this.isLoadingSlots = false;
@@ -437,9 +404,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         expectedBaseItem = textureItemHandler.getStackInSlot(BASE_TEXTURE_SLOT).copy();
     }
 
-    /**
-     * Synchronizes local variables with BlockEntity state.
-     */
+    /** Synchronizes local variables with BlockEntity state. */
     private void syncLocalVariableFromBlockEntity(boolean isToggle) {
         if (blockEntity == null) return;
         
@@ -450,9 +415,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Unified method for sending network updates or applying changes directly.
-     */
+    /** Unified method for sending network updates or applying changes directly. */
     private void sendOrApplyUpdate(String category, String variable, String texturePath, Runnable serverAction) {
         if (level.isClientSide) {
             NetworkHandler.sendTextureVariableUpdate(blockPos, category, variable, texturePath);
@@ -474,9 +437,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /**
-     * Loads slot items from BlockEntity storage.
-     */
+    /** Loads slot items from BlockEntity storage. */
     private void loadSlotItemsFromBlockEntity() {
         if (blockEntity != null) {
 
@@ -673,9 +634,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         super.removed(player);
     }
 
-    /**
-     * Simple texture slot with change callback.
-     */
+    /** Simple texture slot with change callback. */
     private class SimpleTextureSlot extends SlotItemHandler {
         private final Runnable onChangeCallback;
 
@@ -787,23 +746,13 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    // ========================================
-    // PUBLIC ACCESS METHODS
-    // ========================================
-
-    /**
-     * Get the block position for this menu.
-     * Used by GUI for world state access.
-     */
+    /** Returns block position for this menu. */
     @Nullable
     public BlockPos getBlockPos() {
         return blockPos;
     }
 
-    /**
-     * Get the level for this menu.
-     * Used by GUI for world state access.
-     */
+    /** Returns level for this menu. */
     @Nullable
     public Level getLevel() {
         return level;

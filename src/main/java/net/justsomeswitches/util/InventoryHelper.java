@@ -16,20 +16,16 @@ public class InventoryHelper {
         // Utility class
     }
     
-    /**
-     * Efficiently checks if player has required items in inventory
-     * Uses a single pass through inventory to check multiple items
-     */
+    /** Checks if player has required items using single-pass inventory scan. */
     public static boolean hasAllItems(@Nonnull Player player, @Nonnull ItemStack... requiredItems) {
         if (player.getAbilities().instabuild) {
-            return true; // Creative mode has all items
+            return true;
         }
         
         if (requiredItems.length == 0) {
             return true;
         }
         
-        // Build requirements map for efficient checking
         Map<ItemStack, Integer> requirements = new HashMap<>();
         for (ItemStack item : requiredItems) {
             if (!item.isEmpty()) {
@@ -41,7 +37,6 @@ public class InventoryHelper {
             return true;
         }
         
-        // Single pass through inventory
         Map<ItemStack, Integer> found = new HashMap<>();
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack stackInSlot = player.getInventory().getItem(i);
@@ -55,7 +50,6 @@ public class InventoryHelper {
             }
         }
         
-        // Check if all requirements are met
         for (Map.Entry<ItemStack, Integer> requirement : requirements.entrySet()) {
             int foundCount = found.getOrDefault(requirement.getKey(), 0);
             if (foundCount < requirement.getValue()) {
@@ -66,19 +60,16 @@ public class InventoryHelper {
         return true;
     }
     
-    /**
-     * Efficiently removes multiple items from inventory in a single pass
-     */
+    /** Removes multiple items from inventory using single-pass scan. */
     public static void removeItems(@Nonnull Player player, @Nonnull ItemStack... itemsToRemove) {
         if (player.getAbilities().instabuild) {
-            return; // Don't consume in creative
+            return;
         }
         
         if (itemsToRemove.length == 0) {
             return;
         }
         
-        // Build removal map
         Map<ItemStack, Integer> toRemove = new HashMap<>();
         for (ItemStack item : itemsToRemove) {
             if (!item.isEmpty()) {
@@ -90,7 +81,6 @@ public class InventoryHelper {
             return;
         }
         
-        // Single pass removal
         for (int i = 0; i < player.getInventory().getContainerSize() && !toRemove.isEmpty(); i++) {
             ItemStack stackInSlot = player.getInventory().getItem(i);
             if (stackInSlot.isEmpty()) continue;
@@ -113,5 +103,5 @@ public class InventoryHelper {
         }
     }
     
-    // Removed unused checkAndRemoveItems method
+
 }

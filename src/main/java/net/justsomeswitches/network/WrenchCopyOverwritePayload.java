@@ -2,6 +2,7 @@ package net.justsomeswitches.network;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
+import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -13,10 +14,7 @@ import net.neoforged.neoforge.network.handling.PlayPayloadContext;
 
 import javax.annotation.Nonnull;
 
-/**
- * Network payload for wrench copy overwrite confirmation responses
- * Handles client->server communication when user chooses Overwrite or Cancel for copy operations
- */
+/** Network payload for wrench copy overwrite confirmation responses. */
 public record WrenchCopyOverwritePayload(
     BlockPos blockPos,
     boolean overwrite
@@ -43,18 +41,35 @@ public record WrenchCopyOverwritePayload(
         return ID;
     }
     
-    /**
-     * Handles the payload on the server side
-     */
+    /** Handles the payload on server side. */
     public static void handle(WrenchCopyOverwritePayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) return;
             
+            if (SecurityUtils.isRateLimited(player)) {
+                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
+                    "WrenchCopyOverwrite packet rate limit exceeded");
+                return;
+            }
+            
+            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
+                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
+                    "Invalid block position: " + payload.blockPos());
+                return;
+            }
+            
             Level level = player.level();
             BlockPos blockPos = payload.blockPos();
             
-            // Find the wrench in player's hands
+            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
+                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
+                    "Player cannot interact with block at: " + blockPos);
+                return;
+            }
+            
+            SecurityUtils.logSecurityEvent(player, "WRENCH_COPY_OVERWRITE", blockPos, 
+                "Overwrite: " + payload.overwrite());
             ItemStack wrenchStack = null;
             
             if (player.getMainHandItem().getItem() instanceof SwitchesWrenchItem) {
@@ -67,46 +82,36 @@ public record WrenchCopyOverwritePayload(
                 return; // No wrench found
             }
             
-            // Verify the block is still a switch
+
             if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
                 return;
             }
             
             if (payload.overwrite()) {
-                // User chose to overwrite - clear previous settings and open copy GUI
                 handleCopyOverwriteConfirmed(wrench, wrenchStack, blockEntity, player, blockPos);
             } else {
-                // User chose to cancel
                 handleCopyOverwriteCancelled(player);
             }
             
-            // Mark player inventory as dirty to sync changes
+
             player.inventoryMenu.broadcastChanges();
         });
     }
     
     private static void handleCopyOverwriteConfirmed(SwitchesWrenchItem wrench, ItemStack wrenchStack,
                                                    @SuppressWarnings("unused") SwitchesLeverBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
-        // Step 1: Clear previous settings from wrench
         wrench.clearAllSettingsServer(wrenchStack);
-        
-        // Step 2: Send confirmation message
         NetworkHandler.sendActionBarMessage(player, "Previous Texture Settings Cleared", NetworkHandler.MessageType.SUCCESS);
-        
-        // Step 3: Open the copy GUI for the user to select what to copy
         openCopyTextureGUI(player, blockPos);
     }
     
     private static void handleCopyOverwriteCancelled(ServerPlayer player) {
-        // Send cancellation message
+
         NetworkHandler.sendActionBarMessage(player, "New Texture Settings Not Copied, Previous Texture Settings Retained", NetworkHandler.MessageType.INFO);
     }
     
-    /**
-     * Opens the copy texture settings GUI with block position integration
-     */
+    /** Opens the copy texture settings GUI. */
     private static void openCopyTextureGUI(ServerPlayer player, BlockPos blockPos) {
-        // Create a MenuProvider for the copy GUI
         net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
             @Override
             @Nonnull
@@ -121,7 +126,7 @@ public record WrenchCopyOverwritePayload(
             }
         };
 
-        // Open the menu with block position data
+
         player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
 }

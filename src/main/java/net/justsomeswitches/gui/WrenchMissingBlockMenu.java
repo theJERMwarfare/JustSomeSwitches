@@ -10,32 +10,24 @@ import net.minecraft.world.item.ItemStack;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-/**
- * Menu for the Missing Block GUI
- * Displays when player is missing blocks needed for paste operation
- */
+/** Menu for missing block GUI when player lacks blocks for paste operation. */
 public class WrenchMissingBlockMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     private final List<String> missingBlocks;
     
-    /**
-     * Constructor for server-side menu creation
-     */
-    public WrenchMissingBlockMenu(int containerId, Inventory playerInventory, BlockPos blockPos, List<String> missingBlocks) {
+    /** Server-side constructor. */
+    public WrenchMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos, List<String> missingBlocks) {
         super(JustSomeSwitchesMenuTypes.WRENCH_MISSING_BLOCK.get(), containerId);
         this.blockPos = blockPos;
         this.missingBlocks = missingBlocks;
     }
     
-    /**
-     * Constructor for client-side menu creation (from network data)
-     */
-    public WrenchMissingBlockMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
+    /** Client-side constructor from network data. */
+    public WrenchMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, FriendlyByteBuf extraData) {
         super(JustSomeSwitchesMenuTypes.WRENCH_MISSING_BLOCK.get(), containerId);
         this.blockPos = extraData.readBlockPos();
         
-        // Read missing blocks list from network data
         int count = extraData.readInt();
         this.missingBlocks = new java.util.ArrayList<>();
         for (int i = 0; i < count; i++) {

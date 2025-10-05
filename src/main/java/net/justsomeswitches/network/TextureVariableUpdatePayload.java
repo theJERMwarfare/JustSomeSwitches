@@ -3,6 +3,7 @@ package net.justsomeswitches.network;
 import net.justsomeswitches.JustSomeSwitchesMod;
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.util.TextureRotation;
+import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -60,15 +61,46 @@ public record TextureVariableUpdatePayload(
                 return;
             }
             
-            @SuppressWarnings("resource")
+            if (SecurityUtils.isRateLimited(player)) {
+                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
+                    "TextureVariableUpdate packet rate limit exceeded");
+                return;
+            }
+            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
+                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
+                    "Invalid block position: " + payload.blockPos());
+                return;
+            }
             Level level = player.level();
-            BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
-            
-            if (!(blockEntity instanceof SwitchesLeverBlockEntity switchEntity)) {
+            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, payload.blockPos())) {
+                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
+                    "Player cannot interact with block at: " + payload.blockPos());
+                return;
+            }
+            if (!SecurityUtils.isValidCategory(payload.category())) {
+                SecurityUtils.logSecurityViolation(player, "INVALID_CATEGORY", 
+                    "Invalid category: " + payload.category());
                 return;
             }
             
-            // Update the server-side BlockEntity directly
+            if (!SecurityUtils.isValidString(payload.variable(), SecurityUtils.getMaxStringLength())) {
+                SecurityUtils.logSecurityViolation(player, "INVALID_VARIABLE", 
+                    "Invalid variable string: " + payload.variable());
+                return;
+            }
+            // Only validate texture path for base and toggle categories
+            boolean needsTexturePath = payload.category().equals("base") || payload.category().equals("toggle");
+            if (needsTexturePath && !SecurityUtils.isValidTexturePath(payload.texturePath())) {
+                SecurityUtils.logSecurityViolation(player, "INVALID_TEXTURE_PATH", 
+                    "Invalid texture path: " + payload.texturePath());
+                return;
+            }
+            SecurityUtils.logSecurityEvent(player, "TEXTURE_VARIABLE_UPDATE", payload.blockPos(), 
+                "Category: " + payload.category() + ", Variable: " + payload.variable());
+            BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
+            if (!(blockEntity instanceof SwitchesLeverBlockEntity switchEntity)) {
+                return;
+            }
             switch (payload.category()) {
                 case "base" -> {
                     switchEntity.setBaseTextureVariable(payload.variable());
@@ -108,12 +140,8 @@ public record TextureVariableUpdatePayload(
                     }
                 }
 
-                default -> {
-                    // Unknown category, ignore
-                }
+                default -> {}
             }
-            
-
         });
     }
 

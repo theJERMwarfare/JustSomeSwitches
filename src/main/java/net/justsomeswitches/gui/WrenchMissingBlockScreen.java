@@ -12,10 +12,7 @@ import net.minecraft.world.entity.player.Inventory;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-/**
- * Client-side GUI for missing block notification
- * Shows when player is missing blocks needed for paste operation
- */
+/** Client-side GUI for missing block notification. */
 public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMissingBlockMenu> {
     
     private static final ResourceLocation BACKGROUND_TEXTURE = 
@@ -39,12 +36,10 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
         
-        // Paste button (moved down 3 pixels)
         addRenderableWidget(Button.builder(Component.literal("Paste"), this::onApplyClicked)
                 .bounds(leftPos + 20, topPos + 61, 70, 20)
                 .build());
         
-        // Cancel button (moved down 3 pixels)
         addRenderableWidget(Button.builder(Component.literal("Cancel"), this::onCancelClicked)
                 .bounds(leftPos + 111, topPos + 61, 70, 20)
                 .build());
@@ -52,19 +47,16 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
     
     @Override
     protected void renderBg(@Nonnull GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // Draw background using texture
         graphics.blit(BACKGROUND_TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
     }
     
     @Override
     protected void renderLabels(@Nonnull GuiGraphics graphics, int mouseX, int mouseY) {
-        // Title - y12 centered horizontally with fixed scaling to fit x11-x189
         String titleText = missingBlocks.size() == 1 ? "Missing Required Block In Inventory" : "Missing Required Blocks In Inventory";
         Component title = Component.literal(titleText);
         
-        // Calculate fixed scale to fit longer header within x11-x189 (178 pixels)
-        int maxHeaderWidth = 178; // Between x11 and x189
-        int fullHeaderWidth = font.width("Missing Required Blocks In Inventory"); // Use longer version for calculation
+        int maxHeaderWidth = 178;
+        int fullHeaderWidth = font.width("Missing Required Blocks In Inventory");
         float headerScale = Math.min(1.0f, (float)maxHeaderWidth / fullHeaderWidth);
         
         graphics.pose().pushPose();
@@ -78,16 +70,12 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
         
         graphics.pose().popPose();
         
-        // Missing block text lines - positioned with dynamic scaling for long names
-        int buttonTextColor = 0xFFFFFF; // White color like button text
-        int shadowColor = 0xFF555555; // Button text shadow color
-        int maxTextWidth = 182; // Between x9 and x191 (182 pixels)
+        int buttonTextColor = 0xFFFFFF;
+        int shadowColor = 0xFF555555;
+        int maxTextWidth = 182;
         
         if (missingBlocks.size() == 1) {
-            // Single line: centered at y33
             String missingText = missingBlocks.get(0);
-            
-            // Calculate dynamic scale to fit within x8-x192
             float baseScale = 0.7f;
             int fullTextWidth = font.width(missingText);
             float dynamicScale = Math.min(baseScale, (float)maxTextWidth / fullTextWidth);
@@ -97,23 +85,19 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
             
             int scaledTextWidth = (int)(fullTextWidth * dynamicScale);
             int scaledX = (int)((imageWidth - scaledTextWidth) / 2.0f / dynamicScale);
-            int scaledY = (int)(33 / dynamicScale); // Centered at y33
+            int scaledY = (int)(33 / dynamicScale);
             
-            // Draw shadow
             graphics.drawString(font, missingText, scaledX + 1, scaledY + 1, shadowColor, false);
-            // Draw main text
             graphics.drawString(font, missingText, scaledX, scaledY, buttonTextColor, false);
             
             graphics.pose().popPose();
         } else if (missingBlocks.size() == 2) {
-            // Two lines: top at y29, second at y38
-            int firstLineY = 29;  // Top line at y29
-            int secondLineY = 38; // Second line at y38
+            int firstLineY = 29;
+            int secondLineY = 38;
             
             for (int i = 0; i < 2; i++) {
                 String missingText = missingBlocks.get(i);
                 
-                // Calculate dynamic scale to fit within x8-x192
                 float baseScale = 0.7f;
                 int fullTextWidth = font.width(missingText);
                 float dynamicScale = Math.min(baseScale, (float)maxTextWidth / fullTextWidth);
@@ -126,28 +110,23 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
                 int yPos = i == 0 ? firstLineY : secondLineY;
                 int scaledY = (int)(yPos / dynamicScale);
                 
-                // Draw shadow
                 graphics.drawString(font, missingText, scaledX + 1, scaledY + 1, shadowColor, false);
-                // Draw main text
                 graphics.drawString(font, missingText, scaledX, scaledY, buttonTextColor, false);
                 
                 graphics.pose().popPose();
             }
         }
         
-        // Question text above buttons - y51 (static position, moved down 3 pixels) with 70% scale and drop shadow
         graphics.pose().pushPose();
         graphics.pose().scale(0.7f, 0.7f, 1.0f);
         
         String questionText = "Paste other possible texture settings?";
         int questionTextWidth = (int)(font.width(questionText) * 0.7f);
-        int questionScaledX = (int)((imageWidth - questionTextWidth) / 2.0f / 0.7f); // Adjust for scale
-        int questionScaledY = (int)(51 / 0.7f); // Adjust for scale (y51, moved down 3 pixels)
+        int questionScaledX = (int)((imageWidth - questionTextWidth) / 2.0f / 0.7f);
+        int questionScaledY = (int)(51 / 0.7f);
         
-        // Draw shadow
         graphics.drawString(font, questionText, questionScaledX + 1, questionScaledY + 1, shadowColor, false);
-        // Draw main text
-        graphics.drawString(font, questionText, questionScaledX, questionScaledY, 0xFFFFCC00, false); // Keep original color
+        graphics.drawString(font, questionText, questionScaledX, questionScaledY, 0xFFFFCC00, false);
         
         graphics.pose().popPose();
     }
@@ -164,5 +143,5 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
         onClose();
     }
     
-    // isPauseScreen() uses default implementation
+
 }

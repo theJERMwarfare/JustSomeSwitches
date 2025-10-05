@@ -9,19 +9,17 @@ import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nonnull;
 
-/**
- * Container menu for wrench overwrite confirmation GUI
- * Handles the "Replace existing settings?" dialog when pasting to a switch with custom settings
- */
+/** Container menu for wrench overwrite confirmation GUI. */
 public class WrenchOverwriteMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     
-    public WrenchOverwriteMenu(int containerId, Inventory playerInventory, BlockPos blockPos) {
+    public WrenchOverwriteMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos) {
         super(JustSomeSwitchesMenuTypes.WRENCH_OVERWRITE.get(), containerId);
         this.blockPos = blockPos;
     }
     
+    @SuppressWarnings("unused") // Required for network registration
     public WrenchOverwriteMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory, buf.readBlockPos());
     }
@@ -34,12 +32,11 @@ public class WrenchOverwriteMenu extends AbstractContainerMenu {
     @Override
     @Nonnull
     public ItemStack quickMoveStack(@Nonnull Player player, int index) {
-        return ItemStack.EMPTY; // No slots to move items between
+        return ItemStack.EMPTY;
     }
     
     @Override
     public boolean stillValid(@Nonnull Player player) {
-        // Always valid since it's just a confirmation dialog
         return true;
     }
 }

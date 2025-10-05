@@ -9,32 +9,16 @@ import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Modern Face Selection System with Java 17+ optimizations.
- * <p>
- * This system implements modern Java patterns including records, streams, and
- * immutable data structures for enhanced performance and type safety.
- * 
- * @since 1.0.0
- */
+/** Modern face selection system using Java 17+ records and streams. */
 public class FaceSelectionData {
 
-    // ========================================
-    // MODERN JAVA: IMMUTABLE CONFIGURATION
-    // ========================================
-
-    /**
-     * Modern record for priority configuration with improved immutability.
-     */
+    /** Record for priority configuration with immutability. */
     public record PriorityConfig(List<String> defaultOrder) {
         public PriorityConfig {
-            // Defensive copy to ensure immutability
             defaultOrder = List.copyOf(defaultOrder);
         }
 
-        /**
-         * Default priority configuration for texture variable selection.
-         */
+        /** Default priority configuration for texture variable selection. */
         public static final PriorityConfig DEFAULT = new PriorityConfig(
                 List.of("side", "north", "front", "top", "end", "south", "east", "west", "bottom", "back", "down", "up")
         );
@@ -42,16 +26,7 @@ public class FaceSelectionData {
 
     private static final PriorityConfig PRIORITY_CONFIG = PriorityConfig.DEFAULT;
 
-    // ========================================
-    // MODERN JAVA: ENHANCED RECORD-BASED DATA STRUCTURES
-    // ========================================
-
-    /**
-     * Modern record for raw texture selection with enhanced type safety and immutability.
-     * <p>
-     * This record replaces the previous class-based approach with a more efficient
-     * and type-safe immutable data structure.
-     */
+    /** Record for raw texture selection with immutability and type safety. */
     public record RawTextureSelection(
             boolean enabled,
             @Nonnull List<String> availableVariables,
@@ -59,34 +34,23 @@ public class FaceSelectionData {
             @Nullable String previewTexture,
             @Nonnull ItemStack sourceBlock
     ) {
-        /**
-         * Compact constructor with validation and defensive copying.
-         */
+        /** Compact constructor with defensive copying. */
         public RawTextureSelection {
-            // Ensure immutability through defensive copying
             availableVariables = List.copyOf(availableVariables);
             sourceBlock = sourceBlock.copy();
         }
 
-        /**
-         * Enhanced factory method for creating disabled selections.
-         */
+        /** Creates disabled selection. */
         public static RawTextureSelection createDisabled() {
             return new RawTextureSelection(false, List.of("all"), "all", null, ItemStack.EMPTY);
         }
 
-        /**
-         * Check if preview texture is available.
-         */
+        /** Checks if preview texture is available. */
         public boolean hasPreview() { 
             return previewTexture != null && !previewTexture.isEmpty(); 
         }
 
-        /**
-         * MODERN JAVA: Stream-based display options generation.
-         * <p>
-         * Uses modern stream operations for efficient component creation.
-         */
+        /** Returns display options using stream operations. */
         @Nonnull
         public List<Component> getDisplayOptions() {
             return availableVariables.stream()
@@ -94,16 +58,14 @@ public class FaceSelectionData {
                     .collect(Collectors.toUnmodifiableList());
         }
 
-        /**
-         * Get index of currently selected variable for GUI dropdown.
-         */
+        /** Returns index of currently selected variable. */
+        @SuppressWarnings("unused") // Public API method
         public int getSelectedIndex() {
             return Math.max(0, availableVariables.indexOf(selectedVariable));
         }
 
-        /**
-         * Get variable name by index with bounds checking.
-         */
+        /** Returns variable name by index with bounds checking. */
+        @SuppressWarnings("unused") // Public API method
         @Nonnull
         public String getVariableByIndex(int index) {
             if (index >= 0 && index < availableVariables.size()) {
@@ -112,9 +74,8 @@ public class FaceSelectionData {
             return availableVariables.isEmpty() ? "all" : availableVariables.get(0);
         }
 
-        /**
-         * Get texture path for the selected variable with caching.
-         */
+        /** Returns texture path for the selected variable. */
+        @SuppressWarnings("unused") // Public API method
         @Nullable
         public String getTextureForVariable(@Nonnull String variable) {
             if (sourceBlock.isEmpty()) return null;
@@ -128,16 +89,7 @@ public class FaceSelectionData {
         }
     }
 
-    // ========================================
-    // MODERN JAVA: FACTORY METHODS WITH STREAM OPTIMIZATIONS
-    // ========================================
-
-    /**
-     * MODERN JAVA: Create raw texture selection using optimized stream processing.
-     * <p>
-     * Uses modern Java patterns including Optional, streams, and method references
-     * for enhanced performance and readability.
-     */
+    /** Creates raw texture selection using stream processing. */
     @Nonnull
     public static RawTextureSelection createRawTextureSelection(@Nonnull ItemStack itemStack,
                                                                 @Nonnull String currentSelection) {
@@ -148,16 +100,14 @@ public class FaceSelectionData {
         try {
             var blockInfo = DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack);
             
-            // MODERN JAVA: Stream-based variable processing
             final var availableVariables = blockInfo.getAvailableVariables().stream()
                     .filter(var -> !var.isEmpty())
-                    .collect(Collectors.toUnmodifiableList());
+                    .toList();
 
             final var finalAvailableVariables = availableVariables.isEmpty() ? List.of("all") : availableVariables;
 
             boolean shouldEnable = finalAvailableVariables.size() > 1;
 
-            // MODERN JAVA: Functional approach to variable selection
             String selectedVariable = Optional.of(currentSelection)
                     .filter(selection -> !selection.equals("all"))
                     .filter(finalAvailableVariables::contains)
@@ -172,27 +122,20 @@ public class FaceSelectionData {
         }
     }
 
-    /**
-     * MODERN JAVA: Stream-based default variable selection.
-     * <p>
-     * Uses stream operations with priority ordering for optimal variable selection.
-     */
+    /** Returns default variable using priority ordering. */
     @Nonnull
     public static String getDefaultVariable(@Nonnull List<String> availableVariables) {
         if (availableVariables.isEmpty()) {
             return "all";
         }
 
-        // MODERN JAVA: Stream-based priority matching
         return PRIORITY_CONFIG.defaultOrder().stream()
                 .filter(availableVariables::contains)
                 .findFirst()
                 .orElse(availableVariables.get(0));
     }
 
-    /**
-     * MODERN JAVA: Optimized texture path retrieval with caching.
-     */
+    /** Returns texture path for variable with caching. */
     @Nullable
     public static String getTextureForVariable(@Nonnull ItemStack itemStack, @Nonnull String variable) {
         if (itemStack.isEmpty()) return null;
@@ -205,9 +148,7 @@ public class FaceSelectionData {
         }
     }
 
-    /**
-     * MODERN JAVA: Stream-based available variables extraction.
-     */
+    /** Returns available variables for ItemStack. */
     @Nonnull
     public static List<String> getAvailableVariables(@Nonnull ItemStack itemStack) {
         if (itemStack.isEmpty()) return List.of("all");
@@ -221,13 +162,7 @@ public class FaceSelectionData {
         }
     }
 
-    // ========================================
-    // PRIVATE UTILITY METHODS
-    // ========================================
-
-    /**
-     * Create fallback selection for blocks that can't be analyzed.
-     */
+    /** Creates fallback selection for blocks that can't be analyzed. */
     @Nonnull
     private static RawTextureSelection createFallbackSelection(@Nonnull ItemStack itemStack,
                                                                @Nonnull String currentSelection) {
@@ -236,17 +171,9 @@ public class FaceSelectionData {
         return new RawTextureSelection(false, fallbackVariables, selectedVariable, null, itemStack);
     }
 
-    // ========================================
-    // LEGACY COMPATIBILITY (DEPRECATED BUT PRESERVED)
-    // ========================================
-
-    /**
-     * @deprecated Use RawTextureSelection record instead
-     * <p>
-     * This class is maintained for backward compatibility but new code should
-     * use the modern RawTextureSelection record.
-     */
+    /** @deprecated Use RawTextureSelection record instead. */
     @Deprecated
+    @SuppressWarnings("DeprecatedIsStillUsed") // Legacy compatibility
     public static class DropdownState {
         private final RawTextureSelection rawSelection;
 
@@ -254,33 +181,29 @@ public class FaceSelectionData {
             this.rawSelection = rawSelection;
         }
 
+        @SuppressWarnings("unused") // Legacy API
         public boolean isEnabled() { return rawSelection.enabled(); }
         
+        @SuppressWarnings("unused") // Legacy API
         @Nonnull 
         public List<Component> getDisplayOptions() { return rawSelection.getDisplayOptions(); }
         
+        @SuppressWarnings("unused") // Legacy API
         @Nullable 
         public String getPreviewTexture() { return rawSelection.previewTexture(); }
         
+        @SuppressWarnings("unused") // Legacy API
         public boolean hasPreview() { return rawSelection.hasPreview(); }
     }
 
-    /**
-     * @deprecated Use RawTextureSelection.createDisabled() instead
-     */
+    /** @deprecated Use RawTextureSelection.createDisabled() instead. */
     @Deprecated
     @Nonnull
     public static DropdownState createDisabledState() {
         return new DropdownState(RawTextureSelection.createDisabled());
     }
 
-    // ========================================
-    // MODERN JAVA: UTILITY RECORDS FOR ENHANCED TYPE SAFETY
-    // ========================================
-
-    /**
-     * Modern record for validation results with enhanced error information.
-     */
+    /** Record for validation results with error information. */
     public record ValidationResult(
             boolean isValid,
             @Nonnull String message,
@@ -291,24 +214,19 @@ public class FaceSelectionData {
             suggestion = Objects.requireNonNull(suggestion, "Suggestion optional cannot be null");
         }
 
-        /**
-         * Factory method for successful validation.
-         */
+        /** Creates successful validation result. */
         public static ValidationResult success() {
             return new ValidationResult(true, "Valid", Optional.empty());
         }
 
-        /**
-         * Factory method for failed validation with suggestion.
-         */
+        /** Creates failed validation result with suggestion. */
         public static ValidationResult failure(@Nonnull String message, @Nullable String suggestion) {
             return new ValidationResult(false, message, Optional.ofNullable(suggestion));
         }
     }
 
-    /**
-     * MODERN JAVA: Validate texture selection with comprehensive error reporting.
-     */
+    /** Validates texture selection with comprehensive error reporting. */
+    @SuppressWarnings("unused") // Public API method
     @Nonnull
     public static ValidationResult validateSelection(@Nonnull ItemStack itemStack, @Nonnull String variable) {
         if (itemStack.isEmpty()) {
@@ -327,9 +245,8 @@ public class FaceSelectionData {
         return ValidationResult.success();
     }
 
-    /**
-     * Modern record for selection statistics with performance metrics.
-     */
+    /** Record for selection statistics with performance metrics. */
+    @SuppressWarnings("unused") // Future analytics feature
     public record SelectionStats(
             int totalSelections,
             @Nonnull Map<String, Integer> variableUsage,
@@ -339,9 +256,8 @@ public class FaceSelectionData {
             variableUsage = Map.copyOf(variableUsage);
         }
 
-        /**
-         * Get the most commonly used variable.
-         */
+        /** Returns most commonly used variable. */
+        @SuppressWarnings("unused") // Future analytics feature
         @Nonnull
         public Optional<String> getMostUsedVariable() {
             return variableUsage.entrySet().stream()

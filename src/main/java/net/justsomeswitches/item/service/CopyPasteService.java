@@ -14,10 +14,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Service class for handling copy/paste operations
- * Extracted from SwitchesWrenchItem for better maintainability
- */
+/** Service class for handling copy/paste operations. */
 public class CopyPasteService {
     
     private CopyPasteService() {

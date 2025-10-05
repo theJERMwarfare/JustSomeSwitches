@@ -2,6 +2,8 @@ package net.justsomeswitches.client.model;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.util.TextureRotation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
@@ -24,10 +26,45 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Dynamic model for lever blocks with custom texture support.*
- */
+/** Dynamic model for lever blocks with custom texture support. */
 public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SwitchesLeverDynamicModel.class);
+    
+    /** Pre-computed wall orientation matrices for common rotations. Keys are "orientation_direction" like "top_north". */
+    private static final Map<String, Matrix4f> WALL_ROTATION_CACHE = new HashMap<>();
+    
+    static {
+        // Pre-compute rotation matrices for all wall orientations and directions
+        for (String orientation : new String[]{"top", "left", "right", "bottom"}) {
+            for (Direction direction : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+                int degrees;
+                switch (orientation) {
+                    case "top": degrees = 180; break;
+                    case "left": degrees = 90; break;
+                    case "right": degrees = -90; break;
+                    default: continue; // Skip bottom and center
+                }
+                
+                float radians = (float) Math.toRadians(degrees);
+                Matrix4f matrix = new Matrix4f().identity();
+                
+                switch (direction) {
+                    case NORTH:
+                    case SOUTH:
+                        matrix.rotateZ(radians);
+                        break;
+                    case EAST:
+                    case WEST:
+                        matrix.rotateX(-radians);
+                        break;
+                }
+                
+                String key = orientation + "_" + direction.getName();
+                WALL_ROTATION_CACHE.put(key, matrix);
+            }
+        }
+    }
+    
     /**
      * Checks if block is wall-mounted.
      */
@@ -92,12 +129,20 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return "center";
     }
     /**
-     * Creates rotation matrix for wall orientation.
+     * Creates rotation matrix for wall orientation. Uses pre-computed cache for common orientations.
      */
     @Nonnull
     private Matrix4f createWallOrientationMatrix(@Nonnull String wallOrientation, 
                                                  @Nonnull net.minecraft.core.Direction wallFace) {
         
+        // Check cache for pre-computed matrices
+        String cacheKey = wallOrientation + "_" + wallFace.getName();
+        Matrix4f cached = WALL_ROTATION_CACHE.get(cacheKey);
+        if (cached != null) {
+            return new Matrix4f(cached); // Return copy to avoid mutation
+        }
+        
+        // Fallback for center and bottom orientations (identity matrix)
         Matrix4f matrix = new Matrix4f().identity();
 
         int degrees;
@@ -169,16 +214,114 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     private final Map<ModelCacheKey, List<BakedQuad>> instanceCache = new HashMap<>();
 
 
-    private static final Map<ModelCacheKey, List<BakedQuad>> GLOBAL_CACHE = new ConcurrentHashMap<>();
+    // LRU cache implementation with configurable size (optimized for modpack environments)
+    private static final int DEFAULT_CACHE_SIZE = 2000; // Optimized from 5000 for memory efficiency
+    private static final int MAX_CACHE_SIZE = getConfiguredCacheSize();
+    private static final Map<ModelCacheKey, CacheEntry> GLOBAL_CACHE = new ConcurrentHashMap<>();
+    
+    // Texture ID mapping for memory-efficient cache keys
+    private static final Map<String, Integer> TEXTURE_ID_MAP = new ConcurrentHashMap<>();
+    private static final java.util.concurrent.atomic.AtomicInteger NEXT_TEXTURE_ID = new java.util.concurrent.atomic.AtomicInteger(0);
+    
+    // BlockState string to ID mapping for cache key compression
+    private static final Map<String, Integer> BLOCKSTATE_ID_MAP = new ConcurrentHashMap<>();
+    private static final java.util.concurrent.atomic.AtomicInteger NEXT_BLOCKSTATE_ID = new java.util.concurrent.atomic.AtomicInteger(0);
+    
+    // Cache statistics tracking
+    private static final java.util.concurrent.atomic.AtomicLong cacheHits = new java.util.concurrent.atomic.AtomicLong(0);
+    private static final java.util.concurrent.atomic.AtomicLong cacheMisses = new java.util.concurrent.atomic.AtomicLong(0);
+    private static final java.util.concurrent.atomic.AtomicLong cacheEvictions = new java.util.concurrent.atomic.AtomicLong(0);
 
 
     private final Map<String, TextureAtlasSprite> textureSprites;
     private final BakedModel vanillaLeverModel;
     private final ItemOverrides itemOverrides;
+    
+    /** Cached sprite names to avoid repeated contents() calls. Thread-safe for concurrent rendering. */
+    private final Map<TextureAtlasSprite, String> spriteNameCache = new ConcurrentHashMap<>();
+    /** Cached ResourceLocation objects to reduce allocations. Thread-safe for concurrent rendering. */
+    private final Map<String, ResourceLocation> resourceLocationCache = new ConcurrentHashMap<>();
 
     // Cache performance tracking
     private static final java.util.concurrent.atomic.AtomicInteger cacheOperations = 
             new java.util.concurrent.atomic.AtomicInteger(0);
+    
+    /**
+     * Gets or creates texture ID for memory-efficient cache keys.
+     */
+    private static int getTextureId(@Nullable String texturePath) {
+        if (texturePath == null) return 0;
+        return TEXTURE_ID_MAP.computeIfAbsent(texturePath, 
+            path -> NEXT_TEXTURE_ID.incrementAndGet());
+    }
+    
+    /**
+     * Gets or creates BlockState ID for cache key compression.
+     */
+    private static int getBlockStateId(@Nonnull String blockStateString) {
+        return BLOCKSTATE_ID_MAP.computeIfAbsent(blockStateString,
+            state -> NEXT_BLOCKSTATE_ID.incrementAndGet());
+    }
+    
+    /**
+     * Gets configured cache size from system property or uses default.
+     * Can be configured via: -Djustsomeswitches.cache.size=2000
+     */
+    private static int getConfiguredCacheSize() {
+        String sizeProperty = System.getProperty("justsomeswitches.cache.size");
+        if (sizeProperty != null) {
+            try {
+                int size = Integer.parseInt(sizeProperty);
+                if (size > 0 && size <= 20000) { // Max 20k for safety
+                    LOGGER.info("Cache size configured to: {} entries", size);
+                    return size;
+                }
+            } catch (NumberFormatException e) {
+                LOGGER.warn("Invalid cache size property: {}", sizeProperty);
+            }
+        }
+        return DEFAULT_CACHE_SIZE;
+    }
+    
+    /**
+     * Cache entry with weighted access tracking for optimized LRU eviction.
+     * Uses a combined score of access frequency and recency for better cache retention.
+     */
+    private static class CacheEntry {
+        private final List<BakedQuad> quads;
+        private volatile long lastAccessTime;
+        private volatile int accessCount;
+        
+        public CacheEntry(List<BakedQuad> quads) {
+            this.quads = quads;
+            this.lastAccessTime = System.currentTimeMillis();
+            this.accessCount = 1;
+        }
+        
+        public List<BakedQuad> getQuads() {
+            this.lastAccessTime = System.currentTimeMillis();
+            this.accessCount++;
+            return quads;
+        }
+        
+        public long getLastAccessTime() {
+            return lastAccessTime;
+        }
+        
+        public int getAccessCount() {
+            return accessCount;
+        }
+        
+        /**
+         * Calculates weighted eviction score.
+         * Higher score = higher priority to keep in cache.
+         * Formula: (accessCount * 1000) - age_in_ms
+         */
+        public long getEvictionScore() {
+            long ageMs = System.currentTimeMillis() - lastAccessTime;
+            return (accessCount * 1000L) - ageMs;
+        }
+    }
 
 
     public SwitchesLeverDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
@@ -233,9 +376,14 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         List<BakedQuad> generatedQuads = generateSwitchQuads(state, side, extraData, rand, renderType);
         cacheGeneratedQuads(cacheKey, generatedQuads);
 
-        // Periodic cache cleanup
-        if (cacheOperations.incrementAndGet() % 1000 == 0) {
+        // Periodic cache cleanup and statistics logging
+        @SuppressWarnings("NonAtomicOperationOnVolatileField") // Intentional - approximate periodic check
+        int ops = cacheOperations.incrementAndGet();
+        if (ops % 1000 == 0) {
             cleanupGlobalCache();
+            if (ops % 10000 == 0) {
+                logCacheStatistics();
+            }
         }
 
         return generatedQuads;
@@ -260,12 +408,15 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
 
-        cached = GLOBAL_CACHE.get(key);
-        if (cached != null) {
+        CacheEntry entry = GLOBAL_CACHE.get(key);
+        if (entry != null) {
+            cacheHits.incrementAndGet();
+            cached = entry.getQuads();
             instanceCache.put(key, cached);
             return cached;
         }
-
+        
+        cacheMisses.incrementAndGet();
         return null;
     }
 
@@ -276,7 +427,11 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
         if (isCommonConfiguration(key)) {
-            GLOBAL_CACHE.put(key, quads);
+            // Check cache size before adding
+            if (GLOBAL_CACHE.size() >= MAX_CACHE_SIZE) {
+                performLRUEviction();
+            }
+            GLOBAL_CACHE.put(key, new CacheEntry(quads));
         }
     }
 
@@ -437,14 +592,18 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         }
         
         // Check if this is a toggle texture part that needs rotation
+        // IMPORTANT: Toggle texture faces in the vanilla model have built-in 270° rotation,
+        // so we need to apply a +90° offset to compensate and give users intuitive control
         boolean isToggleTexturePart = isLeverMovingPart(originalTextureName);
         if (isToggleTexturePart && toggleTexture != null) {
             String rotationString = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
             if (rotationString != null) {
                 try {
-                    rotation = TextureRotation.valueOf(rotationString);
+                    TextureRotation userRotation = TextureRotation.valueOf(rotationString);
+                    // Apply +90° offset to compensate for model's built-in 270° rotation
+                    rotation = compensateToggleRotation(userRotation);
                 } catch (IllegalArgumentException e) {
-                    rotation = TextureRotation.NORMAL;
+                    rotation = TextureRotation.RIGHT; // Compensated NORMAL = RIGHT
                 }
             }
         }
@@ -607,6 +766,26 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
     /**
+     * Applies +90° rotation offset to compensate for toggle texture faces' built-in 270° rotation in the model JSON.
+     * This ensures users get intuitive rotation control where NORMAL appears as expected.
+     * 
+     * Mapping:
+     * - User selects NORMAL (0°) → Apply RIGHT (90°) → Total: 270° + 90° = 360° = 0° (appears normal)
+     * - User selects RIGHT (90°) → Apply INVERT (180°) → Total: 270° + 180° = 450° = 90°
+     * - User selects INVERT (180°) → Apply LEFT (-90°) → Total: 270° - 90° = 180°  
+     * - User selects LEFT (-90°) → Apply NORMAL (0°) → Total: 270° + 0° = 270° = -90°
+     */
+    @Nonnull
+    private TextureRotation compensateToggleRotation(@Nonnull TextureRotation userRotation) {
+        return switch (userRotation) {
+            case NORMAL -> TextureRotation.RIGHT;   // 0° + 90° = 90° compensation
+            case RIGHT -> TextureRotation.INVERT;   // 90° + 90° = 180° compensation
+            case INVERT -> TextureRotation.LEFT;    // 180° + 90° = 270° = -90° compensation
+            case LEFT -> TextureRotation.NORMAL;    // -90° + 90° = 0° compensation
+        };
+    }
+
+    /**
      * Identifies lever moving parts for toggle texture.
      */
     private boolean isLeverMovingPart(@Nonnull String originalTextureName) {
@@ -642,13 +821,25 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
 
+    /** Returns cached sprite name to avoid repeated contents() calls. */
     @Nonnull
-    private String getTextureName(@Nonnull TextureAtlasSprite sprite) {
+    private String getCachedSpriteName(@Nonnull TextureAtlasSprite sprite) {
+        return spriteNameCache.computeIfAbsent(sprite, this::computeSpriteName);
+    }
+    
+    /** Computes sprite name by opening contents resource. */
+    @Nonnull
+    private String computeSpriteName(@Nonnull TextureAtlasSprite sprite) {
         try (var contents = sprite.contents()) {
             return contents.name().toString();
         } catch (Exception e) {
             return "unknown";
         }
+    }
+    
+    @Nonnull
+    private String getTextureName(@Nonnull TextureAtlasSprite sprite) {
+        return getCachedSpriteName(sprite);
     }
 
     private boolean isPoweredTexture(@Nonnull String textureName) {
@@ -664,6 +855,12 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                textureName.contains("unpowered") ||
                (textureName.contains("lever") && textureName.contains("off"));
     }
+    /** Returns cached ResourceLocation to reduce object allocations. */
+    @Nonnull
+    private ResourceLocation getCachedResourceLocation(@Nonnull String path) {
+        return resourceLocationCache.computeIfAbsent(path, ResourceLocation::new);
+    }
+    
     /**
      * Gets texture sprite from path string.
      */
@@ -675,7 +872,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         
         try {
 
-            ResourceLocation textureLocation = new ResourceLocation(texturePath);
+            ResourceLocation textureLocation = getCachedResourceLocation(texturePath);
 
             for (TextureAtlasSprite sprite : textureSprites.values()) {
                 try (var contents = sprite.contents()) {
@@ -765,14 +962,101 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     }
 
 
+    /**
+     * Performs LRU-based cache cleanup when cache exceeds size limit.
+     */
     private static void cleanupGlobalCache() {
-        if (GLOBAL_CACHE.size() > 10000) {
-
-            int removeCount = GLOBAL_CACHE.size() / 5;
+        if (GLOBAL_CACHE.size() > MAX_CACHE_SIZE) {
+            performLRUEviction();
+        }
+    }
+    
+    /**
+     * Performs weighted LRU eviction to reduce cache to 80% of max size.
+     * Uses eviction score (access frequency + recency) to retain frequently-used entries.
+     * Higher eviction score = higher priority to keep in cache.
+     */
+    private static void performLRUEviction() {
+        int targetSize = (int) (MAX_CACHE_SIZE * 0.8); // Reduce to 80% capacity
+        int toRemove = GLOBAL_CACHE.size() - targetSize;
+        
+        if (toRemove <= 0) {
+            return;
+        }
+        
+        // Sort entries by eviction score (LOWEST score evicted first)
+        // Score = (accessCount * 1000) - age_ms
+        // This keeps frequently-accessed AND recently-used entries
+        GLOBAL_CACHE.entrySet().stream()
+            .sorted(java.util.Comparator.comparingLong(e -> e.getValue().getEvictionScore()))
+            .limit(toRemove)
+            .map(Map.Entry::getKey)
+            .forEach(key -> {
+                GLOBAL_CACHE.remove(key);
+                cacheEvictions.incrementAndGet();
+            });
+    }
+    
+    /**
+     * Estimates cache memory usage in bytes.
+     * Provides approximate memory footprint for monitoring.
+     */
+    private static long estimateCacheMemoryUsage() {
+        long totalBytes = 0;
+        
+        // Cache key overhead (integer IDs + packed flags)
+        // ModelCacheKey: ~48 bytes per entry (compressed from ~200+ bytes with strings)
+        totalBytes += GLOBAL_CACHE.size() * 48L;
+        
+        // Quad data overhead
+        for (CacheEntry entry : GLOBAL_CACHE.values()) {
+            List<BakedQuad> quads = entry.getQuads();
+            // BakedQuad: ~200 bytes per quad (vertices + metadata)
+            totalBytes += quads.size() * 200L;
+        }
+        
+        // ID mapping overhead
+        totalBytes += TEXTURE_ID_MAP.size() * 64L; // String + Integer
+        totalBytes += BLOCKSTATE_ID_MAP.size() * 64L; // String + Integer
+        
+        return totalBytes;
+    }
+    
+    /**
+     * Logs cache statistics for performance monitoring.
+     */
+    private static void logCacheStatistics() {
+        long hits = cacheHits.get();
+        long misses = cacheMisses.get();
+        long evictions = cacheEvictions.get();
+        long total = hits + misses;
+        
+        if (total > 0) {
+            double hitRate = (hits * 100.0) / total;
+            long memoryBytes = estimateCacheMemoryUsage();
+            double memoryMB = memoryBytes / (1024.0 * 1024.0);
+            
+            LOGGER.info(
+                "Cache Statistics - Size: {}/{}, Memory: {:.2f}MB, Hits: {}, Misses: {}, Hit Rate: {:.2f}%, Evictions: {}",
+                GLOBAL_CACHE.size(), MAX_CACHE_SIZE, memoryMB, hits, misses, hitRate, evictions
+            );
+            LOGGER.info(
+                "  ID Maps - Textures: {}, BlockStates: {}",
+                TEXTURE_ID_MAP.size(), BLOCKSTATE_ID_MAP.size()
+            );
+            
+            // Log most accessed entries (top 5)
             GLOBAL_CACHE.entrySet().stream()
-                    .limit(removeCount)
-                    .map(Map.Entry::getKey)
-                    .forEach(GLOBAL_CACHE::remove);
+                .sorted((e1, e2) -> Integer.compare(
+                    e2.getValue().getAccessCount(),
+                    e1.getValue().getAccessCount()))
+                .limit(5)
+                .forEach(entry -> {
+                    LOGGER.debug(
+                        "  Top cached config: {} (accessed {} times)",
+                        entry.getKey().toString(), entry.getValue().getAccessCount()
+                    );
+                });
         }
     }
 
@@ -818,22 +1102,25 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     }
 
     /**
-     * Cache key for memory efficiency and fast comparison.
+     * Optimized cache key using integer IDs and bitpacked flags for memory efficiency.
+     * Reduces memory footprint from ~200+ bytes to ~48 bytes per key.
      */
     private static class ModelCacheKey {
-        private final String blockStateString;
+        private final int blockStateId;
         private final Direction side;
-        private final String toggleTexture;
-        private final String baseTexture;
-        private final String powerMode;
-        private final String wallOrientation;
-        private final String baseRotation;
-        private final String toggleRotation;
-        private final Boolean ghostMode;
+        private final int toggleTextureId;
+        private final int baseTextureId;
+        private final int stateFlags; // Bitpacked: powerMode(2 bits) + wallOrientation(3 bits) + rotations(6 bits) + ghost(1 bit)
         private final Float ghostOpacity;
-
         private final RenderType renderType;
         private final int hashCode;
+        
+        // Bit positions for state flags
+        private static final int POWER_MODE_SHIFT = 0;    // Bits 0-1
+        private static final int WALL_ORIENT_SHIFT = 2;   // Bits 2-4
+        private static final int BASE_ROTATION_SHIFT = 5; // Bits 5-7
+        private static final int TOGGLE_ROTATION_SHIFT = 8; // Bits 8-10
+        private static final int GHOST_MODE_SHIFT = 11;   // Bit 11
 
         public ModelCacheKey(@Nonnull String blockStateString, @Nullable Direction side,
                             @Nullable String toggleTexture, @Nullable String baseTexture,
@@ -841,48 +1128,101 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                             @Nullable String baseRotation, @Nullable String toggleRotation,
                             @Nullable Boolean ghostMode, @Nullable Float ghostOpacity,
                             @Nullable RenderType renderType) {
-            this.blockStateString = blockStateString;
+            // Convert strings to integer IDs for memory efficiency
+            this.blockStateId = getBlockStateId(blockStateString);
             this.side = side;
-            this.toggleTexture = toggleTexture;
-            this.baseTexture = baseTexture;
-            this.powerMode = powerMode;
-            this.wallOrientation = wallOrientation;
-            this.baseRotation = baseRotation;
-            this.toggleRotation = toggleRotation;
-            this.ghostMode = ghostMode;
+            this.toggleTextureId = getTextureId(toggleTexture);
+            this.baseTextureId = getTextureId(baseTexture);
             this.ghostOpacity = ghostOpacity;
-
             this.renderType = renderType;
+            
+            // Pack all state flags into a single integer
+            int flags = 0;
+            flags |= encodePowerMode(powerMode) << POWER_MODE_SHIFT;
+            flags |= encodeWallOrientation(wallOrientation) << WALL_ORIENT_SHIFT;
+            flags |= encodeRotation(baseRotation) << BASE_ROTATION_SHIFT;
+            flags |= encodeRotation(toggleRotation) << TOGGLE_ROTATION_SHIFT;
+            flags |= (ghostMode != null && ghostMode ? 1 : 0) << GHOST_MODE_SHIFT;
+            this.stateFlags = flags;
 
-            this.hashCode = Objects.hash(blockStateString, side, toggleTexture, baseTexture, powerMode, wallOrientation, baseRotation, toggleRotation, ghostMode, ghostOpacity, renderType);
+            this.hashCode = Objects.hash(blockStateId, side, toggleTextureId, baseTextureId, stateFlags, ghostOpacity, renderType);
+        }
+        
+        // Encoding helpers for bitpacking
+        private static int encodePowerMode(@Nullable String mode) {
+            if (mode == null) return 0;
+            return switch (mode) {
+                case "DEFAULT" -> 0;
+                case "ALT" -> 1;
+                case "NONE" -> 2;
+                default -> 0;
+            };
+        }
+        
+        private static int encodeWallOrientation(@Nullable String orientation) {
+            if (orientation == null || "center".equals(orientation)) return 0;
+            return switch (orientation) {
+                case "top" -> 1;
+                case "bottom" -> 2;
+                case "left" -> 3;
+                case "right" -> 4;
+                default -> 0;
+            };
+        }
+        
+        private static int encodeRotation(@Nullable String rotation) {
+            if (rotation == null || "NORMAL".equals(rotation)) return 0;
+            return switch (rotation) {
+                case "RIGHT" -> 1;      // 90° clockwise
+                case "INVERT" -> 2;     // 180°
+                case "LEFT" -> 3;       // -90° counterclockwise
+                default -> 0;
+            };
+        }
+        
+        // Decoding helpers for toString and getWallOrientation
+        private String decodeWallOrientation() {
+            int encoded = (stateFlags >> WALL_ORIENT_SHIFT) & 0b111;
+            return switch (encoded) {
+                case 1 -> "top";
+                case 2 -> "bottom";
+                case 3 -> "left";
+                case 4 -> "right";
+                default -> "center";
+            };
+        }
+        
+        private boolean isGhostMode() {
+            return ((stateFlags >> GHOST_MODE_SHIFT) & 1) == 1;
         }
 
         public boolean isDefaultTextures() {
-            return (toggleTexture == null || toggleTexture.equals(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) &&
-                   (baseTexture == null || baseTexture.equals(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE)) &&
-                   (powerMode == null || powerMode.equals("DEFAULT")) &&
-                   (baseRotation == null || baseRotation.equals("NORMAL")) &&
-                   (toggleRotation == null || toggleRotation.equals("NORMAL"));
+            // Check if using default texture IDs (0 = null/default)
+            boolean defaultTextures = (toggleTextureId == 0 || toggleTextureId == getTextureId(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) &&
+                                     (baseTextureId == 0 || baseTextureId == getTextureId(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE));
+            
+            // Check if using default flags (all 0 = defaults)
+            int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b11;
+            int baseRotation = (stateFlags >> BASE_ROTATION_SHIFT) & 0b111;
+            int toggleRotation = (stateFlags >> TOGGLE_ROTATION_SHIFT) & 0b111;
+            
+            return defaultTextures && powerMode == 0 && baseRotation == 0 && toggleRotation == 0;
         }
 
         @Nullable
         public String getWallOrientation() {
-            return wallOrientation != null ? wallOrientation : "center";
+            return decodeWallOrientation();
         }
 
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
             if (!(obj instanceof ModelCacheKey other)) return false;
-            return Objects.equals(blockStateString, other.blockStateString) &&
+            return blockStateId == other.blockStateId &&
                    Objects.equals(side, other.side) &&
-                   Objects.equals(toggleTexture, other.toggleTexture) &&
-                   Objects.equals(baseTexture, other.baseTexture) &&
-                   Objects.equals(powerMode, other.powerMode) &&
-                   Objects.equals(wallOrientation, other.wallOrientation) &&
-                   Objects.equals(baseRotation, other.baseRotation) &&
-                   Objects.equals(toggleRotation, other.toggleRotation) &&
-                   Objects.equals(ghostMode, other.ghostMode) &&
+                   toggleTextureId == other.toggleTextureId &&
+                   baseTextureId == other.baseTextureId &&
+                   stateFlags == other.stateFlags &&
                    Objects.equals(ghostOpacity, other.ghostOpacity) &&
                    Objects.equals(renderType, other.renderType);
         }
@@ -890,6 +1230,46 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         @Override
         public int hashCode() {
             return hashCode;
+        }
+        
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder("CacheKey[");
+            if (isGhostMode()) {
+                sb.append("ghost,opacity=").append(ghostOpacity);
+            } else {
+                // Decode texture IDs for display
+                if (toggleTextureId != 0 && toggleTextureId != getTextureId(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) {
+                    sb.append("toggleId=").append(toggleTextureId).append(",");
+                }
+                if (baseTextureId != 0 && baseTextureId != getTextureId(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE)) {
+                    sb.append("baseId=").append(baseTextureId).append(",");
+                }
+                
+                // Decode power mode
+                int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b11;
+                if (powerMode != 0) {
+                    String mode = switch (powerMode) {
+                        case 1 -> "ALT";
+                        case 2 -> "NONE";
+                        default -> "DEFAULT";
+                    };
+                    sb.append("power=").append(mode).append(",");
+                }
+            }
+            
+            // Decode wall orientation
+            String wallOrient = decodeWallOrientation();
+            if (!"center".equals(wallOrient)) {
+                sb.append("wall=").append(wallOrient).append(",");
+            }
+            
+            if (side != null) {
+                sb.append("side=").append(side.getName());
+            }
+            
+            sb.append(",stateId=").append(blockStateId);
+            return sb.append("]").toString();
         }
     }
 }

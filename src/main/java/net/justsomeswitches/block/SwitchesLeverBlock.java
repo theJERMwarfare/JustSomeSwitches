@@ -31,7 +31,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Lever block with custom textures and intelligent placement.*
+ * Advanced lever switch with texture customization and intelligent placement system.
+ * Uses block entity for texture storage and supports wall orientation detection.
  */
 public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
@@ -231,31 +232,26 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     private BlockState getFloorPlacement(Vec3 relativeHit, BlockPlaceContext context) {
         final double EDGE_THRESHOLD = 4.0 / 16.0;
         if (relativeHit.y < EDGE_THRESHOLD) {
-
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
                 .setValue(BlockStateProperties.POWERED, false);
         } else if (relativeHit.y > (1.0 - EDGE_THRESHOLD)) {
-
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH)
                 .setValue(BlockStateProperties.POWERED, false);
         } else if (relativeHit.x < EDGE_THRESHOLD) {
-
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST)
                 .setValue(BlockStateProperties.POWERED, false);
         } else if (relativeHit.x > (1.0 - EDGE_THRESHOLD)) {
-
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST)
                 .setValue(BlockStateProperties.POWERED, false);
         } else {
-
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection())
@@ -269,7 +265,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     private BlockState getCeilingPlacement(Vec3 relativeHit, BlockPlaceContext context) {
         final double EDGE_THRESHOLD = 4.0 / 16.0;
         if (relativeHit.y < EDGE_THRESHOLD) {
-
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.CEILING)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
@@ -287,13 +282,11 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.WEST)
                 .setValue(BlockStateProperties.POWERED, false);
         } else if (relativeHit.x > (1.0 - EDGE_THRESHOLD)) {
-
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.CEILING)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.EAST)
                 .setValue(BlockStateProperties.POWERED, false);
         } else {
-
             Direction playerFacing = context.getHorizontalDirection();
             
             Direction leverFacing = switch (playerFacing) {
@@ -302,7 +295,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                 case NORTH, SOUTH -> playerFacing;
                 default -> playerFacing;
             };
-            
             return this.defaultBlockState()
                 .setValue(BlockStateProperties.ATTACH_FACE, AttachFace.CEILING)
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, leverFacing)
@@ -344,8 +336,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     public VoxelShape getShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);
         Direction direction = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-
-
         if (attachFace == AttachFace.WALL && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             String wallOrientation = blockEntity.getWallOrientation();
             if (!wallOrientation.isEmpty()) {
@@ -379,17 +369,12 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Nonnull
     public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player,
                                  @Nonnull InteractionHand hand, @Nonnull BlockHitResult hit) {
-        // Handle shift-clicking behavior for block placement
         if (player.isShiftKeyDown()) {
-            return InteractionResult.PASS; // Allow item placement when shift-clicking
+            return InteractionResult.PASS;
         }
-        
-        // Handle regular interaction (toggle lever)
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
-
-
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             blockEntity.protectNBTDuringStateChange();
         }
@@ -397,15 +382,12 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
         boolean currentlyPowered = state.getValue(BlockStateProperties.POWERED);
         BlockState newState = state.setValue(BlockStateProperties.POWERED, !currentlyPowered);
         level.setBlock(pos, newState, Block.UPDATE_ALL);
-
-
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
         
         level.updateNeighborsAt(pos, this);
         Direction attachedDirection = getAttachedDirection(newState);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);
-
         return InteractionResult.CONSUME;
     }
 
@@ -413,11 +395,8 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     @Override
     @SuppressWarnings("deprecation")
     public void tick(@Nonnull BlockState state, @Nonnull net.minecraft.server.level.ServerLevel level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource random) {
-
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             blockEntity.endNBTProtection();
-
-
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
             blockEntity.requestModelDataUpdate();
         }
@@ -425,7 +404,7 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
     @Override
     public void animateTick(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource randomSource) {
-
+        // No particles for switches lever - empty method intentional
     }
 
     @Nonnull
@@ -459,7 +438,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     public void neighborChanged(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
                                 @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);
-
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             if (blockEntity.hasCustomTextures()) {
                 level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
@@ -472,15 +450,12 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
                             @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer,
                             @Nonnull net.minecraft.world.item.ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-
         if (level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
-
             String wallOrientation = PENDING_WALL_ORIENTATION.get();
             if (wallOrientation != null && state.getValue(BlockStateProperties.ATTACH_FACE) == AttachFace.WALL) {
                 blockEntity.setWallOrientation(wallOrientation);
                 PENDING_WALL_ORIENTATION.remove();
             }
-            
             level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
         }
     }

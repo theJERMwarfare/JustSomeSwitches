@@ -3,6 +3,7 @@ package net.justsomeswitches.network;
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.item.service.CopyPasteService;
+import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -14,10 +15,7 @@ import net.neoforged.neoforge.network.handling.PlayPayloadContext;
 
 import javax.annotation.Nonnull;
 
-/**
- * Network payload for wrench overwrite confirmation responses
- * Handles client->server communication when user chooses Overwrite or Cancel
- */
+/** Network payload for wrench overwrite confirmation responses. */
 public record WrenchOverwritePayload(
     BlockPos blockPos,
     boolean overwrite
@@ -44,18 +42,35 @@ public record WrenchOverwritePayload(
         return ID;
     }
     
-    /**
-     * Handles the payload on the server side
-     */
+    /** Handles the payload on server side. */
     public static void handle(WrenchOverwritePayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) return;
             
+            if (SecurityUtils.isRateLimited(player)) {
+                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
+                    "WrenchOverwrite packet rate limit exceeded");
+                return;
+            }
+            
+            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
+                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
+                    "Invalid block position: " + payload.blockPos());
+                return;
+            }
+            
             Level level = player.level();
             BlockPos blockPos = payload.blockPos();
             
-            // Find the wrench in player's hands
+            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
+                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
+                    "Player cannot interact with block at: " + blockPos);
+                return;
+            }
+            
+            SecurityUtils.logSecurityEvent(player, "WRENCH_OVERWRITE", blockPos, 
+                "Overwrite: " + payload.overwrite());
             ItemStack wrenchStack = null;
             
             if (player.getMainHandItem().getItem() instanceof SwitchesWrenchItem) {
@@ -68,30 +83,26 @@ public record WrenchOverwritePayload(
                 return; // No wrench found
             }
             
-            // Verify the block is still a switch
+
             if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
                 return;
             }
             
             if (payload.overwrite()) {
-                // User chose to overwrite - return existing blocks and reset settings
                 handleOverwriteConfirmed(wrench, wrenchStack, blockEntity, player);
             } else {
-                // User chose to cancel
                 handleOverwriteCancelled(player);
             }
             
-            // Mark player inventory as dirty to sync changes
+
             player.inventoryMenu.broadcastChanges();
         });
     }
     
     private static void handleOverwriteConfirmed(SwitchesWrenchItem wrench, ItemStack wrenchStack,
                                                SwitchesLeverBlockEntity blockEntity, ServerPlayer player) {
-        // Step 1: Return existing blocks to player inventory FIRST
         if (!blockEntity.getGuiToggleItem().isEmpty()) {
             if (!player.addItem(blockEntity.getGuiToggleItem().copy())) {
-                // If inventory full, drop the item
                 player.drop(blockEntity.getGuiToggleItem().copy(), false);
             }
             blockEntity.setToggleSlotItem(ItemStack.EMPTY);
@@ -99,38 +110,29 @@ public record WrenchOverwritePayload(
         
         if (!blockEntity.getGuiBaseItem().isEmpty()) {
             if (!player.addItem(blockEntity.getGuiBaseItem().copy())) {
-                // If inventory full, drop the item
                 player.drop(blockEntity.getGuiBaseItem().copy(), false);
             }
             blockEntity.setBaseSlotItem(ItemStack.EMPTY);
         }
         
-        // Step 2: Reset all settings to default
         blockEntity.resetToggleTexture();
         blockEntity.resetBaseTexture();
         blockEntity.setPowerMode(SwitchesLeverBlockEntity.PowerMode.DEFAULT);
         blockEntity.setToggleTextureRotation(net.justsomeswitches.util.TextureRotation.NORMAL);
         blockEntity.setBaseTextureRotation(net.justsomeswitches.util.TextureRotation.NORMAL);
         
-        // Step 3: Update the model
         blockEntity.updateTextures();
         
-        // Step 4: Send success message
         NetworkHandler.sendActionBarMessage(player, "Previous Settings Removed Successfully", NetworkHandler.MessageType.SUCCESS);
-        
-        // Step 5: Now check inventory for required blocks for the new settings
         CopyPasteService.PasteResult inventoryCheck = wrench.checkInventoryForPasteServer(wrenchStack, player);
         
-        // If missing blocks, show missing block GUI
         if (!inventoryCheck.success && "SHOW_MISSING_BLOCK_GUI".equals(inventoryCheck.message)) {
             openMissingBlockGUI(player, blockEntity.getBlockPos(), inventoryCheck.missingBlocks);
             return;
         }
         
-        // Step 6: Apply new settings normally (we know inventory is fine)
         CopyPasteService.PasteResult result = wrench.applySettingsFromWrenchServer(wrenchStack, blockEntity, player);
         
-        // Send appropriate action bar message for the paste result
         if (result.success) {
             NetworkHandler.sendActionBarMessage(player, result.message, NetworkHandler.MessageType.SUCCESS);
         } else {
@@ -139,13 +141,11 @@ public record WrenchOverwritePayload(
     }
     
     private static void handleOverwriteCancelled(ServerPlayer player) {
-        // Send cancellation message
+
         NetworkHandler.sendActionBarMessage(player, "New Texture Settings Not Pasted", NetworkHandler.MessageType.INFO);
     }
     
-    /**
-     * Opens the missing block GUI for the player
-     */
+    /** Opens the missing block GUI for the player. */
     private static void openMissingBlockGUI(ServerPlayer player, BlockPos blockPos, java.util.List<String> missingBlocks) {
         net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
             @Override
@@ -164,7 +164,7 @@ public record WrenchOverwritePayload(
             }
         };
 
-        // Open the menu with block position and missing blocks data
+
         player.openMenu(menuProvider, buf -> {
             buf.writeBlockPos(blockPos);
             buf.writeInt(missingBlocks.size());
