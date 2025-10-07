@@ -236,6 +236,10 @@ public class TexturePreviewRenderer {
         modelDataBuilder.with(SwitchesLeverBlockEntity.TOGGLE_ROTATION,
                 menu.getToggleTextureRotation().name());
         
+        // Add toggle slot state for conditional rotation compensation
+        modelDataBuilder.with(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK,
+                !toggleSelection.sourceBlock().isEmpty());
+        
         // Add current texture paths from GUI selections
         if (baseSelection.hasPreview() && baseSelection.previewTexture() != null) {
             modelDataBuilder.with(SwitchesLeverBlockEntity.BASE_TEXTURE,

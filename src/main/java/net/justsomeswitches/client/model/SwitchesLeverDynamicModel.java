@@ -594,18 +594,27 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         // Check if this is a toggle texture part that needs rotation
         // IMPORTANT: Toggle texture faces in the vanilla model have built-in 270° rotation,
         // so we need to apply a +90° offset to compensate and give users intuitive control
+        // HOWEVER: Only apply rotation compensation when there is a block in the toggle slot
         boolean isToggleTexturePart = isLeverMovingPart(originalTextureName);
-        if (isToggleTexturePart && toggleTexture != null) {
-            String rotationString = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
-            if (rotationString != null) {
-                try {
-                    TextureRotation userRotation = TextureRotation.valueOf(rotationString);
-                    // Apply +90° offset to compensate for model's built-in 270° rotation
-                    rotation = compensateToggleRotation(userRotation);
-                } catch (IllegalArgumentException e) {
-                    rotation = TextureRotation.RIGHT; // Compensated NORMAL = RIGHT
+        if (isToggleTexturePart) {
+            // Check if toggle slot has a block
+            Boolean hasToggleBlock = extraData.get(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK);
+            boolean toggleSlotHasBlock = hasToggleBlock != null && hasToggleBlock;
+            
+            if (toggleSlotHasBlock) {
+                // Toggle slot has block - apply rotation with compensation
+                String rotationString = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
+                if (rotationString != null) {
+                    try {
+                        TextureRotation userRotation = TextureRotation.valueOf(rotationString);
+                        // Apply +90° offset to compensate for model's built-in 270° rotation
+                        rotation = compensateToggleRotation(userRotation);
+                    } catch (IllegalArgumentException e) {
+                        rotation = TextureRotation.RIGHT; // Compensated NORMAL = RIGHT
+                    }
                 }
             }
+            // else: Toggle slot is empty - no rotation applied (rotation stays null, becomes NORMAL)
         }
         
         // Apply processing if we need texture replacement OR rotation
@@ -768,7 +777,6 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     /**
      * Applies +90° rotation offset to compensate for toggle texture faces' built-in 270° rotation in the model JSON.
      * This ensures users get intuitive rotation control where NORMAL appears as expected.
-     * 
      * Mapping:
      * - User selects NORMAL (0°) → Apply RIGHT (90°) → Total: 270° + 90° = 360° = 0° (appears normal)
      * - User selects RIGHT (90°) → Apply INVERT (180°) → Total: 270° + 180° = 450° = 90°
@@ -934,6 +942,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 null, null, // No rotation parameters for ghost preview
                 ghostMode,
                 ghostOpacity,
+                null, // No toggle block for ghost preview
                 renderType
             );
         }
@@ -945,6 +954,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
         String baseRotation = extraData.get(SwitchesLeverBlockEntity.BASE_ROTATION);
         String toggleRotation = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
+        Boolean hasToggleBlock = extraData.get(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK);
 
         return new ModelCacheKey(
                 state != null ? state.toString() : "null",
@@ -957,6 +967,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 toggleRotation,
                 false, // Not ghost mode
                 null, // No ghost opacity
+                hasToggleBlock,
                 renderType
         );
     }
@@ -1121,12 +1132,14 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         private static final int BASE_ROTATION_SHIFT = 5; // Bits 5-7
         private static final int TOGGLE_ROTATION_SHIFT = 8; // Bits 8-10
         private static final int GHOST_MODE_SHIFT = 11;   // Bit 11
+        private static final int HAS_TOGGLE_BLOCK_SHIFT = 12; // Bit 12
 
         public ModelCacheKey(@Nonnull String blockStateString, @Nullable Direction side,
                             @Nullable String toggleTexture, @Nullable String baseTexture,
                             @Nullable String powerMode, @Nullable String wallOrientation,
                             @Nullable String baseRotation, @Nullable String toggleRotation,
                             @Nullable Boolean ghostMode, @Nullable Float ghostOpacity,
+                            @Nullable Boolean hasToggleBlock,
                             @Nullable RenderType renderType) {
             // Convert strings to integer IDs for memory efficiency
             this.blockStateId = getBlockStateId(blockStateString);
@@ -1143,6 +1156,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             flags |= encodeRotation(baseRotation) << BASE_ROTATION_SHIFT;
             flags |= encodeRotation(toggleRotation) << TOGGLE_ROTATION_SHIFT;
             flags |= (ghostMode != null && ghostMode ? 1 : 0) << GHOST_MODE_SHIFT;
+            flags |= (hasToggleBlock != null && hasToggleBlock ? 1 : 0) << HAS_TOGGLE_BLOCK_SHIFT;
             this.stateFlags = flags;
 
             this.hashCode = Objects.hash(blockStateId, side, toggleTextureId, baseTextureId, stateFlags, ghostOpacity, renderType);

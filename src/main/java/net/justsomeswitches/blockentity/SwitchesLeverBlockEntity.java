@@ -104,6 +104,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public static final ModelProperty<String> WALL_ORIENTATION = new ModelProperty<>();
     public static final ModelProperty<String> BASE_ROTATION = new ModelProperty<>();
     public static final ModelProperty<String> TOGGLE_ROTATION = new ModelProperty<>();
+    public static final ModelProperty<Boolean> HAS_TOGGLE_BLOCK = new ModelProperty<>();
     public static final ModelProperty<Boolean> GHOST_MODE = new ModelProperty<>();
     public static final ModelProperty<Float> GHOST_ALPHA = new ModelProperty<>();
     public static final ModelProperty<BlockState> GHOST_STATE = new ModelProperty<>();
@@ -122,6 +123,7 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
                 .with(WALL_ORIENTATION, wallOrientation)
                 .with(BASE_ROTATION, baseTextureRotation.name())
                 .with(TOGGLE_ROTATION, toggleTextureRotation.name())
+                .with(HAS_TOGGLE_BLOCK, !guiToggleItem.isEmpty())
                 .build();
     }
 
@@ -377,10 +379,25 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     public void setToggleSlotItem(@Nonnull ItemStack toggleItem) {
         this.guiToggleItem = toggleItem.copy();
+        // Force update to sync HAS_TOGGLE_BLOCK state to client
+        // This is critical because the slot state affects model rendering
+        if (level != null && !level.isClientSide) {
+            setChanged();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        } else if (level != null) {
+            requestModelDataUpdate();
+        }
     }
 
     public void setBaseSlotItem(@Nonnull ItemStack baseItem) {
         this.guiBaseItem = baseItem.copy();
+        // Force update to ensure NBT sync
+        if (level != null && !level.isClientSide) {
+            setChanged();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        } else if (level != null) {
+            requestModelDataUpdate();
+        }
     }
 
     public void dropStoredTextures(@Nonnull Level level, @Nonnull BlockPos pos) {
@@ -503,6 +520,9 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void onDataPacket(@Nonnull net.minecraft.network.Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
         CompoundTag nbt = pkt.getTag();
         if (nbt != null) {
+            // Clear NBT protection flag - network data is authoritative and must be loaded
+            // This prevents block state changes from blocking network NBT updates
+            skipNextNBTLoad = false;
             load(nbt);
             requestModelDataUpdate();
             if (level != null) {
