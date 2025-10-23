@@ -19,6 +19,7 @@ import org.joml.Matrix4f;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -65,9 +66,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         }
     }
     
-    /**
-     * Checks if block is wall-mounted.
-     */
+    /** Checks if block is wall-mounted. */
     private boolean isWallPlacement(@Nonnull BlockState state) {
         try {
             net.minecraft.world.level.block.state.properties.AttachFace attachFace = 
@@ -77,9 +76,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             return false;
         }
     }
-    /**
-     * Applies wall orientation rotations.
-     */
+    /** Applies wall orientation rotations to quads based on BlockState and ModelData. */
     @Nonnull
     private List<BakedQuad> applyWallOrientationRotations(@Nonnull List<BakedQuad> baseQuads, 
                                                           @Nonnull BlockState state, 
@@ -112,9 +109,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         
         return rotatedQuads;
     }
-    /**
-     * Gets wall orientation from model data.
-     */
+    /** Gets wall orientation from model data. */
     @Nonnull
     private String getWallOrientationFromBlockEntity(@Nonnull ModelData extraData) {
         try {
@@ -128,9 +123,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         
         return "center";
     }
-    /**
-     * Creates rotation matrix for wall orientation. Uses pre-computed cache for common orientations.
-     */
+    /** Creates rotation matrix for wall orientation using pre-computed cache for common orientations. */
     @Nonnull
     private Matrix4f createWallOrientationMatrix(@Nonnull String wallOrientation, 
                                                  @Nonnull net.minecraft.core.Direction wallFace) {
@@ -179,9 +172,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         
         return matrix;
     }
-    /**
-     * Transforms quad using rotation matrix.
-     */
+    /** Transforms quad using rotation matrix. */
     @Nonnull
     private BakedQuad transformQuadWithMatrix(@Nonnull BakedQuad originalQuad, @Nonnull Matrix4f matrix) {
         int[] originalVertices = originalQuad.getVertices();
@@ -239,34 +230,57 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     
     /** Cached sprite names to avoid repeated contents() calls. Thread-safe for concurrent rendering. */
     private final Map<TextureAtlasSprite, String> spriteNameCache = new ConcurrentHashMap<>();
+    
+    /** Reflection fields for safe animated texture access without calling sprite.contents() */
+    private static Field spriteContentsField = null;
+    private static Field contentsNameField = null;
+    private static boolean reflectionInitialized = false;
+    
+    /** Initializes reflection fields for safe animated texture access. */
+    private static void initializeReflection() {
+        if (reflectionInitialized) {
+            return;
+        }
+        reflectionInitialized = true;
+        
+        try {
+            // Access TextureAtlasSprite.contents field
+            spriteContentsField = TextureAtlasSprite.class.getDeclaredField("contents");
+            spriteContentsField.setAccessible(true);
+            
+            // Access SpriteContents.name field
+            Class<?> spriteContentsClass = Class.forName("net.minecraft.client.renderer.texture.SpriteContents");
+            contentsNameField = spriteContentsClass.getDeclaredField("name");
+            contentsNameField.setAccessible(true);
+        } catch (Exception e) {
+            // Reflection failed - will fall back to sprite.contents() with try-catch
+            spriteContentsField = null;
+            contentsNameField = null;
+        }
+    }
     /** Cached ResourceLocation objects to reduce allocations. Thread-safe for concurrent rendering. */
     private final Map<String, ResourceLocation> resourceLocationCache = new ConcurrentHashMap<>();
+    /** Cache for custom block texture sprites (supports mod compatibility). Thread-safe for concurrent rendering. */
+    private static final Map<String, TextureAtlasSprite> CUSTOM_TEXTURE_CACHE = new ConcurrentHashMap<>();
 
     // Cache performance tracking
     private static final java.util.concurrent.atomic.AtomicInteger cacheOperations = 
             new java.util.concurrent.atomic.AtomicInteger(0);
     
-    /**
-     * Gets or creates texture ID for memory-efficient cache keys.
-     */
+    /** Gets or creates texture ID for memory-efficient cache keys. */
     private static int getTextureId(@Nullable String texturePath) {
         if (texturePath == null) return 0;
         return TEXTURE_ID_MAP.computeIfAbsent(texturePath, 
             path -> NEXT_TEXTURE_ID.incrementAndGet());
     }
     
-    /**
-     * Gets or creates BlockState ID for cache key compression.
-     */
+    /** Gets or creates BlockState ID for cache key compression. */
     private static int getBlockStateId(@Nonnull String blockStateString) {
         return BLOCKSTATE_ID_MAP.computeIfAbsent(blockStateString,
             state -> NEXT_BLOCKSTATE_ID.incrementAndGet());
     }
     
-    /**
-     * Gets configured cache size from system property or uses default.
-     * Can be configured via: -Djustsomeswitches.cache.size=2000
-     */
+    /** Gets configured cache size from system property or defaults to 2000. Configure via -Djustsomeswitches.cache.size=2000. */
     private static int getConfiguredCacheSize() {
         String sizeProperty = System.getProperty("justsomeswitches.cache.size");
         if (sizeProperty != null) {
@@ -283,60 +297,47 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return DEFAULT_CACHE_SIZE;
     }
     
-    /**
-     * Cache entry with weighted access tracking for optimized LRU eviction.
-     * Uses a combined score of access frequency and recency for better cache retention.
-     */
+    /** Cache entry with weighted access tracking using combined score of access frequency and recency for optimized LRU eviction. */
     private static class CacheEntry {
         private final List<BakedQuad> quads;
         private volatile long lastAccessTime;
-        private volatile int accessCount;
+        private final java.util.concurrent.atomic.AtomicInteger accessCount;
         
         public CacheEntry(List<BakedQuad> quads) {
             this.quads = quads;
             this.lastAccessTime = System.currentTimeMillis();
-            this.accessCount = 1;
+            this.accessCount = new java.util.concurrent.atomic.AtomicInteger(1);
         }
         
         public List<BakedQuad> getQuads() {
             this.lastAccessTime = System.currentTimeMillis();
-            this.accessCount++;
+            this.accessCount.incrementAndGet();
             return quads;
         }
         
-        public long getLastAccessTime() {
-            return lastAccessTime;
-        }
-        
         public int getAccessCount() {
-            return accessCount;
+            return accessCount.get();
         }
         
-        /**
-         * Calculates weighted eviction score.
-         * Higher score = higher priority to keep in cache.
-         * Formula: (accessCount * 1000) - age_in_ms
-         */
+        /** Calculates weighted eviction score where higher score means higher priority to keep in cache using formula (accessCount * 1000) - age_in_ms. */
         public long getEvictionScore() {
             long ageMs = System.currentTimeMillis() - lastAccessTime;
-            return (accessCount * 1000L) - ageMs;
+            return (accessCount.get() * 1000L) - ageMs;
         }
     }
 
 
     public SwitchesLeverDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
-                             @SuppressWarnings("unused") @Nonnull Map<String, Matrix4f> orientationTransforms,
-                             @SuppressWarnings("unused") @Nonnull Map<String, String> jsonVariables,
-                             @SuppressWarnings("unused") @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
                              @Nonnull BakedModel vanillaLeverModel,
                              @Nonnull ItemOverrides itemOverrides) {
         this.textureSprites = new HashMap<>(textureSprites);
         this.vanillaLeverModel = vanillaLeverModel;
         this.itemOverrides = itemOverrides;
+        
+        // Initialize reflection for safe animated texture access
+        initializeReflection();
     }
-    /**
-     * Validates ModelData before rendering.
-     */
+    /** Validates ModelData before rendering. */
     private boolean hasValidModelData(@Nonnull ModelData extraData) {
         if (extraData == ModelData.EMPTY) {
             return false;
@@ -374,10 +375,28 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         }
 
         List<BakedQuad> generatedQuads = generateSwitchQuads(state, side, extraData, rand, renderType);
+        
+        // DIAGNOSTIC LOGGING - Verify what quads we're returning for glazed terracotta
+        String toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
+        String baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
+        if ((toggleTexture != null && toggleTexture.contains("glazed_terracotta")) ||
+            (baseTexture != null && baseTexture.contains("glazed_terracotta"))) {
+            LOGGER.info("[DIAGNOSTIC] Returning {} quads for side: {}, renderType: {}", generatedQuads.size(), side, renderType);
+            if (!generatedQuads.isEmpty()) {
+                BakedQuad firstQuad = generatedQuads.get(0);
+                BakedQuad lastQuad = generatedQuads.get(generatedQuads.size() - 1);
+                String firstSprite = getCachedSpriteName(firstQuad.getSprite());
+                String lastSprite = getCachedSpriteName(lastQuad.getSprite());
+                LOGGER.info("[DIAGNOSTIC] First quad sprite: {}", firstSprite);
+                LOGGER.info("[DIAGNOSTIC] Last quad sprite: {}", lastSprite);
+                LOGGER.info("[DIAGNOSTIC] Quad direction: {}, Shade: {}, Tint: {}", 
+                    firstQuad.getDirection(), firstQuad.isShade(), firstQuad.getTintIndex());
+            }
+        }
+        
         cacheGeneratedQuads(cacheKey, generatedQuads);
 
         // Periodic cache cleanup and statistics logging
-        @SuppressWarnings("NonAtomicOperationOnVolatileField") // Intentional - approximate periodic check
         int ops = cacheOperations.incrementAndGet();
         if (ops % 1000 == 0) {
             cleanupGlobalCache();
@@ -395,9 +414,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return getQuads(state, side, rand, ModelData.EMPTY, null);
     }
 
-    /**
-     * Multi-level cache lookup.
-     */
+    /** Multi-level cache lookup checking instance cache first then global cache. */
     @Nullable
     private List<BakedQuad> getCachedQuads(@Nonnull ModelCacheKey key) {
 
@@ -441,9 +458,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return key.isDefaultTextures() || "center".equals(key.getWallOrientation());
     }
 
-    /**
-     * Generates switch quads based on current configuration.
-     */
+    /** Generates switch quads based on current configuration including textures, power mode, and rotations. */
     @Nonnull
     private List<BakedQuad> generateSwitchQuads(@Nullable BlockState state, @Nullable Direction side,
                                                @Nonnull ModelData extraData, @Nonnull RandomSource rand,
@@ -458,13 +473,11 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         boolean hasTextureData = false;
         String toggleTexture = null;
         String baseTexture = null;
-        String faceSelection = null;
         String powerMode = null;
         
         if (extraData != ModelData.EMPTY) {
             toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
             baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
-            faceSelection = extraData.get(SwitchesLeverBlockEntity.FACE_SELECTION);
             powerMode = extraData.get(SwitchesLeverBlockEntity.POWER_MODE);
             
             // Check for texture replacement or power mode
@@ -491,7 +504,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
         List<BakedQuad> texturedQuads = baseQuads;
         if (hasTextureData) {
-            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData);
+            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, powerMode, extraData);
         }
 
         if (state != null && isWallPlacement(state) && extraData != ModelData.EMPTY) {
@@ -501,9 +514,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return texturedQuads;
     }
     
-    /**
-     * Generates quads specifically for ghost preview (default lever with correct orientation).
-     */
+    /** Generates quads for ghost preview mode using default lever with correct orientation. */
     @Nonnull
     private List<BakedQuad> generateGhostPreviewQuads(@Nullable BlockState state, @Nullable Direction side,
                                                      @Nonnull ModelData extraData, @Nonnull RandomSource rand,
@@ -525,9 +536,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return baseQuads;
     }
     
-    /**
-     * Checks if ghost preview mode is enabled in ModelData.
-     */
+    /** Checks if ghost preview mode is enabled in ModelData. */
     private boolean isGhostPreviewMode(@Nonnull ModelData extraData) {
         Boolean ghostMode = extraData.get(SwitchesLeverBlockEntity.GHOST_MODE);
         return ghostMode != null && ghostMode;
@@ -535,36 +544,40 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
 
-    /**
-     * Applies custom texture replacement to quads.
-     */
+    /** Applies custom texture replacement to quads based on toggle, base, and power mode configurations. */
     @Nonnull
     private List<BakedQuad> applyCustomTextures(@Nonnull List<BakedQuad> baseQuads, 
                                                @Nullable String toggleTexture,
                                                @Nullable String baseTexture,
-                                               @Nullable String faceSelection,
                                                @Nullable String powerMode,
-                                               @Nullable BlockState state,
                                                @Nonnull ModelData extraData) {
         
         List<BakedQuad> texturedQuads = new ArrayList<>();
         for (BakedQuad quad : baseQuads) {
             BakedQuad processedQuad = processQuadWithCustomTextures(quad, toggleTexture, baseTexture, 
-                                                                  faceSelection, powerMode, state, extraData);
+                                                                  powerMode, extraData);
             texturedQuads.add(processedQuad);
+            
+            // DIAGNOSTIC LOGGING - Verify quads are being processed
+            if ((toggleTexture != null && toggleTexture.contains("glazed_terracotta")) ||
+                (baseTexture != null && baseTexture.contains("glazed_terracotta"))) {
+                String originalSprite = getCachedSpriteName(quad.getSprite());
+                String processedSprite = getCachedSpriteName(processedQuad.getSprite());
+                if (!originalSprite.equals(processedSprite)) {
+                    LOGGER.info("[DIAGNOSTIC] Quad processed: {} -> {}", originalSprite, processedSprite);
+                } else {
+                    LOGGER.info("[DIAGNOSTIC] Quad unchanged: {}", originalSprite);
+                }
+            }
         }
         return texturedQuads;
     }
-    /**
-     * Processes individual quad with custom texture replacement.
-     */
+    /** Processes individual quad with custom texture replacement including rotation compensation. */
     @Nonnull
     private BakedQuad processQuadWithCustomTextures(@Nonnull BakedQuad originalQuad,
                                                    @Nullable String toggleTexture,
                                                    @Nullable String baseTexture,
-                                                   @SuppressWarnings("unused") @Nullable String faceSelection,
                                                    @Nullable String powerMode,
-                                                   @SuppressWarnings("unused") @Nullable BlockState state,
                                                    @Nonnull ModelData extraData) {
 
         TextureAtlasSprite originalSprite = originalQuad.getSprite();
@@ -631,9 +644,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return replaceQuadTexture(originalQuad, finalSprite, rotation);
     }
 
-    /**
-     * Determines replacement texture based on part type.
-     */
+    /** Determines replacement texture based on part type including power mode handling. */
     @Nonnull
     private TextureAtlasSprite determineReplacementTexture(@Nonnull TextureAtlasSprite originalSprite,
                                                          @Nonnull String originalTextureName,
@@ -670,9 +681,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return originalSprite;
     }
 
-    /**
-     * Gets powered texture replacement based on power mode.
-     */
+    /** Gets powered texture replacement based on power mode (ALT/NONE/DEFAULT). */
     @Nonnull
     private TextureAtlasSprite getPoweredReplacementTexture(@Nullable String powerMode, @Nullable String toggleTexture) {
         if ("ALT".equals(powerMode)) {
@@ -691,9 +700,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return fallback != null ? fallback : textureSprites.values().iterator().next();
     }
 
-    /**
-     * Gets unpowered texture replacement based on power mode.
-     */
+    /** Gets unpowered texture replacement based on power mode (ALT/NONE/DEFAULT). */
     @Nonnull
     private TextureAtlasSprite getUnpoweredReplacementTexture(@Nullable String powerMode, @Nullable String toggleTexture) {
         if ("ALT".equals(powerMode)) {
@@ -720,6 +727,17 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         
         int[] originalVertices = originalQuad.getVertices();
         TextureAtlasSprite originalSprite = originalQuad.getSprite();
+        
+        // DIAGNOSTIC LOGGING - Track quad replacement for glazed terracotta
+        String newSpriteName = getCachedSpriteName(newSprite);
+        if (newSpriteName.contains("glazed_terracotta")) {
+            String originalSpriteName = getCachedSpriteName(originalSprite);
+            LOGGER.info("[DIAGNOSTIC] Replacing quad texture with glazed terracotta:");
+            LOGGER.info("[DIAGNOSTIC]   Original: {}", originalSpriteName);
+            LOGGER.info("[DIAGNOSTIC]   New: {}", newSpriteName);
+            LOGGER.info("[DIAGNOSTIC]   Rotation: {}", rotation);
+            LOGGER.info("[DIAGNOSTIC]   Direction: {}", originalQuad.getDirection());
+        }
 
 
         int[] newVertices = transformVertexData(originalVertices, originalSprite, newSprite, rotation);
@@ -774,15 +792,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
 
-    /**
-     * Applies +90° rotation offset to compensate for toggle texture faces' built-in 270° rotation in the model JSON.
-     * This ensures users get intuitive rotation control where NORMAL appears as expected.
-     * Mapping:
-     * - User selects NORMAL (0°) → Apply RIGHT (90°) → Total: 270° + 90° = 360° = 0° (appears normal)
-     * - User selects RIGHT (90°) → Apply INVERT (180°) → Total: 270° + 180° = 450° = 90°
-     * - User selects INVERT (180°) → Apply LEFT (-90°) → Total: 270° - 90° = 180°  
-     * - User selects LEFT (-90°) → Apply NORMAL (0°) → Total: 270° + 0° = 270° = -90°
-     */
+    /** Applies +90° rotation offset to compensate for toggle texture faces' built-in 270° rotation in model JSON for intuitive rotation control. */
     @Nonnull
     private TextureRotation compensateToggleRotation(@Nonnull TextureRotation userRotation) {
         return switch (userRotation) {
@@ -793,9 +803,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         };
     }
 
-    /**
-     * Identifies lever moving parts for toggle texture.
-     */
+    /** Identifies lever moving parts for toggle texture replacement. */
     private boolean isLeverMovingPart(@Nonnull String originalTextureName) {
 
         if (isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName)) {
@@ -812,9 +820,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 !originalTextureName.contains("iron"));
     }
 
-    /**
-     * Identifies lever base parts for base texture.
-     */
+    /** Identifies lever base parts for base texture replacement. */
     private boolean isLeverBasePart(@Nonnull String originalTextureName) {
 
         if (isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName)) {
@@ -835,14 +841,43 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return spriteNameCache.computeIfAbsent(sprite, this::computeSpriteName);
     }
     
-    /** Computes sprite name by opening contents resource. */
+    /** Computes sprite name using reflection to avoid calling sprite.contents() which prevents crashes for animated textures. */
     @Nonnull
     private String computeSpriteName(@Nonnull TextureAtlasSprite sprite) {
-        try (var contents = sprite.contents()) {
-            return contents.name().toString();
-        } catch (Exception e) {
-            return "unknown";
+        String spriteName = null;
+        
+        // APPROACH 1: Try reflection first (safest for animated textures)
+        if (spriteContentsField != null && contentsNameField != null) {
+            try {
+                // Get contents object via reflection (doesn't call contents() method)
+                Object contentsObj = spriteContentsField.get(sprite);
+                if (contentsObj != null) {
+                    // Get name ResourceLocation from contents
+                    Object nameObj = contentsNameField.get(contentsObj);
+                    if (nameObj instanceof ResourceLocation name) {
+                        spriteName = name.toString();
+                    }
+                }
+            } catch (Exception e) {
+                // Reflection failed, try fallback
+            }
         }
+        
+        // APPROACH 2: Fallback to sprite.contents() with exception handling
+        if (spriteName == null) {
+            try {
+                // WARNING: This can crash for animated textures if image is deallocated
+                @SuppressWarnings("resource") // Must NOT close - managed by Minecraft
+                var contents = sprite.contents();
+                ResourceLocation name = contents.name();
+                spriteName = name.toString();
+            } catch (Exception e) {
+                // Image not allocated (animated texture) or any other error accessing sprite data
+                spriteName = "unknown";
+            }
+        }
+        
+        return spriteName;
     }
     
     @Nonnull
@@ -869,61 +904,116 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return resourceLocationCache.computeIfAbsent(path, ResourceLocation::new);
     }
     
-    /**
-     * Gets texture sprite from path string.
-     */
+    /** Checks if texture path is a lever default texture which uses limited textureSprites map for performance. */
+    private boolean isLeverDefaultTexture(@Nonnull String texturePath) {
+        return texturePath.contains("lever") || 
+               texturePath.contains("oak_planks") ||
+               texturePath.contains("cobblestone") ||
+               texturePath.contains("redstone_block") ||
+               texturePath.contains("gray_concrete_powder") ||
+               texturePath.contains("lime_concrete_powder");
+    }
+    
+    /** Gets texture sprite from path using optimized lookup strategy checking custom texture cache, lever defaults map, then full texture atlas. */
     @Nullable
     private TextureAtlasSprite getTextureSprite(@Nullable String texturePath) {
         if (texturePath == null || texturePath.isEmpty()) {
             return null;
         }
         
-        try {
-
-            ResourceLocation textureLocation = getCachedResourceLocation(texturePath);
-
-            for (TextureAtlasSprite sprite : textureSprites.values()) {
-                try (var contents = sprite.contents()) {
-                    if (contents.name().equals(textureLocation)) {
-                        return sprite;
-                    }
-                } catch (Exception e) {
-                    // Continue checking other sprites
-                }
-            }
-
-            TextureAtlasSprite directSprite = textureSprites.get(texturePath);
-            if (directSprite != null) {
-                return directSprite;
-            }
-
-            String simplifiedKey = textureLocation.getPath().replace("/", "_");
-            TextureAtlasSprite simplifiedSprite = textureSprites.get(simplifiedKey);
-            if (simplifiedSprite != null) {
-                return simplifiedSprite;
-            }
-
-            net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-            try {
-                TextureAtlasSprite atlasSprite = minecraft.getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
-                    .apply(textureLocation);
-                if (atlasSprite != null) {
-                    return atlasSprite;
-                }
-            } catch (Exception atlasException) {
-                // Ignore exception
-            }
-            
-        } catch (Exception e) {
-            // Ignore exception
+        // DIAGNOSTIC LOGGING - Track glazed terracotta texture lookups
+        boolean isGlazedTerracotta = texturePath.contains("glazed_terracotta");
+        if (isGlazedTerracotta) {
+            LOGGER.info("[DIAGNOSTIC] Looking up glazed terracotta texture: {}", texturePath);
+            LOGGER.info("[DIAGNOSTIC] textureSprites map size: {}", textureSprites.size());
+            LOGGER.info("[DIAGNOSTIC] Custom texture cache size: {}", CUSTOM_TEXTURE_CACHE.size());
         }
         
-        return null;
+        // Check custom texture cache first (fastest for repeated custom blocks)
+        TextureAtlasSprite cached = CUSTOM_TEXTURE_CACHE.get(texturePath);
+        if (cached != null) {
+            return cached;
+        }
+        
+        try {
+            ResourceLocation textureLocation = getCachedResourceLocation(texturePath);
+            TextureAtlasSprite sprite = null;
+            
+            // For lever default textures, use the limited textureSprites map (optimization)
+            if (isLeverDefaultTexture(texturePath)) {
+                // Try textureSprites map by contents
+                // CRITICAL: Never close sprite contents - causes animated texture crashes
+                for (TextureAtlasSprite candidateSprite : textureSprites.values()) {
+                    try {
+                        @SuppressWarnings("resource") // Must NOT close - managed by Minecraft
+                        var contents = candidateSprite.contents();
+                        if (contents.name().equals(textureLocation)) {
+                            sprite = candidateSprite;
+                            break;
+                        }
+                    } catch (Exception e) {
+                        // Continue checking other sprites
+                    }
+                }
+                
+                // Try direct key lookup
+                if (sprite == null) {
+                    sprite = textureSprites.get(texturePath);
+                }
+                
+                // Try simplified key
+                if (sprite == null) {
+                    String simplifiedKey = textureLocation.getPath().replace("/", "_");
+                    sprite = textureSprites.get(simplifiedKey);
+                }
+            }
+            
+            // For custom block textures OR if lever lookup failed, use full texture atlas
+            // This ensures compatibility with ALL blocks (vanilla + modded)
+            if (sprite == null) {
+                net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+                try {
+                    sprite = minecraft.getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
+                        .apply(textureLocation);
+                    
+                    // Verify sprite is valid (not missing texture)
+                    if (sprite != null) {
+                        String spriteName = getCachedSpriteName(sprite);
+                        if (spriteName.contains("missingno")) {
+                            sprite = null; // Invalid sprite, don't cache
+                        }
+                    }
+                } catch (Exception atlasException) {
+                    LOGGER.debug("Failed to get texture from atlas: {}", texturePath, atlasException);
+                    sprite = null;
+                }
+            }
+            
+            // Cache the result (even if null, to avoid repeated failed lookups)
+            if (sprite != null && !isLeverDefaultTexture(texturePath)) {
+                CUSTOM_TEXTURE_CACHE.put(texturePath, sprite);
+            }
+            
+            // DIAGNOSTIC LOGGING - Report lookup result for glazed terracotta
+            if (isGlazedTerracotta) {
+                if (sprite != null) {
+                    String spriteName = getCachedSpriteName(sprite);
+                    LOGGER.info("[DIAGNOSTIC] Successfully found sprite: {}", spriteName);
+                    LOGGER.info("[DIAGNOSTIC] Sprite is valid: {}", !spriteName.contains("missingno"));
+                } else {
+                    LOGGER.warn("[DIAGNOSTIC] Failed to find sprite for: {}", texturePath);
+                }
+            }
+            
+            return sprite;
+            
+        } catch (Exception e) {
+            LOGGER.debug("Exception getting texture sprite: {}", texturePath, e);
+            return null;
+        }
     }
 
-    /**
-     * Creates cache key from rendering parameters.
-     */
+    /** Creates cache key from rendering parameters including textures, power mode, rotations, and ghost mode. */
     @Nonnull
     private ModelCacheKey createCacheKey(@Nullable BlockState state, @Nullable Direction side,
                                         @Nonnull ModelData extraData, @Nullable RenderType renderType) {
@@ -973,20 +1063,14 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     }
 
 
-    /**
-     * Performs LRU-based cache cleanup when cache exceeds size limit.
-     */
+    /** Performs LRU-based cache cleanup when cache exceeds size limit. */
     private static void cleanupGlobalCache() {
         if (GLOBAL_CACHE.size() > MAX_CACHE_SIZE) {
             performLRUEviction();
         }
     }
     
-    /**
-     * Performs weighted LRU eviction to reduce cache to 80% of max size.
-     * Uses eviction score (access frequency + recency) to retain frequently-used entries.
-     * Higher eviction score = higher priority to keep in cache.
-     */
+    /** Performs weighted LRU eviction to reduce cache to 80% of max size using eviction score based on access frequency and recency. */
     private static void performLRUEviction() {
         int targetSize = (int) (MAX_CACHE_SIZE * 0.8); // Reduce to 80% capacity
         int toRemove = GLOBAL_CACHE.size() - targetSize;
@@ -1008,10 +1092,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             });
     }
     
-    /**
-     * Estimates cache memory usage in bytes.
-     * Provides approximate memory footprint for monitoring.
-     */
+    /** Estimates cache memory usage in bytes for monitoring purposes. */
     private static long estimateCacheMemoryUsage() {
         long totalBytes = 0;
         
@@ -1033,9 +1114,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return totalBytes;
     }
     
-    /**
-     * Logs cache statistics for performance monitoring.
-     */
+    /** Logs cache statistics for performance monitoring. */
     private static void logCacheStatistics() {
         long hits = cacheHits.get();
         long misses = cacheMisses.get();
@@ -1043,14 +1122,14 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         long total = hits + misses;
         
         if (total > 0) {
-            double hitRate = (hits * 100.0) / total;
-            long memoryBytes = estimateCacheMemoryUsage();
-            double memoryMB = memoryBytes / (1024.0 * 1024.0);
-            
-            LOGGER.info(
-                "Cache Statistics - Size: {}/{}, Memory: {:.2f}MB, Hits: {}, Misses: {}, Hit Rate: {:.2f}%, Evictions: {}",
-                GLOBAL_CACHE.size(), MAX_CACHE_SIZE, memoryMB, hits, misses, hitRate, evictions
-            );
+        double hitRate = (hits * 100.0) / total;
+        long memoryBytes = estimateCacheMemoryUsage();
+        double memoryMB = memoryBytes / (1024.0 * 1024.0);
+        
+        LOGGER.info(
+        "Cache Statistics - Size: {}/{}, Memory: {}MB, Hits: {}, Misses: {}, Hit Rate: {}%, Evictions: {}",
+        GLOBAL_CACHE.size(), MAX_CACHE_SIZE, String.format("%.2f", memoryMB), hits, misses, String.format("%.2f", hitRate), evictions
+        );
             LOGGER.info(
                 "  ID Maps - Textures: {}, BlockStates: {}",
                 TEXTURE_ID_MAP.size(), BLOCKSTATE_ID_MAP.size()
@@ -1062,12 +1141,10 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                     e2.getValue().getAccessCount(),
                     e1.getValue().getAccessCount()))
                 .limit(5)
-                .forEach(entry -> {
-                    LOGGER.debug(
-                        "  Top cached config: {} (accessed {} times)",
-                        entry.getKey().toString(), entry.getValue().getAccessCount()
-                    );
-                });
+                .forEach(entry -> LOGGER.debug(
+                    "  Top cached config: {} (accessed {} times)",
+                    entry.getKey().toString(), entry.getValue().getAccessCount()
+                ));
         }
     }
 
@@ -1112,10 +1189,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return itemOverrides;
     }
 
-    /**
-     * Optimized cache key using integer IDs and bitpacked flags for memory efficiency.
-     * Reduces memory footprint from ~200+ bytes to ~48 bytes per key.
-     */
+    /** Optimized cache key using integer IDs and bitpacked flags reducing memory footprint from 200+ bytes to 48 bytes per key. */
     private static class ModelCacheKey {
         private final int blockStateId;
         private final Direction side;
