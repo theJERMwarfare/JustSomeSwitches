@@ -13,54 +13,58 @@ import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nonnull;
 
-/** Main screen for switch texture customization GUI coordinating TexturePreviewRenderer, DropdownManager, and FaceSelectionHandler components for real-time previews. */
+/**
+ * Main screen for switch texture customization GUI.
+ * Coordinates TexturePreviewRenderer, DropdownManager, and FaceSelectionHandler components
+ * to provide real-time 2D/3D previews and interactive texture selection.
+ */
 public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextureMenu> {
 
     private static final int GUI_WIDTH = 176;
-    private static final int GUI_HEIGHT = 186;
+    private static final int GUI_HEIGHT = 176;
 
     private static final ResourceLocation GUI_BACKGROUND = new ResourceLocation("justsomeswitches", "textures/gui/switch_texture_gui.png");
 
     // 3D Preview
     private static final int PREVIEW_CENTER_X = 81;
-    private static final int PREVIEW_CENTER_Y = 40;
+    private static final int PREVIEW_CENTER_Y = 39;
 
     // Face selection dropdowns
     private static final int LEFT_FACE_X = 11;
-    private static final int LEFT_FACE_Y = 55;
+    private static final int LEFT_FACE_Y = 50;
     private static final int RIGHT_FACE_X = 119;
-    private static final int RIGHT_FACE_Y = 55;
+    private static final int RIGHT_FACE_Y = 50;
     private static final int FACE_DROPDOWN_HEIGHT = 12;
 
     // Rotation dropdowns
     private static final int LEFT_ROTATION_X = 26;
-    private static final int LEFT_ROTATION_Y = 73;
+    private static final int LEFT_ROTATION_Y = 65;
     private static final int RIGHT_ROTATION_X = 119;
-    private static final int RIGHT_ROTATION_Y = 73;
+    private static final int RIGHT_ROTATION_Y = 65;
     private static final int ROTATION_DROPDOWN_HEIGHT = 12;
 
     // Texture previews
-    private static final int LEFT_PREVIEW_X = 37;
-    private static final int LEFT_PREVIEW_Y = 30;
-    private static final int RIGHT_PREVIEW_X = 121;
-    private static final int RIGHT_PREVIEW_Y = 30;
+    private static final int LEFT_PREVIEW_X = 36;
+    private static final int LEFT_PREVIEW_Y = 28;
+    private static final int RIGHT_PREVIEW_X = 122;
+    private static final int RIGHT_PREVIEW_Y = 28;
 
     // Power dropdown
     private static final int POWER_DROPDOWN_X = 65;
-    private static final int POWER_DROPDOWN_Y = 55;
+    private static final int POWER_DROPDOWN_Y = 50;
     private static final int POWER_DROPDOWN_HEIGHT = 12;
 
     // Power previews
     private static final int UNPOWERED_PREVIEW_X = 64;
-    private static final int UNPOWERED_PREVIEW_Y = 71;
+    private static final int UNPOWERED_PREVIEW_Y = 64;
     private static final int POWERED_PREVIEW_X = 69;
-    private static final int POWERED_PREVIEW_Y = 81;
+    private static final int POWERED_PREVIEW_Y = 73;
 
     // Power labels
     private static final int UNPOWERED_LABEL_X = 73;
-    private static final int UNPOWERED_LABEL_Y = 72;
+    private static final int UNPOWERED_LABEL_Y = 64;
     private static final int POWERED_LABEL_X = 78;
-    private static final int POWERED_LABEL_Y = 81;
+    private static final int POWERED_LABEL_Y = 73;
 
 
 
@@ -74,7 +78,7 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
     // Component for handling all preview rendering
     private final TexturePreviewRenderer previewRenderer;
 
-    /** Creates new switch texture customization screen. */
+    /** Creates a new switch texture customization screen. */
     public SwitchesTextureScreen(@Nonnull SwitchesTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
 
@@ -84,7 +88,7 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
         this.titleLabelX = 8;
         this.titleLabelY = 10;
         this.inventoryLabelX = 8;
-        this.inventoryLabelY = 96;
+        this.inventoryLabelY = 86;
 
         // Initialize preview renderer component
         this.previewRenderer = new TexturePreviewRenderer(menu, this.font);
@@ -92,7 +96,7 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
     
     // Note: Preview rendering methods moved to TexturePreviewRenderer component
 
-    /** Initializes screen components with critical ordering: DropdownManager requires Font, FaceSelectionHandler depends on DropdownManager. */
+    /** Initializes screen components. Order is critical: DropdownManager requires Font from super.init(), FaceSelectionHandler depends on DropdownManager. */
     @Override
     protected void init() {
         super.init();
@@ -147,14 +151,18 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
 
 
 
-    /** Handles mouse hover detection allowing normal hover even with dropdowns open. */
+    /**
+     * Handles mouse hover detection - allows normal hover even with dropdowns open.
+     */
     @Override
     public boolean isMouseOver(double mouseX, double mouseY) {
         // Allow normal hover detection
         return super.isMouseOver(mouseX, mouseY);
     }
     
-    /** Prevents slot clicking when dropdowns are open. */
+    /**
+     * Prevents slot clicking when dropdowns are open.
+     */
     @Override 
     protected void slotClicked(@Nonnull net.minecraft.world.inventory.Slot slot, int slotId, int mouseButton, @Nonnull net.minecraft.world.inventory.ClickType type) {
         // Block slot clicks when any dropdown is open
@@ -164,7 +172,7 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
         super.slotClicked(slot, slotId, mouseButton, type);
     }
     
-    /** Handles mouse click events for dropdown interactions with critical priority to intercept clicks before parent class. */
+    /** Handles mouse click events for dropdown interactions. CRITICAL: Intercepts clicks before parent class processing. */
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         // Only process left-click (button 0) for dropdown interactions
@@ -258,7 +266,10 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
 
 
 
-    /** Renders background layer including GUI texture, 3D preview, dropdowns, power elements, and 2D previews with proper z-level layering. */
+    /**
+     * Renders background layer: GUI texture, 3D preview, dropdowns, power elements, and 2D previews.
+     * Order matters for proper z-level layering.
+     */
     @Override
     protected void renderBg(@Nonnull GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int guiLeft = (this.width - this.imageWidth) / 2;
@@ -313,7 +324,7 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
 
     // Note: 2D texture preview methods moved to TexturePreviewRenderer
 
-    /** Renders entire screen with dropdown popups overlaid for proper z-ordering and tooltips suppressed when dropdowns are open. */
+    /** Renders entire screen with dropdown popups overlaid for proper z-ordering. Tooltips are suppressed when dropdowns are open. */
     @Override
     public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // ALWAYS render the base screen with container slots
@@ -374,14 +385,12 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
 
     // Note: Power texture preview methods moved to TexturePreviewRenderer component
 
-    /** Draws Unpowered and Powered labels at 75% scale. */
+    /** Draws "Unpowered" and "Powered" labels at 75% scale. */
     private void drawPowerLabels(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        // Draw "Unpowered" label with 75% scale and 0.5px upward adjustment
+        // Draw "Unpowered" label with 75% scale
         graphics.pose().pushPose();
         graphics.pose().scale(0.75f, 0.75f, 1.0f);
-        float unpoweredX = (guiLeft + UNPOWERED_LABEL_X) / 0.75f;
-        float unpoweredY = (guiTop + UNPOWERED_LABEL_Y) / 0.75f - (0.5f / 0.75f);
-        graphics.drawString(this.font, "Unpowered", unpoweredX, unpoweredY, 0xFF404040, false);
+        graphics.drawString(this.font, "Unpowered", (int)((guiLeft + UNPOWERED_LABEL_X) / 0.75f), (int)((guiTop + UNPOWERED_LABEL_Y) / 0.75f), 0xFF404040, false);
         graphics.pose().popPose();
         
         // Draw "Powered" label with 75% scale

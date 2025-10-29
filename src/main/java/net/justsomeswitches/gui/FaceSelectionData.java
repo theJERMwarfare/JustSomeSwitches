@@ -12,13 +12,13 @@ import java.util.stream.Collectors;
 /** Modern face selection system using Java 17+ records and streams. */
 public class FaceSelectionData {
 
-    /** Record for priority configuration with immutable default order. */
+    /** Record for priority configuration with immutability. */
     public record PriorityConfig(List<String> defaultOrder) {
         public PriorityConfig {
             defaultOrder = List.copyOf(defaultOrder);
         }
 
-        /** Default priority configuration for texture variable selection ordered by frequency. */
+        /** Default priority configuration for texture variable selection. */
         public static final PriorityConfig DEFAULT = new PriorityConfig(
                 List.of("side", "north", "front", "top", "end", "south", "east", "west", "bottom", "back", "down", "up")
         );
@@ -26,7 +26,7 @@ public class FaceSelectionData {
 
     private static final PriorityConfig PRIORITY_CONFIG = PriorityConfig.DEFAULT;
 
-    /** Record for raw texture selection with immutability guaranteeing thread-safe access to texture data. */
+    /** Record for raw texture selection with immutability and type safety. */
     public record RawTextureSelection(
             boolean enabled,
             @Nonnull List<String> availableVariables,
@@ -34,13 +34,13 @@ public class FaceSelectionData {
             @Nullable String previewTexture,
             @Nonnull ItemStack sourceBlock
     ) {
-        /** Compact constructor with defensive copying for immutability. */
+        /** Compact constructor with defensive copying. */
         public RawTextureSelection {
             availableVariables = List.copyOf(availableVariables);
             sourceBlock = sourceBlock.copy();
         }
 
-        /** Creates disabled selection with empty configuration. */
+        /** Creates disabled selection. */
         public static RawTextureSelection createDisabled() {
             return new RawTextureSelection(false, List.of("all"), "all", null, ItemStack.EMPTY);
         }
@@ -74,7 +74,7 @@ public class FaceSelectionData {
             return availableVariables.isEmpty() ? "all" : availableVariables.get(0);
         }
 
-        /** Returns texture path for selected variable with fallback to 'all'. */
+        /** Returns texture path for the selected variable. */
         @SuppressWarnings("unused") // Public API method
         @Nullable
         public String getTextureForVariable(@Nonnull String variable) {
@@ -82,21 +82,14 @@ public class FaceSelectionData {
 
             try {
                 var blockInfo = DynamicBlockModelAnalyzer.analyzeBlockDynamically(sourceBlock);
-                String texture = blockInfo.getTextureForVariable(variable);
-                
-                // NEW: If variable not found, try "all" as fallback
-                if (texture == null && !variable.equals("all")) {
-                    texture = blockInfo.getTextureForVariable("all");
-                }
-                
-                return texture;
+                return blockInfo.getTextureForVariable(variable);
             } catch (Exception e) {
                 return null;
             }
         }
     }
 
-    /** Creates raw texture selection using stream processing with intelligent defaults. */
+    /** Creates raw texture selection using stream processing. */
     @Nonnull
     public static RawTextureSelection createRawTextureSelection(@Nonnull ItemStack itemStack,
                                                                 @Nonnull String currentSelection) {
@@ -180,6 +173,7 @@ public class FaceSelectionData {
 
     /** @deprecated Use RawTextureSelection record instead. */
     @Deprecated
+    @SuppressWarnings("DeprecatedIsStillUsed") // Legacy compatibility
     public static class DropdownState {
         private final RawTextureSelection rawSelection;
 
@@ -209,7 +203,7 @@ public class FaceSelectionData {
         return new DropdownState(RawTextureSelection.createDisabled());
     }
 
-    /** Record for validation results with error message and optional suggestion. */
+    /** Record for validation results with error information. */
     public record ValidationResult(
             boolean isValid,
             @Nonnull String message,
@@ -217,6 +211,7 @@ public class FaceSelectionData {
     ) {
         public ValidationResult {
             message = Objects.requireNonNull(message, "Validation message cannot be null");
+            suggestion = Objects.requireNonNull(suggestion, "Suggestion optional cannot be null");
         }
 
         /** Creates successful validation result. */
@@ -250,7 +245,7 @@ public class FaceSelectionData {
         return ValidationResult.success();
     }
 
-    /** Record for selection statistics with performance metrics for analytics. */
+    /** Record for selection statistics with performance metrics. */
     @SuppressWarnings("unused") // Future analytics feature
     public record SelectionStats(
             int totalSelections,
@@ -261,7 +256,7 @@ public class FaceSelectionData {
             variableUsage = Map.copyOf(variableUsage);
         }
 
-        /** Returns most commonly used variable from statistics. */
+        /** Returns most commonly used variable. */
         @SuppressWarnings("unused") // Future analytics feature
         @Nonnull
         public Optional<String> getMostUsedVariable() {

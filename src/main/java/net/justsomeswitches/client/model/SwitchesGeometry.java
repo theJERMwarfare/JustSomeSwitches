@@ -14,6 +14,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.client.model.geometry.IGeometryBakingContext;
 import net.neoforged.neoforge.client.model.geometry.IUnbakedGeometry;
+import org.joml.Matrix4f;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -27,17 +29,23 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
     private final Map<String, String> baseTextures;
     private final Map<String, String> toggleTextures;
     private final Map<String, String> powerTextures;
+    private final Map<String, SwitchesGeometryLoader.WallOrientationData> orientationTransforms;
+    private final Map<String, String> jsonVariables;
     private final SwitchesGeometryLoader.PowerModeConfig powerModeConfig;
     private final String baseModelLocation;
 
     public SwitchesGeometry(@Nonnull Map<String, String> baseTextures,
                          @Nonnull Map<String, String> toggleTextures,
                          @Nonnull Map<String, String> powerTextures,
+                         @Nonnull Map<String, SwitchesGeometryLoader.WallOrientationData> orientationTransforms,
+                         @Nonnull Map<String, String> jsonVariables,
                          @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
                          @Nonnull String baseModelLocation) {
         this.baseTextures = new HashMap<>(baseTextures);
         this.toggleTextures = new HashMap<>(toggleTextures);
         this.powerTextures = new HashMap<>(powerTextures);
+        this.orientationTransforms = new HashMap<>(orientationTransforms);
+        this.jsonVariables = new HashMap<>(jsonVariables);
         this.powerModeConfig = powerModeConfig;
         this.baseModelLocation = baseModelLocation;
     }
@@ -51,9 +59,13 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
                           @Nonnull ItemOverrides overrides,
                           @Nonnull ResourceLocation modelLocation) {
         Map<String, TextureAtlasSprite> resolvedSprites = resolveAllTextures(spriteGetter);
+        Map<String, Matrix4f> bakedTransforms = bakeOrientationTransforms();
         BakedModel baseCustomModel = getCustomBaseModel(baker, modelState, spriteGetter);
         return new SwitchesLeverDynamicModel(
                 resolvedSprites,
+                bakedTransforms,
+                jsonVariables,
+                powerModeConfig,
                 baseCustomModel,
                 overrides
         );
@@ -104,6 +116,30 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
         resolvedSprites.put("alt_unpowered", spriteGetter.apply(altUnpoweredMaterial));
         resolvedSprites.put("alt_powered", spriteGetter.apply(altPoweredMaterial));
         return resolvedSprites;
+    }
+
+    /** Pre-calculates orientation transforms. */
+    @Nonnull
+    private Map<String, Matrix4f> bakeOrientationTransforms() {
+        Map<String, Matrix4f> bakedTransforms = new HashMap<>();
+        for (Map.Entry<String, SwitchesGeometryLoader.WallOrientationData> entry : orientationTransforms.entrySet()) {
+            String orientationName = entry.getKey();
+            SwitchesGeometryLoader.WallOrientationData data = entry.getValue();
+            Matrix4f transform = new Matrix4f();
+            transform.identity();
+            transform.translate(data.translationX, data.translationY, data.translationZ);
+            if (data.rotationX != 0) {
+                transform.rotateX((float) Math.toRadians(data.rotationX));
+            }
+            if (data.rotationY != 0) {
+                transform.rotateY((float) Math.toRadians(data.rotationY));
+            }
+            if (data.rotationZ != 0) {
+                transform.rotateZ((float) Math.toRadians(data.rotationZ));
+            }
+            bakedTransforms.put(orientationName, transform);
+        }
+        return bakedTransforms;
     }
 
     /** Gets the custom base model for geometry. */

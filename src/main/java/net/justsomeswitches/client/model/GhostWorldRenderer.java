@@ -62,12 +62,6 @@ public class GhostWorldRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             return;
         }
-        
-        // Check if ghost preview is enabled in config
-        if (!net.justsomeswitches.config.SwitchesClientConfig.SHOW_SWITCHES_PREVIEW.get()) {
-            return;
-        }
-        
         renderActiveGhostPreviews(event);
     }
 
@@ -232,7 +226,6 @@ public class GhostWorldRenderer {
                 }
             }
         } catch (Exception e) {
-            // Intentionally ignore UV extraction errors - safe default is false
         }
         return false;
     }

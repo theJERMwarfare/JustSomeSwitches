@@ -2,7 +2,6 @@ package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
 import net.justsomeswitches.network.NetworkHandler;
-import net.justsomeswitches.util.SwitchesBlockValidator;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -11,7 +10,11 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
@@ -19,8 +22,9 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-
-/** Texture customization menu for switches. */
+/**
+ * Texture customization menu for switches.
+ */
 public class SwitchesTextureMenu extends AbstractContainerMenu {
 
     private static final int TEXTURE_SLOT_COUNT = 2;
@@ -29,11 +33,11 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
 
     // GUI layout constants
     private static final int TOGGLE_SLOT_X = 13;
-    private static final int TOGGLE_SLOT_Y = 31;
+    private static final int TOGGLE_SLOT_Y = 29;
     private static final int BASE_SLOT_X = 147;
-    private static final int BASE_SLOT_Y = 31;
-    private static final int PLAYER_INV_Y = 108;
-    private static final int HOTBAR_Y = 166;
+    private static final int BASE_SLOT_Y = 29;
+    private static final int PLAYER_INV_Y = 98;
+    private static final int HOTBAR_Y = 156;
 
 
     private final ItemStackHandler textureItemHandler;
@@ -113,7 +117,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         this(containerId, playerInventory, extraData.readBlockPos());
     }
 
-    /** Toggle texture slot change handler with validation and analysis. */
+    /** Toggle texture category handler. */
     private void onToggleSlotChanged() {
         if (blockEntity == null) return;
 
@@ -148,7 +152,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         analyzeToggleBlock(toggleItem);
     }
 
-    /** Base texture slot change handler with validation and analysis. */
+    /** Base texture category handler. */
     private void onBaseSlotChanged() {
         if (blockEntity == null) return;
 
@@ -183,7 +187,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         analyzeBaseBlock(baseItem);
     }
 
-    /** Analyzes toggle block and sets intelligent default variable using priority ordering. */
+    /** Analyzes toggle block and sets intelligent default. */
     private void analyzeToggleBlock(@Nonnull ItemStack toggleItem) {
 
         blockEntity.setSyncSuppressed(true);
@@ -220,7 +224,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /** Analyzes base block and sets intelligent default variable using priority ordering. */
+    /** Analyzes base block and sets intelligent default. */
     private void analyzeBaseBlock(@Nonnull ItemStack baseItem) {
 
         blockEntity.setSyncSuppressed(true);
@@ -257,7 +261,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /** Handles toggle dropdown selection change with texture update. */
+    /** Handles toggle dropdown selection change. */
     public void setToggleTextureVariable(@Nonnull String variable) {
         if (blockEntity == null) return;
         
@@ -276,7 +280,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /** Handles base dropdown selection change with texture update. */
+    /** Handles base dropdown selection change. */
     public void setBaseTextureVariable(@Nonnull String variable) {
         if (blockEntity == null) return;
         
@@ -311,7 +315,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
     }
 
-    /** Handles power mode selection change with texture update. */
+    /** Handles power mode selection change. */
     public void setPowerMode(@Nonnull SwitchesLeverBlockEntity.PowerMode mode) {
         if (blockEntity == null) return;
         
@@ -332,7 +336,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return this.powerMode;
     }
 
-    /** Handles base texture rotation selection change with texture update. */
+    /** Handles base texture rotation selection change. */
     public void setBaseTextureRotation(@Nonnull TextureRotation rotation) {
         if (blockEntity == null) return;
         
@@ -353,7 +357,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return this.baseTextureRotation;
     }
 
-    /** Handles toggle texture rotation selection change with texture update. */
+    /** Handles toggle texture rotation selection change. */
     public void setToggleTextureRotation(@Nonnull TextureRotation rotation) {
         if (blockEntity == null) return;
         
@@ -411,7 +415,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
     }
 
-    /** Unified method for sending network updates on client or applying changes directly on server. */
+    /** Unified method for sending network updates or applying changes directly. */
     private void sendOrApplyUpdate(String category, String variable, String texturePath, Runnable serverAction) {
         if (level.isClientSide) {
             NetworkHandler.sendTextureVariableUpdate(blockPos, category, variable, texturePath);
@@ -484,9 +488,36 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
     }
 
 
-    /** Validates whether ItemStack can be used for texture customization using SwitchesBlockValidator. */
     private boolean isValidTextureItem(@Nonnull ItemStack stack) {
-        return SwitchesBlockValidator.isValidTextureItem(stack);
+        if (!(stack.getItem() instanceof BlockItem blockItem)) {
+            return false;
+        }
+
+        Block block = blockItem.getBlock();
+        BlockState state = block.defaultBlockState();
+
+
+        try {
+            VoxelShape shape = state.getShape(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+            var bounds = shape.bounds();
+            if (bounds.minX > 0.001 || bounds.minY > 0.001 || bounds.minZ > 0.001 ||
+                bounds.maxX < 0.999 || bounds.maxY < 0.999 || bounds.maxZ < 0.999) {
+                return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+
+
+        if (!state.canOcclude()) {
+            return false;
+        }
+
+
+        String blockName = block.getDescriptionId().toLowerCase();
+        return !blockName.contains("stairs") && !blockName.contains("slab") &&
+               !blockName.contains("fence") && !blockName.contains("door") &&
+               !blockName.contains("redstone") && !blockName.contains("glass");
     }
 
 

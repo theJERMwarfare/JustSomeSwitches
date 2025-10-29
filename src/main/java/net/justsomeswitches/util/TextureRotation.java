@@ -33,8 +33,8 @@ public enum TextureRotation {
         
         float[] result = switch (this) {
             case NORMAL -> new float[]{centeredU, centeredV};
-            case RIGHT -> new float[]{centeredV, -centeredU};  // 90° clockwise
-            case LEFT -> new float[]{-centeredV, centeredU};   // -90° counterclockwise
+            case RIGHT -> new float[]{-centeredV, centeredU};
+            case LEFT -> new float[]{centeredV, -centeredU};
             case INVERT -> new float[]{-centeredU, -centeredV};
         };
         
