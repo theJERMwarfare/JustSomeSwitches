@@ -1,6 +1,7 @@
 package net.justsomeswitches.client.model;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.tinting.OverlayLayer;
 import net.justsomeswitches.util.TextureRotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import org.joml.Matrix4f;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -211,9 +213,6 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 originalQuad.isShade()
         );
     }
-    private final Map<ModelCacheKey, List<BakedQuad>> instanceCache = new HashMap<>();
-
-
     // LRU cache implementation with configurable size (optimized for modpack environments)
     private static final int DEFAULT_CACHE_SIZE = 2000; // Optimized from 5000 for memory efficiency
     private static final int MAX_CACHE_SIZE = getConfiguredCacheSize();
@@ -241,6 +240,8 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     private final Map<TextureAtlasSprite, String> spriteNameCache = new ConcurrentHashMap<>();
     /** Cached ResourceLocation objects to reduce allocations. Thread-safe for concurrent rendering. */
     private final Map<String, ResourceLocation> resourceLocationCache = new ConcurrentHashMap<>();
+    /** Tracks overlay diagnostic logging to avoid log spam (one message per unique texture). */
+    private final java.util.Set<String> overlayDiagnosticLogged = ConcurrentHashMap.newKeySet();
 
     // Cache performance tracking
     private static final java.util.concurrent.atomic.AtomicInteger cacheOperations = 
@@ -290,36 +291,24 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     private static class CacheEntry {
         private final List<BakedQuad> quads;
         private volatile long lastAccessTime;
-        private volatile int accessCount;
-        
+        private final java.util.concurrent.atomic.AtomicInteger accessCount;
         public CacheEntry(List<BakedQuad> quads) {
             this.quads = quads;
             this.lastAccessTime = System.currentTimeMillis();
-            this.accessCount = 1;
+            this.accessCount = new java.util.concurrent.atomic.AtomicInteger(1);
         }
-        
         public List<BakedQuad> getQuads() {
             this.lastAccessTime = System.currentTimeMillis();
-            this.accessCount++;
+            this.accessCount.incrementAndGet();
             return quads;
         }
-        
-        public long getLastAccessTime() {
-            return lastAccessTime;
-        }
-        
         public int getAccessCount() {
-            return accessCount;
+            return accessCount.get();
         }
-        
-        /**
-         * Calculates weighted eviction score.
-         * Higher score = higher priority to keep in cache.
-         * Formula: (accessCount * 1000) - age_in_ms
-         */
+        /** Weighted eviction score: higher = higher priority to keep. */
         public long getEvictionScore() {
             long ageMs = System.currentTimeMillis() - lastAccessTime;
-            return (accessCount * 1000L) - ageMs;
+            return (accessCount.get() * 1000L) - ageMs;
         }
     }
 
@@ -334,6 +323,33 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         this.vanillaLeverModel = vanillaLeverModel;
         this.itemOverrides = itemOverrides;
     }
+    /**
+     * Calculates Z-offset for overlay layer to prevent z-fighting.
+     */
+    private static float calculateZOffset(int order) {
+        return order * 0.0001f;
+    }
+    
+    /**
+     * Gets TextureAtlasSprite for a ResourceLocation.
+     */
+    @SuppressWarnings("resource") // SpriteContents owned by atlas, not our responsibility to close
+    @Nonnull
+    private TextureAtlasSprite getAtlasSprite(@Nonnull ResourceLocation spriteLocation) {
+        net.minecraft.client.renderer.texture.TextureAtlas atlas = 
+            net.minecraft.client.Minecraft.getInstance()
+                .getModelManager()
+                .getAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS);
+        TextureAtlasSprite sprite = atlas.getSprite(spriteLocation);
+        // atlas.getSprite() never returns null; check for missing texture placeholder
+        if (sprite.contents().name().equals(
+                net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation())) {
+            sprite = atlas.getSprite(
+                net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
+        }
+        return sprite;
+    }
+    
     /**
      * Validates ModelData before rendering.
      */
@@ -366,8 +382,6 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
         ModelCacheKey cacheKey = createCacheKey(state, side, extraData, renderType);
-
-
         List<BakedQuad> cachedQuads = getCachedQuads(cacheKey);
         if (cachedQuads != null) {
             return cachedQuads;
@@ -377,7 +391,6 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         cacheGeneratedQuads(cacheKey, generatedQuads);
 
         // Periodic cache cleanup and statistics logging
-        @SuppressWarnings("NonAtomicOperationOnVolatileField") // Intentional - approximate periodic check
         int ops = cacheOperations.incrementAndGet();
         if (ops % 1000 == 0) {
             cleanupGlobalCache();
@@ -400,32 +413,17 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
      */
     @Nullable
     private List<BakedQuad> getCachedQuads(@Nonnull ModelCacheKey key) {
-
-        List<BakedQuad> cached = instanceCache.get(key);
-        if (cached != null) {
-            return cached;
-        }
-
-
-
         CacheEntry entry = GLOBAL_CACHE.get(key);
         if (entry != null) {
             cacheHits.incrementAndGet();
-            cached = entry.getQuads();
-            instanceCache.put(key, cached);
-            return cached;
+            return entry.getQuads();
         }
-        
         cacheMisses.incrementAndGet();
         return null;
     }
 
 
     private void cacheGeneratedQuads(@Nonnull ModelCacheKey key, @Nonnull List<BakedQuad> quads) {
-
-        instanceCache.put(key, quads);
-
-
         if (isCommonConfiguration(key)) {
             // Check cache size before adding
             if (GLOBAL_CACHE.size() >= MAX_CACHE_SIZE) {
@@ -491,7 +489,9 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
         List<BakedQuad> texturedQuads = baseQuads;
         if (hasTextureData) {
-            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData);
+            // Get overlay data for texture application
+            Map<Direction, List<OverlayLayer>> overlayData = extraData.get(SwitchesLeverBlockEntity.OVERLAY_DATA);
+            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData, overlayData);
         }
 
         if (state != null && isWallPlacement(state) && extraData != ModelData.EMPTY) {
@@ -499,6 +499,70 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         }
 
         return texturedQuads;
+    }
+    
+    /**
+     * Builds a BakedQuad with Z-offset applied to prevent z-fighting.
+     */
+    @Nonnull
+    private BakedQuad buildQuadWithZOffset(@Nonnull BakedQuad templateQuad,
+                                          @Nonnull TextureAtlasSprite sprite,
+                                          int tintIndex,
+                                          float zOffset) {
+        int[] originalVertices = templateQuad.getVertices();
+        int[] newVertices = new int[originalVertices.length];
+        System.arraycopy(originalVertices, 0, newVertices, 0, originalVertices.length);
+        
+        Direction face = templateQuad.getDirection();
+        // Apply Z-offset along face normal
+        for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
+            int baseIndex = vertexIndex * 8;
+            float x = Float.intBitsToFloat(originalVertices[baseIndex]);
+            float y = Float.intBitsToFloat(originalVertices[baseIndex + 1]);
+            float z = Float.intBitsToFloat(originalVertices[baseIndex + 2]);
+            
+            // Apply offset along face normal
+            switch (face) {
+                case UP -> y += zOffset;
+                case DOWN -> y -= zOffset;
+                case NORTH -> z -= zOffset;
+                case SOUTH -> z += zOffset;
+                case WEST -> x -= zOffset;
+                case EAST -> x += zOffset;
+            }
+            
+            newVertices[baseIndex] = Float.floatToIntBits(x);
+            newVertices[baseIndex + 1] = Float.floatToIntBits(y);
+            newVertices[baseIndex + 2] = Float.floatToIntBits(z);
+        }
+        
+        // Update texture coordinates for new sprite
+        TextureAtlasSprite originalSprite = templateQuad.getSprite();
+        for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
+            int baseIndex = vertexIndex * 8;
+            
+            float originalU = Float.intBitsToFloat(originalVertices[baseIndex + 4]);
+            float originalV = Float.intBitsToFloat(originalVertices[baseIndex + 5]);
+            
+            // Convert to relative coordinates
+            float relativeU = (originalU - originalSprite.getU0()) / (originalSprite.getU1() - originalSprite.getU0());
+            float relativeV = (originalV - originalSprite.getV0()) / (originalSprite.getV1() - originalSprite.getV0());
+            
+            // Convert to new texture space
+            float newU = sprite.getU0() + relativeU * (sprite.getU1() - sprite.getU0());
+            float newV = sprite.getV0() + relativeV * (sprite.getV1() - sprite.getV0());
+            
+            newVertices[baseIndex + 4] = Float.floatToIntBits(newU);
+            newVertices[baseIndex + 5] = Float.floatToIntBits(newV);
+        }
+        
+        return new BakedQuad(
+            newVertices,
+            tintIndex,
+            face,
+            sprite,
+            templateQuad.isShade()
+        );
     }
     
     /**
@@ -536,7 +600,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
     /**
-     * Applies custom texture replacement to quads.
+     * Applies custom texture replacement to quads with overlay support.
      */
     @Nonnull
     private List<BakedQuad> applyCustomTextures(@Nonnull List<BakedQuad> baseQuads, 
@@ -545,16 +609,96 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                                @Nullable String faceSelection,
                                                @Nullable String powerMode,
                                                @Nullable BlockState state,
-                                               @Nonnull ModelData extraData) {
+                                               @Nonnull ModelData extraData,
+                                               @Nullable Map<Direction, List<OverlayLayer>> overlayData) {
         
+        // Get tintIndex from ModelData (same tintIndex for both toggle and base parts)
+        Integer tintIndexObj = extraData.get(SwitchesLeverBlockEntity.TINT_INDEX);
+        int tintIndex = (tintIndexObj != null) ? tintIndexObj : -1;
         List<BakedQuad> texturedQuads = new ArrayList<>();
         for (BakedQuad quad : baseQuads) {
-            BakedQuad processedQuad = processQuadWithCustomTextures(quad, toggleTexture, baseTexture, 
-                                                                  faceSelection, powerMode, state, extraData);
-            texturedQuads.add(processedQuad);
+            // Process quad with overlay support
+            List<BakedQuad> processedQuads = processQuadWithOverlaySupport(
+                quad, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData,
+                tintIndex, tintIndex, overlayData
+            );
+            texturedQuads.addAll(processedQuads);
         }
         return texturedQuads;
     }
+    /**
+     * Processes quad with overlay support - returns list of quads (multiple if overlays exist).
+     */
+    @Nonnull
+    private List<BakedQuad> processQuadWithOverlaySupport(@Nonnull BakedQuad originalQuad,
+                                                         @Nullable String toggleTexture,
+                                                         @Nullable String baseTexture,
+                                                         @Nullable String faceSelection,
+                                                         @Nullable String powerMode,
+                                                         @Nullable BlockState state,
+                                                         @Nonnull ModelData extraData,
+                                                         int toggleTintIndex,
+                                                         int baseTintIndex,
+                                                         @Nullable Map<Direction, List<OverlayLayer>> overlayData) {
+        
+        TextureAtlasSprite originalSprite = originalQuad.getSprite();
+        String originalTextureName = getTextureName(originalSprite);
+        
+        // Determine if this quad uses toggle or base texture
+        boolean isTogglePart = isLeverMovingPart(originalTextureName);
+        boolean isBasePart = isLeverBasePart(originalTextureName);
+        
+        // Check if we have overlays for this texture
+        List<OverlayLayer> overlayLayers = null;
+        if (overlayData != null && !overlayData.isEmpty() &&
+                ((isTogglePart && toggleTexture != null) || (isBasePart && baseTexture != null))) {
+            // Find overlay data with multiple layers (e.g. grass block sides have dirt + overlay)
+            for (Direction dir : Direction.values()) {
+                List<OverlayLayer> layers = overlayData.get(dir);
+                if (layers != null && layers.size() > 1) {
+                    overlayLayers = layers;
+                    break;
+                }
+            }
+        }
+        // Diagnostic: log overlay rendering decisions (once per texture to avoid log spam)
+        if (overlayDiagnosticLogged.add(originalTextureName)) {
+            if (overlayData != null && !overlayData.isEmpty() && overlayLayers == null) {
+                LOGGER.info("Overlay data present but no multi-layer faces found for quad '{}' (toggle={}, base={})",
+                    originalTextureName, isTogglePart, isBasePart);
+            }
+            if (overlayLayers != null) {
+                LOGGER.info("Rendering {} overlay layers for quad '{}'", overlayLayers.size(), originalTextureName);
+            }
+        }
+        
+        // If we have overlay layers, generate multiple quads
+        if (overlayLayers != null && overlayLayers.size() > 1) {
+            List<BakedQuad> result = new ArrayList<>();
+            for (OverlayLayer layer : overlayLayers) {
+                float zOffset = calculateZOffset(layer.getOrder());
+                TextureAtlasSprite layerSprite = getAtlasSprite(layer.getSprite());
+                int layerTintIndex = layer.getTintIndex();
+                
+                BakedQuad overlayQuad = buildQuadWithZOffset(
+                    originalQuad,
+                    layerSprite,
+                    layerTintIndex,
+                    zOffset
+                );
+                result.add(overlayQuad);
+            }
+            return result;
+        }
+        
+        // No overlays or single layer - use normal processing
+        BakedQuad processedQuad = processQuadWithCustomTextures(
+            originalQuad, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData,
+            toggleTintIndex, baseTintIndex
+        );
+        return Collections.singletonList(processedQuad);
+    }
+    
     /**
      * Processes individual quad with custom texture replacement.
      */
@@ -565,7 +709,9 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                                    @SuppressWarnings("unused") @Nullable String faceSelection,
                                                    @Nullable String powerMode,
                                                    @SuppressWarnings("unused") @Nullable BlockState state,
-                                                   @Nonnull ModelData extraData) {
+                                                   @Nonnull ModelData extraData,
+                                                   int toggleTintIndex,
+                                                   int baseTintIndex) {
 
         TextureAtlasSprite originalSprite = originalQuad.getSprite();
         String originalTextureName = getTextureName(originalSprite);
@@ -628,7 +774,18 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         // Use replacement sprite if available, otherwise use original sprite
         TextureAtlasSprite finalSprite = needsTextureReplacement ? replacementSprite : originalSprite;
         
-        return replaceQuadTexture(originalQuad, finalSprite, rotation);
+        // Determine tintIndex for this quad
+        int quadTintIndex = originalQuad.getTintIndex(); // Default: preserve original
+        if (needsTextureReplacement) {
+            // Applying custom texture - use appropriate tintIndex from source block
+            if (isToggleTexturePart && toggleTexture != null) {
+                quadTintIndex = toggleTintIndex;
+            } else if (isBaseTexturePart && baseTexture != null) {
+                quadTintIndex = baseTintIndex;
+            }
+        }
+        
+        return replaceQuadTexture(originalQuad, finalSprite, rotation, quadTintIndex);
     }
 
     /**
@@ -716,7 +873,8 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     @Nonnull
     private BakedQuad replaceQuadTexture(@Nonnull BakedQuad originalQuad, 
                                         @Nonnull TextureAtlasSprite newSprite,
-                                        @Nullable TextureRotation rotation) {
+                                        @Nullable TextureRotation rotation,
+                                        int tintIndex) {
         
         int[] originalVertices = originalQuad.getVertices();
         TextureAtlasSprite originalSprite = originalQuad.getSprite();
@@ -727,7 +885,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
         return new BakedQuad(
                 newVertices,
-                originalQuad.getTintIndex(),
+                tintIndex,  // Use provided tintIndex from source block
                 originalQuad.getDirection(),
                 newSprite,
                 originalQuad.isShade()
@@ -835,11 +993,11 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         return spriteNameCache.computeIfAbsent(sprite, this::computeSpriteName);
     }
     
-    /** Computes sprite name by opening contents resource. */
+    /** Computes sprite name from sprite contents. Does NOT close contents - they are owned by the atlas. */
     @Nonnull
     private String computeSpriteName(@Nonnull TextureAtlasSprite sprite) {
-        try (var contents = sprite.contents()) {
-            return contents.name().toString();
+        try {
+            return sprite.contents().name().toString();
         } catch (Exception e) {
             return "unknown";
         }
@@ -872,52 +1030,46 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     /**
      * Gets texture sprite from path string.
      */
+    @SuppressWarnings("resource") // SpriteContents owned by atlas, not our responsibility to close
     @Nullable
     private TextureAtlasSprite getTextureSprite(@Nullable String texturePath) {
         if (texturePath == null || texturePath.isEmpty()) {
             return null;
         }
-        
         try {
-
             ResourceLocation textureLocation = getCachedResourceLocation(texturePath);
-
+            // Check model's own texture sprites first (fast path)
             for (TextureAtlasSprite sprite : textureSprites.values()) {
-                try (var contents = sprite.contents()) {
-                    if (contents.name().equals(textureLocation)) {
+                try {
+                    if (sprite.contents().name().equals(textureLocation)) {
                         return sprite;
                     }
                 } catch (Exception e) {
                     // Continue checking other sprites
                 }
             }
-
+            // Direct key lookup in model sprites
             TextureAtlasSprite directSprite = textureSprites.get(texturePath);
             if (directSprite != null) {
                 return directSprite;
             }
-
+            // Simplified key lookup
             String simplifiedKey = textureLocation.getPath().replace("/", "_");
             TextureAtlasSprite simplifiedSprite = textureSprites.get(simplifiedKey);
             if (simplifiedSprite != null) {
                 return simplifiedSprite;
             }
-
-            net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-            try {
-                TextureAtlasSprite atlasSprite = minecraft.getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
-                    .apply(textureLocation);
-                if (atlasSprite != null) {
-                    return atlasSprite;
-                }
-            } catch (Exception atlasException) {
-                // Ignore exception
+            // Atlas lookup using model manager (getAtlasSprite never returns null)
+            TextureAtlasSprite atlasSprite = getAtlasSprite(textureLocation);
+            // Check that we got a real sprite, not the missing texture
+            if (!atlasSprite.contents().name().equals(
+                    net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation())) {
+                return atlasSprite;
             }
-            
+            LOGGER.warn("Failed to find texture sprite for: {}", texturePath);
         } catch (Exception e) {
-            // Ignore exception
+            LOGGER.warn("Error looking up texture sprite for: {}", texturePath, e);
         }
-        
         return null;
     }
 
@@ -1048,8 +1200,9 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             double memoryMB = memoryBytes / (1024.0 * 1024.0);
             
             LOGGER.info(
-                "Cache Statistics - Size: {}/{}, Memory: {:.2f}MB, Hits: {}, Misses: {}, Hit Rate: {:.2f}%, Evictions: {}",
-                GLOBAL_CACHE.size(), MAX_CACHE_SIZE, memoryMB, hits, misses, hitRate, evictions
+                "Cache Statistics - Size: {}/{}, Memory: {}MB, Hits: {}, Misses: {}, Hit Rate: {}%, Evictions: {}",
+                GLOBAL_CACHE.size(), MAX_CACHE_SIZE, String.format("%.2f", memoryMB),
+                hits, misses, String.format("%.2f", hitRate), evictions
             );
             LOGGER.info(
                 "  ID Maps - Textures: {}, BlockStates: {}",
@@ -1062,12 +1215,10 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                     e2.getValue().getAccessCount(),
                     e1.getValue().getAccessCount()))
                 .limit(5)
-                .forEach(entry -> {
-                    LOGGER.debug(
-                        "  Top cached config: {} (accessed {} times)",
-                        entry.getKey().toString(), entry.getValue().getAccessCount()
-                    );
-                });
+                .forEach(entry -> LOGGER.debug(
+                    "  Top cached config: {} (accessed {} times)",
+                    entry.getKey().toString(), entry.getValue().getAccessCount()
+                ));
         }
     }
 
@@ -1111,7 +1262,14 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     public ItemOverrides getOverrides() {
         return itemOverrides;
     }
-
+    /** Returns render types including cutoutMipped for overlay textures with alpha transparency. */
+    @Override
+    @Nonnull
+    public net.neoforged.neoforge.client.ChunkRenderTypeSet getRenderTypes(
+            @Nonnull BlockState state, @Nonnull RandomSource rand, @Nonnull ModelData data) {
+        return net.neoforged.neoforge.client.ChunkRenderTypeSet.of(
+            RenderType.solid(), RenderType.cutoutMipped());
+    }
     /**
      * Optimized cache key using integer IDs and bitpacked flags for memory efficiency.
      * Reduces memory footprint from ~200+ bytes to ~48 bytes per key.

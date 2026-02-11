@@ -3,14 +3,21 @@ package net.justsomeswitches.util;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.justsomeswitches.blockentity.tinting.FaceTintData;
+import net.justsomeswitches.blockentity.tinting.OverlayLayer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.client.model.data.ModelData;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -18,9 +25,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-/** Dynamic block model analyzer that reads model JSON files at runtime. */
+/** Dynamic block model analyzer that reads model JSON files at runtime and analyzes tinting properties. */
 public class DynamicBlockModelAnalyzer {
-
     private static final Set<String> NON_FACE_TEXTURE_VARIABLES = Set.of(
             "particle", "overlay", "animation", "ctm", "connected",
             "north_overlay", "south_overlay", "east_overlay", "west_overlay",
@@ -70,7 +76,7 @@ public class DynamicBlockModelAnalyzer {
         return analyzeBlockModel(blockId);
     }
 
-    /** Analyzes only the block's own JSON file without parent model inheritance. */
+    /** Analyzes block model JSON, following parent chain when textures are not defined directly. */
     @Nonnull
     private static DynamicBlockInfo analyzeBlockModel(@Nonnull String blockId) {
         try {
@@ -78,25 +84,23 @@ public class DynamicBlockModelAnalyzer {
             if (parts.length != 2) {
                 return createFallbackInfo(blockId);
             }
-
             String namespace = parts[0];
             String fullPath = parts[1];
-
             if (!fullPath.startsWith("block/")) {
                 return createFallbackInfo(blockId);
             }
-
             String blockName = fullPath.substring(6);
-
-
             JsonObject modelJson = loadBlockModelDirect(namespace, blockName);
             if (modelJson == null) {
-                return createFallbackInfo(blockId);
+                // Model JSON not found - block may use blockstate redirect (e.g. waxed copper).
+                // Fall back to extracting textures from the BakedModel's quads.
+                return extractTexturesFromBakedModel(blockId);
             }
-
-
             Map<String, String> textureVariables = extractDirectTextureVariables(modelJson, namespace);
-
+            // If no textures found, follow parent chain (handles waxed copper, etc.)
+            if (textureVariables.isEmpty() && modelJson.has("parent")) {
+                textureVariables = resolveParentTextures(modelJson, namespace);
+            }
             Map<String, String> filteredVariables = new LinkedHashMap<>();
             for (Map.Entry<String, String> entry : textureVariables.entrySet()) {
                 String variable = entry.getKey();
@@ -105,17 +109,46 @@ public class DynamicBlockModelAnalyzer {
                     filteredVariables.put(variable, entry.getValue());
                 }
             }
-
-
             Set<String> uniqueTextures = new HashSet<>(filteredVariables.values());
             boolean hasMultipleTextures = uniqueTextures.size() > 1;
             String primaryTexture = getPrimaryTexture(filteredVariables);
-
             return new DynamicBlockInfo(hasMultipleTextures, filteredVariables, primaryTexture);
-
         } catch (Exception e) {
             return createFallbackInfo(blockId);
         }
+    }
+    /** Follows parent model chain to find textures. Stops after 5 levels to prevent infinite loops. */
+    @Nonnull
+    private static Map<String, String> resolveParentTextures(@Nonnull JsonObject modelJson, @Nonnull String defaultNamespace) {
+        Set<String> visited = new HashSet<>();
+        JsonObject current = modelJson;
+        for (int depth = 0; depth < 5; depth++) {
+            if (!current.has("parent")) break;
+            String parentRef = current.get("parent").getAsString();
+            if (visited.contains(parentRef)) break;
+            visited.add(parentRef);
+            // Parse parent reference (e.g. "minecraft:block/copper_block" or "block/cube_all")
+            String parentNamespace = defaultNamespace;
+            String parentPath;
+            if (parentRef.contains(":")) {
+                String[] parentParts = parentRef.split(":", 2);
+                parentNamespace = parentParts[0];
+                parentPath = parentParts[1];
+            } else {
+                parentPath = parentRef;
+            }
+            // Only follow block model parents, not abstract parents like "cube_all"
+            if (!parentPath.startsWith("block/")) break;
+            String parentBlockName = parentPath.substring(6);
+            JsonObject parentJson = loadBlockModelDirect(parentNamespace, parentBlockName);
+            if (parentJson == null) break;
+            Map<String, String> parentTextures = extractDirectTextureVariables(parentJson, parentNamespace);
+            if (!parentTextures.isEmpty()) {
+                return parentTextures;
+            }
+            current = parentJson;
+        }
+        return Collections.emptyMap();
     }
 
     /** Loads only the block's own model JSON file without parent resolution. */
@@ -207,6 +240,55 @@ public class DynamicBlockModelAnalyzer {
         return texturePath;
     }
 
+    /**
+     * Extracts textures from BakedModel quads when model JSON is unavailable.
+     * Handles blocks with blockstate redirects (e.g. waxed copper → copper_block model).
+     */
+    @SuppressWarnings("resource") // SpriteContents owned by atlas, not our responsibility to close
+    @Nonnull
+    private static DynamicBlockInfo extractTexturesFromBakedModel(@Nonnull String blockId) {
+        try {
+            // Parse block registry name from blockId (format: "namespace:block/name")
+            String[] parts = blockId.split(":");
+            if (parts.length != 2 || !parts[1].startsWith("block/")) {
+                return createFallbackInfo(blockId);
+            }
+            String registryName = parts[0] + ":" + parts[1].substring(6);
+            ResourceLocation blockLoc = new ResourceLocation(registryName);
+            // Registry.get() never returns null (returns air for unknown blocks)
+            Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(blockLoc);
+            BlockState blockState = block.defaultBlockState();
+            BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(blockState);
+            RandomSource random = RandomSource.create(42L);
+            Map<String, String> textureVariables = new LinkedHashMap<>();
+            Direction[] faceDirections = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP, Direction.DOWN };
+            String[] variableNames = { "north", "south", "east", "west", "top", "bottom" };
+            Set<String> uniqueTextures = new HashSet<>();
+            for (int i = 0; i < faceDirections.length; i++) {
+                List<BakedQuad> quads = model.getQuads(blockState, faceDirections[i], random, ModelData.EMPTY, null);
+                if (!quads.isEmpty()) {
+                    ResourceLocation spriteName = quads.get(0).getSprite().contents().name();
+                    String texturePath = spriteName.toString();
+                    textureVariables.put(variableNames[i], texturePath);
+                    uniqueTextures.add(texturePath);
+                }
+            }
+            // If all faces use same texture, simplify to "all"
+            if (uniqueTextures.size() == 1) {
+                String singleTexture = uniqueTextures.iterator().next();
+                textureVariables.clear();
+                textureVariables.put("all", singleTexture);
+            }
+            if (textureVariables.isEmpty()) {
+                return createFallbackInfo(blockId);
+            }
+            boolean hasMultiple = uniqueTextures.size() > 1;
+            String primary = getPrimaryTexture(textureVariables);
+            return new DynamicBlockInfo(hasMultiple, textureVariables, primary);
+        } catch (Exception e) {
+            return createFallbackInfo(blockId);
+        }
+    }
     /** Gets primary texture from texture variables. */
     @Nullable
     private static String getPrimaryTexture(@Nonnull Map<String, String> textureVariables) {
@@ -243,5 +325,67 @@ public class DynamicBlockModelAnalyzer {
         }
     }
 
+    /**
+     * Analyzes tinting data from block model quads using BakedModel API.
+     * Extracts tintIndex from quads - works for ANY block (vanilla or modded).
+     */
+    @Nonnull
+    public static FaceTintData analyzeTinting(@Nonnull BlockState blockState, @Nonnull Direction direction) {
+        FaceTintData tintData = new FaceTintData();
+        
+        try {
+            BakedModel model = Minecraft.getInstance()
+                .getBlockRenderer()
+                .getBlockModel(blockState);
+            
+            RandomSource random = RandomSource.create(42L);
+            List<BakedQuad> quads = model.getQuads(blockState, direction, random, 
+                                                  ModelData.EMPTY, null);
+            
+            if (!quads.isEmpty()) {
+                BakedQuad quad = quads.get(0);
+                int tintIndex = quad.getTintIndex();
+                tintData.setTintIndex(tintIndex);
+            }
+            
+        } catch (Exception e) {
+            // Silently handle errors - tinting is optional feature
+        }
+        
+        return tintData;
+    }
 
+    /**
+     * Analyzes overlay layers from block model quads.
+     * Detects multiple quads per face - completely universal approach.
+     */
+    @SuppressWarnings("resource") // SpriteContents owned by atlas, not our responsibility to close
+    @Nonnull
+    public static List<OverlayLayer> analyzeOverlays(@Nonnull BlockState blockState, @Nonnull Direction direction) {
+        List<OverlayLayer> layers = new ArrayList<>();
+        
+        try {
+            BakedModel model = Minecraft.getInstance()
+                .getBlockRenderer()
+                .getBlockModel(blockState);
+            
+            RandomSource random = RandomSource.create(42L);
+            List<BakedQuad> quads = model.getQuads(blockState, direction, random, 
+                                                  ModelData.EMPTY, null);
+            
+            // Each quad becomes a layer
+            for (int i = 0; i < quads.size(); i++) {
+                BakedQuad quad = quads.get(i);
+                ResourceLocation sprite = quad.getSprite().contents().name();
+                int tintIndex = quad.getTintIndex();
+                
+                layers.add(new OverlayLayer(sprite, tintIndex, i));
+            }
+            
+        } catch (Exception e) {
+            // Silently handle errors - overlays are optional
+        }
+        
+        return layers;
+    }
 }

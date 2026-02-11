@@ -1,9 +1,13 @@
 package net.justsomeswitches.gui;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.tinting.FaceTintData;
+import net.justsomeswitches.blockentity.tinting.OverlayLayer;
 import net.justsomeswitches.network.NetworkHandler;
+import net.justsomeswitches.util.DynamicBlockModelAnalyzer;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -120,7 +124,6 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
     /** Toggle texture category handler. */
     private void onToggleSlotChanged() {
         if (blockEntity == null) return;
-
         if (isInitializing || isLoadingSlots || isSynchronizing) {
             return;
         }
@@ -189,75 +192,61 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
 
     /** Analyzes toggle block and sets intelligent default. */
     private void analyzeToggleBlock(@Nonnull ItemStack toggleItem) {
-
+        // Model analysis only works client-side (BakedModel APIs unavailable on server)
+        if (!level.isClientSide) return;
         blockEntity.setSyncSuppressed(true);
-        
         try {
             FaceSelectionData.RawTextureSelection selection = 
                 FaceSelectionData.createRawTextureSelection(toggleItem, "all");
-
-            if (selection.enabled() && !selection.availableVariables().isEmpty()) {
-
-                String defaultVariable = FaceSelectionData.getDefaultVariable(selection.availableVariables());
-                this.toggleTextureVariable = defaultVariable;
-                blockEntity.setToggleTextureVariable(defaultVariable);
-
-                String texturePath = FaceSelectionData.getTextureForVariable(toggleItem, defaultVariable);
-                if (texturePath != null) {
-                    blockEntity.setToggleTexture(texturePath);
-                    blockEntity.updateTextures();
-                }
-            } else {
-
-                this.toggleTextureVariable = "all";
-                blockEntity.setToggleTextureVariable("all");
-                
-                String texturePath = FaceSelectionData.getTextureForVariable(toggleItem, "all");
-                if (texturePath != null) {
-                    blockEntity.setToggleTexture(texturePath);
-                    blockEntity.updateTextures();
-                }
+            // Always resolve actual variable name (e.g. "pattern" for terracotta, not "all")
+            String resolvedVariable = FaceSelectionData.getDefaultVariable(selection.availableVariables());
+            this.toggleTextureVariable = resolvedVariable;
+            blockEntity.setToggleTextureVariable(resolvedVariable);
+            String texturePath = FaceSelectionData.getTextureForVariable(toggleItem, resolvedVariable);
+            if (texturePath != null) {
+                blockEntity.setToggleTexture(texturePath);
+                blockEntity.updateTextures();
             }
+            analyzeTinting(toggleItem);
         } finally {
-
             blockEntity.setSyncSuppressed(false);
+        }
+        // Force model refresh so renderer picks up overlay/tint data before server sync
+        blockEntity.requestModelDataUpdate();
+        // Send resolved texture to server (server cannot analyze models)
+        String resolvedPath = FaceSelectionData.getTextureForVariable(toggleItem, toggleTextureVariable);
+        if (resolvedPath != null) {
+            NetworkHandler.sendTextureVariableUpdate(blockPos, "toggle", toggleTextureVariable, resolvedPath);
         }
     }
 
     /** Analyzes base block and sets intelligent default. */
     private void analyzeBaseBlock(@Nonnull ItemStack baseItem) {
-
+        // Model analysis only works client-side (BakedModel APIs unavailable on server)
+        if (!level.isClientSide) return;
         blockEntity.setSyncSuppressed(true);
-        
         try {
             FaceSelectionData.RawTextureSelection selection = 
                 FaceSelectionData.createRawTextureSelection(baseItem, "all");
-
-            if (selection.enabled() && !selection.availableVariables().isEmpty()) {
-
-                String defaultVariable = FaceSelectionData.getDefaultVariable(selection.availableVariables());
-                this.baseTextureVariable = defaultVariable;
-                blockEntity.setBaseTextureVariable(defaultVariable);
-
-                String texturePath = FaceSelectionData.getTextureForVariable(baseItem, defaultVariable);
-                if (texturePath != null) {
-                    blockEntity.setBaseTexture(texturePath);
-                    blockEntity.updateTextures();
-                }
-            } else {
-
-                this.baseTextureVariable = "all";
-                blockEntity.setBaseTextureVariable("all");
-                
-                String texturePath = FaceSelectionData.getTextureForVariable(baseItem, "all");
-                if (texturePath != null) {
-                    blockEntity.setBaseTexture(texturePath);
-                    blockEntity.updateTextures();
-                }
+            // Always resolve actual variable name (e.g. "pattern" for terracotta, not "all")
+            String resolvedVariable = FaceSelectionData.getDefaultVariable(selection.availableVariables());
+            this.baseTextureVariable = resolvedVariable;
+            blockEntity.setBaseTextureVariable(resolvedVariable);
+            String texturePath = FaceSelectionData.getTextureForVariable(baseItem, resolvedVariable);
+            if (texturePath != null) {
+                blockEntity.setBaseTexture(texturePath);
+                blockEntity.updateTextures();
             }
+            analyzeTinting(baseItem);
         } finally {
-
             blockEntity.setSyncSuppressed(false);
+        }
+        // Force model refresh so renderer picks up overlay/tint data before server sync
+        blockEntity.requestModelDataUpdate();
+        // Send resolved texture to server (server cannot analyze models)
+        String texturePath = FaceSelectionData.getTextureForVariable(baseItem, baseTextureVariable);
+        if (texturePath != null) {
+            NetworkHandler.sendTextureVariableUpdate(blockPos, "base", baseTextureVariable, texturePath);
         }
     }
 
@@ -313,6 +302,54 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         ItemStack baseItem = textureItemHandler.getStackInSlot(BASE_TEXTURE_SLOT);
         syncLocalVariableFromBlockEntity(false);
         return FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
+    }
+
+    /** Analyzes tinting for all faces of a block and stores in block entity. */
+    private void analyzeTinting(@Nonnull ItemStack item) {
+        if (!(item.getItem() instanceof BlockItem blockItem)) {
+            return;
+        }
+        
+        Block block = blockItem.getBlock();
+        BlockState blockState = block.defaultBlockState();
+        
+        // Store source block state for universal tinting delegation
+        blockEntity.setSourceBlockState(blockState);
+        
+        int tintedFaces = 0;
+        int overlayFaces = 0;
+        
+        for (Direction direction : Direction.values()) {
+            // Analyze tinting
+            FaceTintData tintData = DynamicBlockModelAnalyzer.analyzeTinting(blockState, direction);
+            blockEntity.setTintData(direction, tintData);
+            
+            if (tintData.getTintIndex() >= 0) {
+                tintedFaces++;
+            }
+            
+            // Analyze overlays (Phase 4: Universal overlay detection)
+            java.util.List<OverlayLayer> overlayLayers = DynamicBlockModelAnalyzer.analyzeOverlays(blockState, direction);
+            blockEntity.setOverlayLayers(direction, overlayLayers);
+            
+            if (overlayLayers.size() > 1) {
+                overlayFaces++;
+            }
+        }
+        
+        if (tintedFaces > 0) {
+            net.justsomeswitches.JustSomeSwitchesMod.LOGGER.info(
+                "Tinting detected: {} - {} tinted faces",
+                block.getName().getString(), tintedFaces
+            );
+        }
+        
+        if (overlayFaces > 0) {
+            net.justsomeswitches.JustSomeSwitchesMod.LOGGER.info(
+                "Overlay detected: {} - {} faces with multiple layers",
+                block.getName().getString(), overlayFaces
+            );
+        }
     }
 
     /** Handles power mode selection change. */

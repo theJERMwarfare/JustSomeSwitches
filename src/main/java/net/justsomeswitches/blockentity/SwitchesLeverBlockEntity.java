@@ -1,8 +1,11 @@
 package net.justsomeswitches.blockentity;
 
+import net.justsomeswitches.blockentity.tinting.FaceTintData;
+import net.justsomeswitches.blockentity.tinting.OverlayLayer;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Containers;
@@ -16,6 +19,7 @@ import net.neoforged.neoforge.client.model.data.ModelProperty;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.*;
 
 /** Block entity for lever with custom texture management, NBT storage, and client-server synchronization. */
 public class SwitchesLeverBlockEntity extends BlockEntity {
@@ -55,6 +59,10 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
 
     private ItemStack guiToggleItem = ItemStack.EMPTY;
     private ItemStack guiBaseItem = ItemStack.EMPTY;
+
+    private final Map<Direction, FaceTintData> tintDataMap = new HashMap<>();
+    private final Map<Direction, List<OverlayLayer>> overlayDataMap = new HashMap<>();
+    private BlockState sourceBlockState;
 
     private boolean suppressSync = false;
     private boolean batchMode = false;
@@ -108,12 +116,34 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public static final ModelProperty<Boolean> GHOST_MODE = new ModelProperty<>();
     public static final ModelProperty<Float> GHOST_ALPHA = new ModelProperty<>();
     public static final ModelProperty<BlockState> GHOST_STATE = new ModelProperty<>();
+    public static final ModelProperty<Integer> TINT_INDEX = new ModelProperty<>();
+    public static final ModelProperty<Map<Direction, List<OverlayLayer>>> OVERLAY_DATA = new ModelProperty<>();
 
     /** Provides model data for custom rendering with textures, rotations, and ghost preview properties. */
     @Override
     @Nonnull
     public ModelData getModelData() {
         String faceSelection = baseTextureVariable + "," + toggleTextureVariable;
+        
+        // Find tintIndex from any face with tinting data (Phase 2: Static tinting)
+        int tintIndex = -1;  // Default: no tinting
+        for (Direction direction : Direction.values()) {
+            FaceTintData tintData = getTintData(direction);
+            if (tintData.getTintIndex() >= 0) {
+                tintIndex = tintData.getTintIndex();
+                break;
+            }
+        }
+        
+        // Copy overlay data for rendering (Phase 5: Overlay rendering)
+        Map<Direction, List<OverlayLayer>> overlayDataCopy = new HashMap<>();
+        for (Direction direction : Direction.values()) {
+            List<OverlayLayer> layers = overlayDataMap.get(direction);
+            if (layers != null && !layers.isEmpty()) {
+                overlayDataCopy.put(direction, new ArrayList<>(layers));
+            }
+        }
+        
         return ModelData.builder()
                 .with(TOGGLE_TEXTURE, toggleTexturePath)
                 .with(BASE_TEXTURE, baseTexturePath)
@@ -124,6 +154,8 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
                 .with(BASE_ROTATION, baseTextureRotation.name())
                 .with(TOGGLE_ROTATION, toggleTextureRotation.name())
                 .with(HAS_TOGGLE_BLOCK, !guiToggleItem.isEmpty())
+                .with(TINT_INDEX, tintIndex)
+                .with(OVERLAY_DATA, overlayDataCopy)
                 .build();
     }
 
@@ -300,6 +332,39 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     @Nonnull public TextureRotation getBaseTextureRotation() { return baseTextureRotation; }
     @Nonnull public TextureRotation getToggleTextureRotation() { return toggleTextureRotation; }
 
+    @Nonnull
+    public FaceTintData getTintData(@Nonnull Direction face) {
+        return tintDataMap.getOrDefault(face, new FaceTintData());
+    }
+
+    public void setTintData(@Nonnull Direction face, @Nonnull FaceTintData data) {
+        this.tintDataMap.put(face, data);
+        setChanged();
+    }
+
+    /** Returns overlay layers for specified face, or empty list if none. */
+    @SuppressWarnings("unused") // Public API for future use and mod compatibility
+    @Nonnull
+    public List<OverlayLayer> getOverlayLayers(@Nonnull Direction face) {
+        return overlayDataMap.getOrDefault(face, Collections.emptyList());
+    }
+
+    /** Sets overlay layers for specified face. */
+    public void setOverlayLayers(@Nonnull Direction face, @Nonnull List<OverlayLayer> layers) {
+        this.overlayDataMap.put(face, new ArrayList<>(layers));
+        setChanged();
+    }
+
+    @Nullable
+    public BlockState getSourceBlockState() {
+        return sourceBlockState;
+    }
+
+    public void setSourceBlockState(@Nullable BlockState state) {
+        this.sourceBlockState = state;
+        setChanged();
+    }
+
     public void resetBaseTexture() {
         setBaseTexture(DEFAULT_BASE_TEXTURE);
         setBaseTextureVariable("all");
@@ -426,6 +491,39 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!guiBaseItem.isEmpty()) {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
+        
+        CompoundTag tintDataTag = new CompoundTag();
+        for (Direction direction : Direction.values()) {
+            if (tintDataMap.containsKey(direction)) {
+                CompoundTag faceTag = new CompoundTag();
+                tintDataMap.get(direction).save(faceTag);
+                tintDataTag.put(direction.getName(), faceTag);
+            }
+        }
+        nbt.put("TintData", tintDataTag);
+        
+        CompoundTag overlayTag = new CompoundTag();
+        for (Direction direction : Direction.values()) {
+            if (overlayDataMap.containsKey(direction)) {
+                CompoundTag layersTag = new CompoundTag();
+                List<OverlayLayer> layers = overlayDataMap.get(direction);
+                layersTag.putInt("Count", layers.size());
+                for (int i = 0; i < layers.size(); i++) {
+                    CompoundTag layerTag = new CompoundTag();
+                    layers.get(i).save(layerTag);
+                    layersTag.put("Layer" + i, layerTag);
+                }
+                overlayTag.put(direction.getName(), layersTag);
+            }
+        }
+        nbt.put("OverlayData", overlayTag);
+        
+        if (sourceBlockState != null) {
+            CompoundTag stateTag = new CompoundTag();
+            stateTag.putString("Name", 
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(sourceBlockState.getBlock()).toString());
+            nbt.put("SourceBlockState", stateTag);
+        }
     }
 
     @Override
@@ -473,6 +571,43 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
                 ItemStack.of(nbt.getCompound("gui_toggle_item")) : ItemStack.EMPTY;
         this.guiBaseItem = nbt.contains("gui_base_item") ?
                 ItemStack.of(nbt.getCompound("gui_base_item")) : ItemStack.EMPTY;
+        
+        if (nbt.contains("TintData")) {
+            CompoundTag tintDataTag = nbt.getCompound("TintData");
+            tintDataMap.clear();
+            for (Direction direction : Direction.values()) {
+                if (tintDataTag.contains(direction.getName())) {
+                    CompoundTag faceTag = tintDataTag.getCompound(direction.getName());
+                    tintDataMap.put(direction, FaceTintData.load(faceTag));
+                }
+            }
+        }
+        
+        if (nbt.contains("OverlayData")) {
+            CompoundTag overlayTag = nbt.getCompound("OverlayData");
+            overlayDataMap.clear();
+            for (Direction direction : Direction.values()) {
+                if (overlayTag.contains(direction.getName())) {
+                    CompoundTag layersTag = overlayTag.getCompound(direction.getName());
+                    int count = layersTag.getInt("Count");
+                    List<OverlayLayer> layers = new ArrayList<>();
+                    for (int i = 0; i < count; i++) {
+                        CompoundTag layerTag = layersTag.getCompound("Layer" + i);
+                        layers.add(OverlayLayer.load(layerTag));
+                    }
+                    overlayDataMap.put(direction, layers);
+                }
+            }
+        }
+        
+        if (nbt.contains("SourceBlockState")) {
+            CompoundTag stateTag = nbt.getCompound("SourceBlockState");
+            String blockName = stateTag.getString("Name");
+            Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(new net.minecraft.resources.ResourceLocation(blockName));
+            // Registry.get() never returns null (returns air for unknown blocks)
+            sourceBlockState = block.defaultBlockState();
+        }
+        
         updateLastSyncedValues();
     }
 
@@ -513,6 +648,40 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         if (!guiBaseItem.isEmpty()) {
             nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
         }
+        
+        CompoundTag tintDataTag = new CompoundTag();
+        for (Direction direction : Direction.values()) {
+            if (tintDataMap.containsKey(direction)) {
+                CompoundTag faceTag = new CompoundTag();
+                tintDataMap.get(direction).save(faceTag);
+                tintDataTag.put(direction.getName(), faceTag);
+            }
+        }
+        nbt.put("TintData", tintDataTag);
+        
+        CompoundTag overlayTag = new CompoundTag();
+        for (Direction direction : Direction.values()) {
+            if (overlayDataMap.containsKey(direction)) {
+                CompoundTag layersTag = new CompoundTag();
+                List<OverlayLayer> layers = overlayDataMap.get(direction);
+                layersTag.putInt("Count", layers.size());
+                for (int i = 0; i < layers.size(); i++) {
+                    CompoundTag layerTag = new CompoundTag();
+                    layers.get(i).save(layerTag);
+                    layersTag.put("Layer" + i, layerTag);
+                }
+                overlayTag.put(direction.getName(), layersTag);
+            }
+        }
+        nbt.put("OverlayData", overlayTag);
+        
+        if (sourceBlockState != null) {
+            CompoundTag stateTag = new CompoundTag();
+            stateTag.putString("Name", 
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(sourceBlockState.getBlock()).toString());
+            nbt.put("SourceBlockState", stateTag);
+        }
+        
         return nbt;
     }
 
@@ -520,13 +689,30 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
     public void onDataPacket(@Nonnull net.minecraft.network.Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
         CompoundTag nbt = pkt.getTag();
         if (nbt != null) {
+            // Preserve client-analyzed tinting/overlay data before server sync overwrites it.
+            // analyzeTinting() runs client-only; server never receives this data directly,
+            // so server sync packets contain empty overlay/tint maps that would wipe client state.
+            Map<Direction, List<OverlayLayer>> preservedOverlays = new HashMap<>(overlayDataMap);
+            Map<Direction, FaceTintData> preservedTints = new HashMap<>(tintDataMap);
+            BlockState preservedSourceState = sourceBlockState;
             // Clear NBT protection flag - network data is authoritative and must be loaded
             // This prevents block state changes from blocking network NBT updates
             skipNextNBTLoad = false;
             load(nbt);
+            // Restore client-analyzed data if server update didn't include any
+            if (overlayDataMap.isEmpty() && !preservedOverlays.isEmpty()) {
+                overlayDataMap.putAll(preservedOverlays);
+            }
+            if (tintDataMap.isEmpty() && !preservedTints.isEmpty()) {
+                tintDataMap.putAll(preservedTints);
+            }
+            if (sourceBlockState == null && preservedSourceState != null) {
+                sourceBlockState = preservedSourceState;
+            }
             requestModelDataUpdate();
             if (level != null) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 
+                    Block.UPDATE_CLIENTS);
             }
         }
     }
