@@ -480,9 +480,18 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         }
 
 
-        List<BakedQuad> baseQuads = vanillaLeverModel.getQuads(state, side, rand, 
+        List<BakedQuad> baseQuads = vanillaLeverModel.getQuads(state, side, rand,
                 net.neoforged.neoforge.client.model.data.ModelData.EMPTY, renderType);
-        
+        // For cutoutMipped pass: vanilla lever has no cutoutMipped quads, but we need
+        // template geometry to generate overlay quads with proper alpha transparency.
+        // Get solid quads as templates when overlay data exists.
+        if (baseQuads.isEmpty() && hasTextureData && renderType == RenderType.cutoutMipped()) {
+            Map<Direction, List<OverlayLayer>> overlayCheck = extraData.get(SwitchesLeverBlockEntity.OVERLAY_DATA);
+            if (overlayCheck != null && !overlayCheck.isEmpty()) {
+                baseQuads = vanillaLeverModel.getQuads(state, side, rand,
+                        net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.solid());
+            }
+        }
         if (baseQuads.isEmpty()) {
             return baseQuads;
         }
@@ -491,7 +500,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         if (hasTextureData) {
             // Get overlay data for texture application
             Map<Direction, List<OverlayLayer>> overlayData = extraData.get(SwitchesLeverBlockEntity.OVERLAY_DATA);
-            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData, overlayData);
+            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData, overlayData, renderType);
         }
 
         if (state != null && isWallPlacement(state) && extraData != ModelData.EMPTY) {
@@ -508,7 +517,8 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     private BakedQuad buildQuadWithZOffset(@Nonnull BakedQuad templateQuad,
                                           @Nonnull TextureAtlasSprite sprite,
                                           int tintIndex,
-                                          float zOffset) {
+                                          float zOffset,
+                                          @Nullable TextureRotation rotation) {
         int[] originalVertices = templateQuad.getVertices();
         int[] newVertices = new int[originalVertices.length];
         System.arraycopy(originalVertices, 0, newVertices, 0, originalVertices.length);
@@ -547,7 +557,12 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             // Convert to relative coordinates
             float relativeU = (originalU - originalSprite.getU0()) / (originalSprite.getU1() - originalSprite.getU0());
             float relativeV = (originalV - originalSprite.getV0()) / (originalSprite.getV1() - originalSprite.getV0());
-            
+            // Apply rotation in relative UV space
+            if (rotation != null && rotation != TextureRotation.NORMAL) {
+                float[] rotated = rotation.rotateUV(relativeU, relativeV);
+                relativeU = rotated[0];
+                relativeV = rotated[1];
+            }
             // Convert to new texture space
             float newU = sprite.getU0() + relativeU * (sprite.getU1() - sprite.getU0());
             float newV = sprite.getV0() + relativeV * (sprite.getV1() - sprite.getV0());
@@ -603,15 +618,15 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
      * Applies custom texture replacement to quads with overlay support.
      */
     @Nonnull
-    private List<BakedQuad> applyCustomTextures(@Nonnull List<BakedQuad> baseQuads, 
+    private List<BakedQuad> applyCustomTextures(@Nonnull List<BakedQuad> baseQuads,
                                                @Nullable String toggleTexture,
                                                @Nullable String baseTexture,
                                                @Nullable String faceSelection,
                                                @Nullable String powerMode,
                                                @Nullable BlockState state,
                                                @Nonnull ModelData extraData,
-                                               @Nullable Map<Direction, List<OverlayLayer>> overlayData) {
-        
+                                               @Nullable Map<Direction, List<OverlayLayer>> overlayData,
+                                               @Nullable RenderType renderType) {
         // Get tintIndex from ModelData (same tintIndex for both toggle and base parts)
         Integer tintIndexObj = extraData.get(SwitchesLeverBlockEntity.TINT_INDEX);
         int tintIndex = (tintIndexObj != null) ? tintIndexObj : -1;
@@ -620,7 +635,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             // Process quad with overlay support
             List<BakedQuad> processedQuads = processQuadWithOverlaySupport(
                 quad, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData,
-                tintIndex, tintIndex, overlayData
+                tintIndex, tintIndex, overlayData, renderType
             );
             texturedQuads.addAll(processedQuads);
         }
@@ -628,6 +643,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     }
     /**
      * Processes quad with overlay support - returns list of quads (multiple if overlays exist).
+     * Render-type-conditional: base layers emit in solid pass, overlay layers in cutoutMipped.
      */
     @Nonnull
     private List<BakedQuad> processQuadWithOverlaySupport(@Nonnull BakedQuad originalQuad,
@@ -639,25 +655,38 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                                          @Nonnull ModelData extraData,
                                                          int toggleTintIndex,
                                                          int baseTintIndex,
-                                                         @Nullable Map<Direction, List<OverlayLayer>> overlayData) {
-        
+                                                         @Nullable Map<Direction, List<OverlayLayer>> overlayData,
+                                                         @Nullable RenderType renderType) {
         TextureAtlasSprite originalSprite = originalQuad.getSprite();
         String originalTextureName = getTextureName(originalSprite);
-        
         // Determine if this quad uses toggle or base texture
         boolean isTogglePart = isLeverMovingPart(originalTextureName);
         boolean isBasePart = isLeverBasePart(originalTextureName);
-        
-        // Check if we have overlays for this texture
+        // Face-selection-aware overlay lookup: only use overlays for the selected face
+        // Only apply overlays when the part has a CUSTOM texture (not the default)
+        boolean toggleHasCustomTexture = toggleTexture != null &&
+            !toggleTexture.equals(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE);
+        boolean baseHasCustomTexture = baseTexture != null &&
+            !baseTexture.equals(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE);
         List<OverlayLayer> overlayLayers = null;
         if (overlayData != null && !overlayData.isEmpty() &&
-                ((isTogglePart && toggleTexture != null) || (isBasePart && baseTexture != null))) {
-            // Find overlay data with multiple layers (e.g. grass block sides have dirt + overlay)
-            for (Direction dir : Direction.values()) {
-                List<OverlayLayer> layers = overlayData.get(dir);
+                ((isTogglePart && toggleHasCustomTexture) || (isBasePart && baseHasCustomTexture))) {
+            // Map face selection to specific direction for overlay lookup
+            Direction selectedDir = mapFaceSelectionToDirection(faceSelection, isBasePart);
+            if (selectedDir != null) {
+                // Use overlay data for the specific selected face only
+                List<OverlayLayer> layers = overlayData.get(selectedDir);
                 if (layers != null && layers.size() > 1) {
                     overlayLayers = layers;
-                    break;
+                }
+            } else {
+                // "all" or unresolved: check all directions for overlay data
+                for (Direction dir : Direction.values()) {
+                    List<OverlayLayer> layers = overlayData.get(dir);
+                    if (layers != null && layers.size() > 1) {
+                        overlayLayers = layers;
+                        break;
+                    }
                 }
             }
         }
@@ -671,34 +700,112 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 LOGGER.info("Rendering {} overlay layers for quad '{}'", overlayLayers.size(), originalTextureName);
             }
         }
-        
-        // If we have overlay layers, generate multiple quads
+        // If we have overlay layers, generate quads with render-type-conditional emission
         if (overlayLayers != null && overlayLayers.size() > 1) {
+            TextureRotation overlayRotation = determineTextureRotation(
+                    originalTextureName, baseTexture, extraData);
             List<BakedQuad> result = new ArrayList<>();
             for (OverlayLayer layer : overlayLayers) {
+                // Render-type-conditional: emit each layer only in its correct pass
+                // Solid pass: only base layer (order 0) — opaque underlay
+                // CutoutMipped pass: only overlay layers (order > 0) — transparent overlay with alpha
+                // Null renderType (GUI/item): emit all layers
+                if (renderType == RenderType.solid() && layer.getOrder() > 0) {
+                    continue;
+                }
+                if (renderType == RenderType.cutoutMipped() && layer.getOrder() == 0) {
+                    continue;
+                }
                 float zOffset = calculateZOffset(layer.getOrder());
                 TextureAtlasSprite layerSprite = getAtlasSprite(layer.getSprite());
                 int layerTintIndex = layer.getTintIndex();
-                
                 BakedQuad overlayQuad = buildQuadWithZOffset(
                     originalQuad,
                     layerSprite,
                     layerTintIndex,
-                    zOffset
+                    zOffset,
+                    overlayRotation
                 );
                 result.add(overlayQuad);
             }
             return result;
         }
-        
-        // No overlays or single layer - use normal processing
+        // No overlays or single layer - skip in cutoutMipped pass (nothing transparent to render)
+        if (renderType == RenderType.cutoutMipped()) {
+            return Collections.emptyList();
+        }
+        // Resolve per-face tintIndex from overlay data (single-layer faces have correct tintIndex)
+        int resolvedToggleTintIndex = toggleTintIndex;
+        int resolvedBaseTintIndex = baseTintIndex;
+        if (overlayData != null && !overlayData.isEmpty()) {
+            Direction selectedDir = mapFaceSelectionToDirection(faceSelection, isBasePart);
+            if (selectedDir != null) {
+                List<OverlayLayer> faceLayers = overlayData.get(selectedDir);
+                if (faceLayers != null && !faceLayers.isEmpty()) {
+                    int faceTint = faceLayers.get(0).getTintIndex();
+                    if (isBasePart) {
+                        resolvedBaseTintIndex = faceTint;
+                    } else if (isTogglePart) {
+                        resolvedToggleTintIndex = faceTint;
+                    }
+                }
+            }
+        }
+        // Normal processing for solid pass or null renderType
         BakedQuad processedQuad = processQuadWithCustomTextures(
             originalQuad, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData,
-            toggleTintIndex, baseTintIndex
+            resolvedToggleTintIndex, resolvedBaseTintIndex
         );
         return Collections.singletonList(processedQuad);
     }
-    
+    /**
+     * Maps face selection variable name to a Direction for overlay data lookup.
+     * Returns null for "all" or unresolvable variables (triggers fallback to scan all directions).
+     */
+    @Nullable
+    private Direction mapFaceSelectionToDirection(@Nullable String faceSelection, boolean isBasePart) {
+        if (faceSelection == null) return null;
+        // faceSelection format: "baseVar,toggleVar"
+        String[] parts = faceSelection.split(",");
+        String variable = isBasePart ? parts[0] : (parts.length > 1 ? parts[1] : parts[0]);
+        return switch (variable.toLowerCase()) {
+            case "top", "up" -> Direction.UP;
+            case "bottom", "down" -> Direction.DOWN;
+            case "north" -> Direction.NORTH;
+            case "south" -> Direction.SOUTH;
+            case "east" -> Direction.EAST;
+            case "west" -> Direction.WEST;
+            case "side" -> Direction.NORTH; // "side" maps to NORTH for overlay lookup
+            default -> null; // "all" or unknown — use fallback logic
+        };
+    }
+    /**
+     * Determines texture rotation for a quad based on part type and ModelData.
+     * Handles toggle compensation (+90° offset for model's built-in 270° rotation).
+     */
+    @Nullable
+    private TextureRotation determineTextureRotation(@Nonnull String originalTextureName,
+                                                     @Nullable String baseTexture,
+                                                     @Nonnull ModelData extraData) {
+        if (isLeverBasePart(originalTextureName) && baseTexture != null) {
+            String rotStr = extraData.get(SwitchesLeverBlockEntity.BASE_ROTATION);
+            if (rotStr != null) {
+                try { return TextureRotation.valueOf(rotStr); }
+                catch (IllegalArgumentException e) { return TextureRotation.NORMAL; }
+            }
+        }
+        if (isLeverMovingPart(originalTextureName)) {
+            Boolean hasToggleBlock = extraData.get(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK);
+            if (hasToggleBlock != null && hasToggleBlock) {
+                String rotStr = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
+                if (rotStr != null) {
+                    try { return compensateToggleRotation(TextureRotation.valueOf(rotStr)); }
+                    catch (IllegalArgumentException e) { return TextureRotation.RIGHT; }
+                }
+            }
+        }
+        return null;
+    }
     /**
      * Processes individual quad with custom texture replacement.
      */
@@ -721,60 +828,19 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 originalSprite, originalTextureName, toggleTexture, baseTexture, 
                 powerMode);
 
-        // Check for texture rotations (regardless of whether texture is being replaced)
-        TextureRotation rotation = null;
-        
-        // Check if this is a base texture part that needs rotation
-        boolean isBaseTexturePart = isLeverBasePart(originalTextureName);
-        if (isBaseTexturePart && baseTexture != null) {
-            String rotationString = extraData.get(SwitchesLeverBlockEntity.BASE_ROTATION);
-            if (rotationString != null) {
-                try {
-                    rotation = TextureRotation.valueOf(rotationString);
-                } catch (IllegalArgumentException e) {
-                    rotation = TextureRotation.NORMAL;
-                }
-            }
-        }
-        
-        // Check if this is a toggle texture part that needs rotation
-        // IMPORTANT: Toggle texture faces in the vanilla model have built-in 270° rotation,
-        // so we need to apply a +90° offset to compensate and give users intuitive control
-        // HOWEVER: Only apply rotation compensation when there is a block in the toggle slot
-        boolean isToggleTexturePart = isLeverMovingPart(originalTextureName);
-        if (isToggleTexturePart) {
-            // Check if toggle slot has a block
-            Boolean hasToggleBlock = extraData.get(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK);
-            boolean toggleSlotHasBlock = hasToggleBlock != null && hasToggleBlock;
-            
-            if (toggleSlotHasBlock) {
-                // Toggle slot has block - apply rotation with compensation
-                String rotationString = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
-                if (rotationString != null) {
-                    try {
-                        TextureRotation userRotation = TextureRotation.valueOf(rotationString);
-                        // Apply +90° offset to compensate for model's built-in 270° rotation
-                        rotation = compensateToggleRotation(userRotation);
-                    } catch (IllegalArgumentException e) {
-                        rotation = TextureRotation.RIGHT; // Compensated NORMAL = RIGHT
-                    }
-                }
-            }
-            // else: Toggle slot is empty - no rotation applied (rotation stays null, becomes NORMAL)
-        }
-        
+        // Determine texture rotation (base or toggle with compensation)
+        TextureRotation rotation = determineTextureRotation(originalTextureName, baseTexture, extraData);
         // Apply processing if we need texture replacement OR rotation
         boolean needsTextureReplacement = (replacementSprite != originalSprite);
         boolean needsRotation = (rotation != null && rotation != TextureRotation.NORMAL);
-        
         if (!needsTextureReplacement && !needsRotation) {
             return originalQuad;
         }
-        
         // Use replacement sprite if available, otherwise use original sprite
         TextureAtlasSprite finalSprite = needsTextureReplacement ? replacementSprite : originalSprite;
-        
         // Determine tintIndex for this quad
+        boolean isToggleTexturePart = isLeverMovingPart(originalTextureName);
+        boolean isBaseTexturePart = isLeverBasePart(originalTextureName);
         int quadTintIndex = originalQuad.getTintIndex(); // Default: preserve original
         if (needsTextureReplacement) {
             // Applying custom texture - use appropriate tintIndex from source block
@@ -994,6 +1060,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     }
     
     /** Computes sprite name from sprite contents. Does NOT close contents - they are owned by the atlas. */
+    @SuppressWarnings("resource") // SpriteContents owned by atlas, not our responsibility to close
     @Nonnull
     private String computeSpriteName(@Nonnull TextureAtlasSprite sprite) {
         try {

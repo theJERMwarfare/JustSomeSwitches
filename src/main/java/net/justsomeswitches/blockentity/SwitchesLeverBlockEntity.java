@@ -163,6 +163,39 @@ public class SwitchesLeverBlockEntity extends BlockEntity {
         super(JustSomeSwitchesModBlockEntities.SWITCHES_LEVER.get(), pos, blockState);
     }
 
+    /** Ensures model data is refreshed and overlay/tint data re-analyzed after world load. */
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && level.isClientSide) {
+            reanalyzeClientData();
+            requestModelDataUpdate();
+        }
+    }
+
+    /** Re-analyzes overlay and tint data from stored items on client after world load. */
+    private void reanalyzeClientData() {
+        // Analyze whichever slot has a block — prefer the one with custom texture
+        boolean baseIsCustom = !baseTexturePath.equals(DEFAULT_BASE_TEXTURE);
+        boolean toggleIsCustom = !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE);
+        ItemStack itemToAnalyze = ItemStack.EMPTY;
+        if (baseIsCustom && !guiBaseItem.isEmpty()) {
+            itemToAnalyze = guiBaseItem;
+        } else if (toggleIsCustom && !guiToggleItem.isEmpty()) {
+            itemToAnalyze = guiToggleItem;
+        }
+        if (itemToAnalyze.isEmpty()) return;
+        if (!(itemToAnalyze.getItem() instanceof net.minecraft.world.item.BlockItem blockItem)) return;
+        BlockState blockState = blockItem.getBlock().defaultBlockState();
+        sourceBlockState = blockState;
+        for (Direction direction : Direction.values()) {
+            tintDataMap.put(direction,
+                net.justsomeswitches.util.DynamicBlockModelAnalyzer.analyzeTinting(blockState, direction));
+            overlayDataMap.put(direction,
+                net.justsomeswitches.util.DynamicBlockModelAnalyzer.analyzeOverlays(blockState, direction));
+        }
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public void setBlockState(@Nonnull BlockState blockState) {
