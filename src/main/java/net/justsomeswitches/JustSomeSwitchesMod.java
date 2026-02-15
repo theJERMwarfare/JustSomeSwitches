@@ -1,13 +1,20 @@
 package net.justsomeswitches;
 
+import net.justsomeswitches.client.SwitchesConfigScreen;
+import net.justsomeswitches.config.SwitchesClientConfig;
+import net.justsomeswitches.config.SwitchesCommonConfig;
+import net.justsomeswitches.config.SwitchesServerConfig;
 import net.justsomeswitches.gui.JustSomeSwitchesMenuTypes;
 import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.init.JustSomeSwitchesModTabs;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.client.ConfigScreenHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +37,16 @@ public class JustSomeSwitchesMod {
         JustSomeSwitchesModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         JustSomeSwitchesModTabs.CREATIVE_MODE_TABS.register(modEventBus);
         JustSomeSwitchesMenuTypes.MENU_TYPES.register(modEventBus);
+
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, SwitchesClientConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, SwitchesServerConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SwitchesCommonConfig.SPEC);
+        ModLoadingContext.get().registerExtensionPoint(
+            ConfigScreenHandler.ConfigScreenFactory.class,
+            () -> new ConfigScreenHandler.ConfigScreenFactory(
+                (minecraft, screen) -> new SwitchesConfigScreen(screen)
+            )
+        );
 
         modEventBus.addListener(this::commonSetup);
     }

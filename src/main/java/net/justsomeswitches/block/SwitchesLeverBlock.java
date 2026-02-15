@@ -1,7 +1,9 @@
 package net.justsomeswitches.block;
 
 import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.config.SwitchesCommonConfig;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
+import net.justsomeswitches.util.TightSwitchShapes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
@@ -135,19 +137,17 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
 
     @Override
     @Nonnull
+    @SuppressWarnings("deprecation")
     public RenderShape getRenderShape(@Nonnull BlockState state) {
         return RenderShape.MODEL;
     }
-
-
-
     @Override
     @Nullable
     public BlockState getStateForPlacement(@Nonnull BlockPlaceContext context) {
         return getAdvancedPlacementState(context);
     }
-    
     @Override
+    @SuppressWarnings("deprecation")
     public boolean canBeReplaced(@Nonnull BlockState state, @Nonnull BlockPlaceContext useContext) {
         return false;
     }
@@ -192,8 +192,6 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     private BlockState getAdvancedPlacementState(@Nonnull BlockPlaceContext context) {
         Direction clickedFace = context.getClickedFace();
         Vec3 clickLocation = context.getClickLocation();
-        BlockPos clickedPos = context.getClickedPos();
-        
         Vec3 relativeHit = getRelativeHitLocation(clickLocation, clickedFace);
         BlockState proposedState = switch (clickedFace) {
             case UP -> getFloorPlacement(relativeHit, context);
@@ -336,13 +334,22 @@ public class SwitchesLeverBlock extends LeverBlock implements EntityBlock {
     public VoxelShape getShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);
         Direction direction = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        if (SwitchesCommonConfig.isTightHitboxesSwitches()) {
+            boolean powered = state.getValue(BlockStateProperties.POWERED);
+            if (attachFace == AttachFace.WALL && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity be) {
+                String wallOrientation = be.getWallOrientation();
+                if (!wallOrientation.isEmpty()) {
+                    return TightSwitchShapes.getTightSwitchesShape(attachFace, direction, powered, wallOrientation);
+                }
+            }
+            return TightSwitchShapes.getTightSwitchesShape(attachFace, direction, powered, "");
+        }
         if (attachFace == AttachFace.WALL && level.getBlockEntity(pos) instanceof SwitchesLeverBlockEntity blockEntity) {
             String wallOrientation = blockEntity.getWallOrientation();
             if (!wallOrientation.isEmpty()) {
                 return getRotatedWallShape(direction, wallOrientation);
             }
         }
-
         return switch (attachFace) {
             case FLOOR -> switch (direction) {
                 case NORTH, SOUTH -> FLOOR_NORTH_SOUTH;

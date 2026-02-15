@@ -1,5 +1,6 @@
 package net.justsomeswitches;
 
+import net.justsomeswitches.config.SwitchesServerConfig;
 import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -25,6 +26,9 @@ public class WrenchEventHandler {
         if (!player.getMainHandItem().is(JustSomeSwitchesModBlocks.SWITCHES_WRENCH.get())) {
             return;
         }
+        try {
+            if (SwitchesServerConfig.DISABLE_WRENCH_INSTANT_BREAK.get()) return;
+        } catch (Exception ignored) { /* Config not loaded yet, allow breaking */ }
         
         Level level = event.getLevel();
         BlockPos pos = event.getPos();

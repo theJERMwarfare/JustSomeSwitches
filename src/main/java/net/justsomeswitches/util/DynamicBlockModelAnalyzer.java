@@ -268,7 +268,8 @@ public class DynamicBlockModelAnalyzer {
                 List<BakedQuad> quads = model.getQuads(blockState, faceDirections[i], random, ModelData.EMPTY, null);
                 if (!quads.isEmpty()) {
                     ResourceLocation spriteName = quads.get(0).getSprite().contents().name();
-                    String texturePath = spriteName.toString();
+                    Optional<String> ctmBase = ConnectedTextureHandler.getBaseTexture(spriteName);
+                    String texturePath = ctmBase.orElse(spriteName.toString());
                     textureVariables.put(variableNames[i], texturePath);
                     uniqueTextures.add(texturePath);
                 }

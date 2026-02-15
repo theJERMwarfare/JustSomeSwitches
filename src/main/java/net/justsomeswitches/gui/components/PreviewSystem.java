@@ -91,8 +91,9 @@ public class PreviewSystem {
         }
     }
     /** Draws texture preview box. */
-    private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, int size, 
-                                      @Nonnull String texturePath, 
+    @SuppressWarnings("SameParameterValue")
+    private void drawTexturePreviewBox(@Nonnull GuiGraphics graphics, int x, int y, int size,
+                                      @Nonnull String texturePath,
                                       @Nullable net.justsomeswitches.util.TextureRotation rotation) {
         try {
             TextureAtlasSprite sprite = getTextureSprite(texturePath);
@@ -245,13 +246,12 @@ public class PreviewSystem {
             return null;
         }
     }
-    /** Safely retrieves sprite name (same as SwitchTextureScreen). */
+    /** Safely retrieves sprite name without closing the sprite contents. */
     @Nonnull
+    @SuppressWarnings("resource") // Sprite contents managed by Minecraft, must NOT be closed
     private String getSafeSpriteName(@Nonnull TextureAtlasSprite sprite) {
         try {
-            try (var contents = sprite.contents()) {
-                return contents.name().toString();
-            }
+            return sprite.contents().name().toString();
         } catch (Exception e) {
             return "missingno";
         }

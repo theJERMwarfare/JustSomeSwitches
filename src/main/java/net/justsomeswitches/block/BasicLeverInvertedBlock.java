@@ -1,5 +1,7 @@
 package net.justsomeswitches.block;
 
+import net.justsomeswitches.config.SwitchesCommonConfig;
+import net.justsomeswitches.util.TightSwitchShapes;
 import net.justsomeswitches.util.SwitchesVoxelShapes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -41,8 +43,10 @@ public class BasicLeverInvertedBlock extends LeverBlock {
     public VoxelShape getShape(@Nonnull BlockState state, @Nonnull BlockGetter level, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);
         Direction direction = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-
-
+        if (SwitchesCommonConfig.isTightHitboxesBasic()) {
+            boolean powered = state.getValue(BlockStateProperties.POWERED);
+            return TightSwitchShapes.getTightShape(this, attachFace, direction, powered);
+        }
         return switch (attachFace) {
             case FLOOR -> switch (direction) {
                 case NORTH, SOUTH -> SwitchesVoxelShapes.FLOOR_NORTH_SOUTH;

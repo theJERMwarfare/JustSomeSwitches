@@ -5,6 +5,7 @@ import net.justsomeswitches.blockentity.tinting.FaceTintData;
 import net.justsomeswitches.blockentity.tinting.OverlayLayer;
 import net.justsomeswitches.network.NetworkHandler;
 import net.justsomeswitches.util.DynamicBlockModelAnalyzer;
+import net.justsomeswitches.util.SwitchesBlockValidator;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -18,7 +19,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
@@ -526,35 +526,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
 
 
     private boolean isValidTextureItem(@Nonnull ItemStack stack) {
-        if (!(stack.getItem() instanceof BlockItem blockItem)) {
-            return false;
-        }
-
-        Block block = blockItem.getBlock();
-        BlockState state = block.defaultBlockState();
-
-
-        try {
-            VoxelShape shape = state.getShape(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
-            var bounds = shape.bounds();
-            if (bounds.minX > 0.001 || bounds.minY > 0.001 || bounds.minZ > 0.001 ||
-                bounds.maxX < 0.999 || bounds.maxY < 0.999 || bounds.maxZ < 0.999) {
-                return false;
-            }
-        } catch (Exception e) {
-            return false;
-        }
-
-
-        if (!state.canOcclude()) {
-            return false;
-        }
-
-
-        String blockName = block.getDescriptionId().toLowerCase();
-        return !blockName.contains("stairs") && !blockName.contains("slab") &&
-               !blockName.contains("fence") && !blockName.contains("door") &&
-               !blockName.contains("redstone") && !blockName.contains("glass");
+        return SwitchesBlockValidator.isValidTextureItem(stack);
     }
 
 

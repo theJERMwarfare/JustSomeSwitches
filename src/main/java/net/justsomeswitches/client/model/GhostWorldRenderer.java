@@ -62,6 +62,9 @@ public class GhostWorldRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             return;
         }
+        if (!net.justsomeswitches.config.SwitchesClientConfig.SHOW_SWITCHES_PREVIEW.get()) {
+            return;
+        }
         renderActiveGhostPreviews(event);
     }
 
@@ -225,7 +228,8 @@ public class GhostWorldRenderer {
                     return true;
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
+            // UV analysis failure is non-critical — fall through to default
         }
         return false;
     }
@@ -235,15 +239,13 @@ public class GhostWorldRenderer {
         return false;
     }
 
-    /** Extracts texture name from sprite for analysis. */
+    /** Extracts texture name from sprite without closing the sprite contents. */
     @Nonnull
+    @SuppressWarnings("resource") // Sprite contents managed by Minecraft, must NOT be closed
     private static String getTextureName(@Nonnull TextureAtlasSprite sprite) {
         try {
-            try (var contents = sprite.contents()) {
-                return contents.name().toString().toLowerCase();
-            }
+            return sprite.contents().name().toString().toLowerCase();
         } catch (Exception e) {
-            // Intentionally ignore texture name errors - return safe default
             return "unknown";
         }
     }
