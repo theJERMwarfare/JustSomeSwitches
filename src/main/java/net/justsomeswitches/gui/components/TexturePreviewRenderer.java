@@ -1,6 +1,6 @@
 package net.justsomeswitches.gui.components;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.gui.SwitchesTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
@@ -231,36 +231,36 @@ public class TexturePreviewRenderer {
                 net.neoforged.neoforge.client.model.data.ModelData.builder();
         
         // Add texture rotation states
-        modelDataBuilder.with(SwitchesLeverBlockEntity.BASE_ROTATION,
+        modelDataBuilder.with(SwitchBlockEntity.BASE_ROTATION,
                 menu.getBaseTextureRotation().name());
-        modelDataBuilder.with(SwitchesLeverBlockEntity.TOGGLE_ROTATION,
+        modelDataBuilder.with(SwitchBlockEntity.TOGGLE_ROTATION,
                 menu.getToggleTextureRotation().name());
         
         // Add toggle slot state for conditional rotation compensation
-        modelDataBuilder.with(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK,
+        modelDataBuilder.with(SwitchBlockEntity.HAS_TOGGLE_BLOCK,
                 !toggleSelection.sourceBlock().isEmpty());
         
         // Add current texture paths from GUI selections
         if (baseSelection.hasPreview() && baseSelection.previewTexture() != null) {
-            modelDataBuilder.with(SwitchesLeverBlockEntity.BASE_TEXTURE,
+            modelDataBuilder.with(SwitchBlockEntity.BASE_TEXTURE,
                     baseSelection.previewTexture());
         }
         
         if (toggleSelection.hasPreview() && toggleSelection.previewTexture() != null) {
-            modelDataBuilder.with(SwitchesLeverBlockEntity.TOGGLE_TEXTURE,
+            modelDataBuilder.with(SwitchBlockEntity.TOGGLE_TEXTURE,
                     toggleSelection.previewTexture());
         }
         
         // Add power mode state
-        modelDataBuilder.with(SwitchesLeverBlockEntity.POWER_MODE,
+        modelDataBuilder.with(SwitchBlockEntity.POWER_MODE,
                 menu.getPowerMode().name());
         
         // Add wall orientation (center for GUI preview)
-        modelDataBuilder.with(SwitchesLeverBlockEntity.WALL_ORIENTATION, "center");
+        modelDataBuilder.with(SwitchBlockEntity.WALL_ORIENTATION, "center");
         
         // Add face selection state
         String faceSelection = baseSelection.selectedVariable() + "," + toggleSelection.selectedVariable();
-        modelDataBuilder.with(SwitchesLeverBlockEntity.FACE_SELECTION, faceSelection);
+        modelDataBuilder.with(SwitchBlockEntity.FACE_SELECTION, faceSelection);
         
         net.neoforged.neoforge.client.model.data.ModelData modelData = modelDataBuilder.build();
         

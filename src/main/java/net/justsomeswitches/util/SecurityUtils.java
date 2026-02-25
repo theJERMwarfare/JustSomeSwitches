@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +92,7 @@ public class SecurityUtils {
         }
         
         BlockEntity blockEntity = level.getBlockEntity(blockPos);
-        if (!(blockEntity instanceof SwitchesLeverBlockEntity)) {
+        if (!(blockEntity instanceof SwitchBlockEntity)) {
             LOGGER.warn("Player {} attempted to interact with non-switch block at {}",
                 player.getName().getString(), blockPos);
             return false;

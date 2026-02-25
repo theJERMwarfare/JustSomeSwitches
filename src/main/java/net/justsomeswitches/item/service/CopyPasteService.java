@@ -1,6 +1,6 @@
 package net.justsomeswitches.item.service;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.util.InventoryHelper;
 import net.justsomeswitches.util.NBTHelper;
@@ -32,7 +32,7 @@ public class CopyPasteService {
     /**
      * Copies settings from block entity to wrench NBT
      */
-    public static void copySettingsToWrench(@Nonnull ItemStack stack, @Nonnull SwitchesLeverBlockEntity blockEntity) {
+    public static void copySettingsToWrench(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity) {
         CompoundTag settingsTag = new CompoundTag();
         
         // Store all texture settings efficiently
@@ -62,7 +62,7 @@ public class CopyPasteService {
     /**
      * Selective copying with performance optimizations
      */
-    public static void copySelectedSettings(@Nonnull ItemStack stack, @Nonnull SwitchesLeverBlockEntity blockEntity,
+    public static void copySelectedSettings(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity,
                                           boolean copyToggleBlock, boolean copyToggleFace, boolean copyToggleRotation,
                                           boolean copyIndicators, boolean copyBaseBlock, boolean copyBaseFace,
                                           boolean copyBaseRotation) {
@@ -103,7 +103,7 @@ public class CopyPasteService {
     /**
      * Optimized settings comparison
      */
-    public static boolean hasIdenticalSettings(@Nonnull ItemStack stack, @Nonnull SwitchesLeverBlockEntity blockEntity) {
+    public static boolean hasIdenticalSettings(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
@@ -218,7 +218,7 @@ public class CopyPasteService {
      * Optimized paste operation with efficient inventory management
      */
     @Nonnull
-    public static PasteResult applySettingsFromWrench(@Nonnull ItemStack stack, @Nonnull SwitchesLeverBlockEntity blockEntity, @Nonnull Player player) {
+    public static PasteResult applySettingsFromWrench(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
@@ -243,7 +243,7 @@ public class CopyPasteService {
      * Used when some required blocks are missing from inventory
      */
     @Nonnull
-    public static PasteResult applyPartialSettingsFromWrench(@Nonnull ItemStack stack, @Nonnull SwitchesLeverBlockEntity blockEntity, @Nonnull Player player) {
+    public static PasteResult applyPartialSettingsFromWrench(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
@@ -284,7 +284,7 @@ public class CopyPasteService {
     /**
      * Apply all settings in an optimized manner
      */
-    private static void applyAllSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchesLeverBlockEntity blockEntity, @Nonnull Player player) {
+    private static void applyAllSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player) {
         // Apply power mode first (no inventory required)
         applyPowerMode(settingsTag, blockEntity);
         
@@ -305,11 +305,11 @@ public class CopyPasteService {
         applyBaseSettings(settingsTag, blockEntity);
     }
     
-    private static void applyPowerMode(@Nonnull CompoundTag settingsTag, @Nonnull SwitchesLeverBlockEntity blockEntity) {
+    private static void applyPowerMode(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {
         if (settingsTag.contains(WrenchConstants.POWER_MODE_KEY)) {
             try {
-                SwitchesLeverBlockEntity.PowerMode powerMode = 
-                    SwitchesLeverBlockEntity.PowerMode.valueOf(settingsTag.getString(WrenchConstants.POWER_MODE_KEY));
+                SwitchBlockEntity.PowerMode powerMode = 
+                    SwitchBlockEntity.PowerMode.valueOf(settingsTag.getString(WrenchConstants.POWER_MODE_KEY));
                 blockEntity.setPowerMode(powerMode);
             } catch (IllegalArgumentException ignored) {
                 // Invalid power mode - ignore
@@ -317,7 +317,7 @@ public class CopyPasteService {
         }
     }
     
-    private static void applyToggleSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchesLeverBlockEntity blockEntity) {
+    private static void applyToggleSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {
         if (settingsTag.contains(WrenchConstants.TOGGLE_BLOCK_KEY)) {
             ItemStack toggleItem = ItemStack.of(settingsTag.getCompound(WrenchConstants.TOGGLE_BLOCK_KEY));
             blockEntity.setToggleSlotItem(toggleItem);
@@ -327,7 +327,7 @@ public class CopyPasteService {
         }
     }
     
-    private static void applyBaseSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchesLeverBlockEntity blockEntity) {
+    private static void applyBaseSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {
         if (settingsTag.contains(WrenchConstants.BASE_BLOCK_KEY)) {
             ItemStack baseItem = ItemStack.of(settingsTag.getCompound(WrenchConstants.BASE_BLOCK_KEY));
             blockEntity.setBaseSlotItem(baseItem);
@@ -337,7 +337,7 @@ public class CopyPasteService {
         }
     }
     
-    private static void applyTextureAndRotation(@Nonnull CompoundTag settingsTag, @Nonnull SwitchesLeverBlockEntity blockEntity,
+    private static void applyTextureAndRotation(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity,
                                               @Nonnull ItemStack item, @Nonnull String faceKey, @Nonnull String rotationKey, boolean isToggle) {
         // Apply texture
         if (settingsTag.contains(faceKey)) {

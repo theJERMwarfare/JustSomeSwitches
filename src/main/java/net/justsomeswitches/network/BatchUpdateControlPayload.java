@@ -1,7 +1,7 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -69,7 +69,7 @@ public record BatchUpdateControlPayload(
             SecurityUtils.logSecurityEvent(player, "BATCH_UPDATE_CONTROL", payload.blockPos(), 
                 "Start batch: " + payload.startBatch());
             BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
-            if (!(blockEntity instanceof SwitchesLeverBlockEntity switchEntity)) {
+            if (!(blockEntity instanceof SwitchBlockEntity switchEntity)) {
                 return;
             }
             if (payload.startBatch()) {

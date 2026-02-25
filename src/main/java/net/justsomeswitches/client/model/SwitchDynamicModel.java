@@ -1,6 +1,6 @@
 package net.justsomeswitches.client.model;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.blockentity.tinting.OverlayLayer;
 import net.justsomeswitches.util.TextureRotation;
 import org.slf4j.Logger;
@@ -29,8 +29,8 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Dynamic model for lever blocks with custom texture support. */
-public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SwitchesLeverDynamicModel.class);
+public class SwitchDynamicModel implements IDynamicBakedModel {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SwitchDynamicModel.class);
     
     /** Pre-computed wall orientation matrices for common rotations. Keys are "orientation_direction" like "top_north". */
     private static final Map<String, Matrix4f> WALL_ROTATION_CACHE = new HashMap<>();
@@ -120,7 +120,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     @Nonnull
     private String getWallOrientationFromBlockEntity(@Nonnull ModelData extraData) {
         try {
-            String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
+            String wallOrientation = extraData.get(SwitchBlockEntity.WALL_ORIENTATION);
             if (wallOrientation != null && !wallOrientation.isEmpty()) {
                 return wallOrientation;
             }
@@ -240,8 +240,6 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     private final Map<TextureAtlasSprite, String> spriteNameCache = new ConcurrentHashMap<>();
     /** Cached ResourceLocation objects to reduce allocations. Thread-safe for concurrent rendering. */
     private final Map<String, ResourceLocation> resourceLocationCache = new ConcurrentHashMap<>();
-    /** Tracks overlay diagnostic logging to avoid log spam (one message per unique texture). */
-    private final java.util.Set<String> overlayDiagnosticLogged = ConcurrentHashMap.newKeySet();
 
     // Cache performance tracking
     private static final java.util.concurrent.atomic.AtomicInteger cacheOperations = 
@@ -313,15 +311,20 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
     }
 
 
-    public SwitchesLeverDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
+    /** Number of +90° rotation steps to compensate for toggle model orientation (0=none, 1=+90°, 2=+180°, 3=+270°). */
+    private final int toggleRotationSteps;
+
+    public SwitchDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
                              @SuppressWarnings("unused") @Nonnull Map<String, Matrix4f> orientationTransforms,
                              @SuppressWarnings("unused") @Nonnull Map<String, String> jsonVariables,
                              @SuppressWarnings("unused") @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
                              @Nonnull BakedModel vanillaLeverModel,
-                             @Nonnull ItemOverrides itemOverrides) {
+                             @Nonnull ItemOverrides itemOverrides,
+                             int toggleRotationSteps) {
         this.textureSprites = new HashMap<>(textureSprites);
         this.vanillaLeverModel = vanillaLeverModel;
         this.itemOverrides = itemOverrides;
+        this.toggleRotationSteps = toggleRotationSteps;
     }
     /**
      * Calculates Z-offset for overlay layer to prevent z-fighting.
@@ -359,15 +362,15 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         }
         
         // Ghost preview mode is always valid
-        Boolean ghostMode = extraData.get(SwitchesLeverBlockEntity.GHOST_MODE);
+        Boolean ghostMode = extraData.get(SwitchBlockEntity.GHOST_MODE);
         if (ghostMode != null && ghostMode) {
             return true;
         }
         
         // Check for any texture customization or power mode
-        return extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE) != null ||
-               extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE) != null ||
-               extraData.get(SwitchesLeverBlockEntity.POWER_MODE) != null;
+        return extraData.get(SwitchBlockEntity.TOGGLE_TEXTURE) != null ||
+               extraData.get(SwitchBlockEntity.BASE_TEXTURE) != null ||
+               extraData.get(SwitchBlockEntity.POWER_MODE) != null;
     }
 
     @Override
@@ -460,19 +463,19 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         String powerMode = null;
         
         if (extraData != ModelData.EMPTY) {
-            toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
-            baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
-            faceSelection = extraData.get(SwitchesLeverBlockEntity.FACE_SELECTION);
-            powerMode = extraData.get(SwitchesLeverBlockEntity.POWER_MODE);
+            toggleTexture = extraData.get(SwitchBlockEntity.TOGGLE_TEXTURE);
+            baseTexture = extraData.get(SwitchBlockEntity.BASE_TEXTURE);
+            faceSelection = extraData.get(SwitchBlockEntity.FACE_SELECTION);
+            powerMode = extraData.get(SwitchBlockEntity.POWER_MODE);
             
             // Check for texture replacement or power mode
-            boolean hasTextureReplacement = (toggleTexture != null && !toggleTexture.equals(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) ||
-                           (baseTexture != null && !baseTexture.equals(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE)) ||
+            boolean hasTextureReplacement = (toggleTexture != null && !toggleTexture.equals(SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE)) ||
+                           (baseTexture != null && !baseTexture.equals(SwitchBlockEntity.DEFAULT_BASE_TEXTURE)) ||
                            (powerMode != null);
             
             // Check for texture rotation
-            String baseRotation = extraData.get(SwitchesLeverBlockEntity.BASE_ROTATION);
-            String toggleRotation = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
+            String baseRotation = extraData.get(SwitchBlockEntity.BASE_ROTATION);
+            String toggleRotation = extraData.get(SwitchBlockEntity.TOGGLE_ROTATION);
             boolean hasTextureRotation = (baseRotation != null && !baseRotation.equals("NORMAL") && baseTexture != null) ||
                                         (toggleRotation != null && !toggleRotation.equals("NORMAL") && toggleTexture != null);
             
@@ -486,8 +489,11 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         // template geometry to generate overlay quads with proper alpha transparency.
         // Get solid quads as templates when overlay data exists.
         if (baseQuads.isEmpty() && hasTextureData && renderType == RenderType.cutoutMipped()) {
-            Map<Direction, List<OverlayLayer>> overlayCheck = extraData.get(SwitchesLeverBlockEntity.OVERLAY_DATA);
-            if (overlayCheck != null && !overlayCheck.isEmpty()) {
+            Map<Direction, List<OverlayLayer>> toggleOverlayCheck = extraData.get(SwitchBlockEntity.TOGGLE_OVERLAY_DATA);
+            Map<Direction, List<OverlayLayer>> baseOverlayCheck = extraData.get(SwitchBlockEntity.BASE_OVERLAY_DATA);
+            boolean hasOverlays = (toggleOverlayCheck != null && !toggleOverlayCheck.isEmpty())
+                    || (baseOverlayCheck != null && !baseOverlayCheck.isEmpty());
+            if (hasOverlays) {
                 baseQuads = vanillaLeverModel.getQuads(state, side, rand,
                         net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.solid());
             }
@@ -498,9 +504,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
         List<BakedQuad> texturedQuads = baseQuads;
         if (hasTextureData) {
-            // Get overlay data for texture application
-            Map<Direction, List<OverlayLayer>> overlayData = extraData.get(SwitchesLeverBlockEntity.OVERLAY_DATA);
-            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData, overlayData, renderType);
+            texturedQuads = applyCustomTextures(baseQuads, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData, renderType);
         }
 
         if (state != null && isWallPlacement(state) && extraData != ModelData.EMPTY) {
@@ -608,12 +612,14 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
      * Checks if ghost preview mode is enabled in ModelData.
      */
     private boolean isGhostPreviewMode(@Nonnull ModelData extraData) {
-        Boolean ghostMode = extraData.get(SwitchesLeverBlockEntity.GHOST_MODE);
+        Boolean ghostMode = extraData.get(SwitchBlockEntity.GHOST_MODE);
         return ghostMode != null && ghostMode;
     }
 
 
 
+    /** Offset applied to base quad tintIndex to distinguish from toggle in the color handler. */
+    public static final int BASE_TINT_OFFSET = 100;
     /**
      * Applies custom texture replacement to quads with overlay support.
      */
@@ -625,17 +631,28 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                                @Nullable String powerMode,
                                                @Nullable BlockState state,
                                                @Nonnull ModelData extraData,
-                                               @Nullable Map<Direction, List<OverlayLayer>> overlayData,
                                                @Nullable RenderType renderType) {
-        // Get tintIndex from ModelData (same tintIndex for both toggle and base parts)
-        Integer tintIndexObj = extraData.get(SwitchesLeverBlockEntity.TINT_INDEX);
-        int tintIndex = (tintIndexObj != null) ? tintIndexObj : -1;
+        // Get separate tintIndex per category
+        Integer toggleTintObj = extraData.get(SwitchBlockEntity.TOGGLE_TINT_INDEX);
+        Integer baseTintObj = extraData.get(SwitchBlockEntity.BASE_TINT_INDEX);
+        int toggleTintIndex = (toggleTintObj != null) ? toggleTintObj : -1;
+        int baseTintIndex = (baseTintObj != null) ? baseTintObj : -1;
+        // Encode base tintIndex with offset so color handler can distinguish categories
+        if (baseTintIndex >= 0) {
+            baseTintIndex += BASE_TINT_OFFSET;
+        }
+        // Get separate overlay data per category
+        Map<Direction, List<OverlayLayer>> toggleOverlayData = extraData.get(SwitchBlockEntity.TOGGLE_OVERLAY_DATA);
+        Map<Direction, List<OverlayLayer>> baseOverlayData = extraData.get(SwitchBlockEntity.BASE_OVERLAY_DATA);
         List<BakedQuad> texturedQuads = new ArrayList<>();
         for (BakedQuad quad : baseQuads) {
-            // Process quad with overlay support
+            // Determine which overlay data to use based on quad part type
+            String texName = getTextureName(quad.getSprite());
+            boolean isToggle = isLeverMovingPart(texName);
+            Map<Direction, List<OverlayLayer>> overlayData = isToggle ? toggleOverlayData : baseOverlayData;
             List<BakedQuad> processedQuads = processQuadWithOverlaySupport(
                 quad, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData,
-                tintIndex, tintIndex, overlayData, renderType
+                toggleTintIndex, baseTintIndex, overlayData, renderType
             );
             texturedQuads.addAll(processedQuads);
         }
@@ -665,9 +682,9 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         // Face-selection-aware overlay lookup: only use overlays for the selected face
         // Only apply overlays when the part has a CUSTOM texture (not the default)
         boolean toggleHasCustomTexture = toggleTexture != null &&
-            !toggleTexture.equals(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE);
+            !toggleTexture.equals(SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE);
         boolean baseHasCustomTexture = baseTexture != null &&
-            !baseTexture.equals(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE);
+            !baseTexture.equals(SwitchBlockEntity.DEFAULT_BASE_TEXTURE);
         List<OverlayLayer> overlayLayers = null;
         if (overlayData != null && !overlayData.isEmpty() &&
                 ((isTogglePart && toggleHasCustomTexture) || (isBasePart && baseHasCustomTexture))) {
@@ -690,16 +707,6 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 }
             }
         }
-        // Diagnostic: log overlay rendering decisions (once per texture to avoid log spam)
-        if (overlayDiagnosticLogged.add(originalTextureName)) {
-            if (overlayData != null && !overlayData.isEmpty() && overlayLayers == null) {
-                LOGGER.info("Overlay data present but no multi-layer faces found for quad '{}' (toggle={}, base={})",
-                    originalTextureName, isTogglePart, isBasePart);
-            }
-            if (overlayLayers != null) {
-                LOGGER.info("Rendering {} overlay layers for quad '{}'", overlayLayers.size(), originalTextureName);
-            }
-        }
         // If we have overlay layers, generate quads with render-type-conditional emission
         if (overlayLayers != null && overlayLayers.size() > 1) {
             TextureRotation overlayRotation = determineTextureRotation(
@@ -719,6 +726,10 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 float zOffset = calculateZOffset(layer.getOrder());
                 TextureAtlasSprite layerSprite = getAtlasSprite(layer.getSprite());
                 int layerTintIndex = layer.getTintIndex();
+                // Apply base offset for base part overlay layers so color handler can distinguish
+                if (isBasePart && layerTintIndex >= 0) {
+                    layerTintIndex += BASE_TINT_OFFSET;
+                }
                 BakedQuad overlayQuad = buildQuadWithZOffset(
                     originalQuad,
                     layerSprite,
@@ -744,7 +755,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 if (faceLayers != null && !faceLayers.isEmpty()) {
                     int faceTint = faceLayers.get(0).getTintIndex();
                     if (isBasePart) {
-                        resolvedBaseTintIndex = faceTint;
+                        resolvedBaseTintIndex = (faceTint >= 0) ? faceTint + BASE_TINT_OFFSET : faceTint;
                     } else if (isTogglePart) {
                         resolvedToggleTintIndex = faceTint;
                     }
@@ -788,16 +799,16 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                                      @Nullable String baseTexture,
                                                      @Nonnull ModelData extraData) {
         if (isLeverBasePart(originalTextureName) && baseTexture != null) {
-            String rotStr = extraData.get(SwitchesLeverBlockEntity.BASE_ROTATION);
+            String rotStr = extraData.get(SwitchBlockEntity.BASE_ROTATION);
             if (rotStr != null) {
                 try { return TextureRotation.valueOf(rotStr); }
                 catch (IllegalArgumentException e) { return TextureRotation.NORMAL; }
             }
         }
         if (isLeverMovingPart(originalTextureName)) {
-            Boolean hasToggleBlock = extraData.get(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK);
+            Boolean hasToggleBlock = extraData.get(SwitchBlockEntity.HAS_TOGGLE_BLOCK);
             if (hasToggleBlock != null && hasToggleBlock) {
-                String rotStr = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
+                String rotStr = extraData.get(SwitchBlockEntity.TOGGLE_ROTATION);
                 if (rotStr != null) {
                     try { return compensateToggleRotation(TextureRotation.valueOf(rotStr)); }
                     catch (IllegalArgumentException e) { return TextureRotation.RIGHT; }
@@ -904,7 +915,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             if (altSprite != null) return altSprite;
         } else if ("NONE".equals(powerMode)) {
             // NONE mode uses toggle texture (or default toggle if not set)
-            String effectiveToggleTexture = toggleTexture != null ? toggleTexture : SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE;
+            String effectiveToggleTexture = toggleTexture != null ? toggleTexture : SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE;
             TextureAtlasSprite toggleSprite = getTextureSprite(effectiveToggleTexture);
             if (toggleSprite != null) return toggleSprite;
         }
@@ -925,7 +936,7 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
             if (altSprite != null) return altSprite;
         } else if ("NONE".equals(powerMode)) {
             // NONE mode uses toggle texture (or default toggle if not set)
-            String effectiveToggleTexture = toggleTexture != null ? toggleTexture : SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE;
+            String effectiveToggleTexture = toggleTexture != null ? toggleTexture : SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE;
             TextureAtlasSprite toggleSprite = getTextureSprite(effectiveToggleTexture);
             if (toggleSprite != null) return toggleSprite;
         }
@@ -998,23 +1009,30 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
 
 
+    /** Rotation sequence in clockwise order: 0° → 90° → 180° → 270°(-90°). */
+    private static final TextureRotation[] ROTATION_SEQUENCE = {
+        TextureRotation.NORMAL, TextureRotation.RIGHT, TextureRotation.INVERT, TextureRotation.LEFT
+    };
+    /** Maps each rotation to its index in ROTATION_SEQUENCE for step-based compensation. */
+    private static final Map<TextureRotation, Integer> ROTATION_INDEX_MAP = Map.of(
+        TextureRotation.NORMAL, 0,
+        TextureRotation.RIGHT, 1,
+        TextureRotation.INVERT, 2,
+        TextureRotation.LEFT, 3
+    );
     /**
-     * Applies +90° rotation offset to compensate for toggle texture faces' built-in 270° rotation in the model JSON.
-     * This ensures users get intuitive rotation control where NORMAL appears as expected.
-     * Mapping:
-     * - User selects NORMAL (0°) → Apply RIGHT (90°) → Total: 270° + 90° = 360° = 0° (appears normal)
-     * - User selects RIGHT (90°) → Apply INVERT (180°) → Total: 270° + 180° = 450° = 90°
-     * - User selects INVERT (180°) → Apply LEFT (-90°) → Total: 270° - 90° = 180°  
-     * - User selects LEFT (-90°) → Apply NORMAL (0°) → Total: 270° + 0° = 270° = -90°
+     * Applies configurable rotation offset to compensate for toggle texture orientation in the model JSON.
+     * Steps are configured per-variant via "toggle_rotation_compensation" in JSON (0-3, each step = +90°).
+     * Lever uses 1 step (+90°) because its model has a built-in 270° toggle rotation.
      */
     @Nonnull
     private TextureRotation compensateToggleRotation(@Nonnull TextureRotation userRotation) {
-        return switch (userRotation) {
-            case NORMAL -> TextureRotation.RIGHT;   // 0° + 90° = 90° compensation
-            case RIGHT -> TextureRotation.INVERT;   // 90° + 90° = 180° compensation
-            case INVERT -> TextureRotation.LEFT;    // 180° + 90° = 270° = -90° compensation
-            case LEFT -> TextureRotation.NORMAL;    // -90° + 90° = 0° compensation
-        };
+        if (toggleRotationSteps == 0) {
+            return userRotation;
+        }
+        int currentIndex = ROTATION_INDEX_MAP.getOrDefault(userRotation, 0);
+        int compensatedIndex = (currentIndex + toggleRotationSteps) % ROTATION_SEQUENCE.length;
+        return ROTATION_SEQUENCE[compensatedIndex];
     }
 
     /**
@@ -1148,10 +1166,10 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                                         @Nonnull ModelData extraData, @Nullable RenderType renderType) {
 
         // Simplified cache key for ghost preview (no texture customization)
-        Boolean ghostMode = extraData.get(SwitchesLeverBlockEntity.GHOST_MODE);
+        Boolean ghostMode = extraData.get(SwitchBlockEntity.GHOST_MODE);
         if (ghostMode != null && ghostMode) {
-            Float ghostOpacity = extraData.get(SwitchesLeverBlockEntity.GHOST_ALPHA);
-            String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
+            Float ghostOpacity = extraData.get(SwitchBlockEntity.GHOST_ALPHA);
+            String wallOrientation = extraData.get(SwitchBlockEntity.WALL_ORIENTATION);
             
             return new ModelCacheKey(
                 state != null ? state.toString() : "null",
@@ -1167,13 +1185,13 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
         }
         
         // Full cache key for regular texture customization
-        String toggleTexture = extraData.get(SwitchesLeverBlockEntity.TOGGLE_TEXTURE);
-        String baseTexture = extraData.get(SwitchesLeverBlockEntity.BASE_TEXTURE);
-        String powerMode = extraData.get(SwitchesLeverBlockEntity.POWER_MODE);
-        String wallOrientation = extraData.get(SwitchesLeverBlockEntity.WALL_ORIENTATION);
-        String baseRotation = extraData.get(SwitchesLeverBlockEntity.BASE_ROTATION);
-        String toggleRotation = extraData.get(SwitchesLeverBlockEntity.TOGGLE_ROTATION);
-        Boolean hasToggleBlock = extraData.get(SwitchesLeverBlockEntity.HAS_TOGGLE_BLOCK);
+        String toggleTexture = extraData.get(SwitchBlockEntity.TOGGLE_TEXTURE);
+        String baseTexture = extraData.get(SwitchBlockEntity.BASE_TEXTURE);
+        String powerMode = extraData.get(SwitchBlockEntity.POWER_MODE);
+        String wallOrientation = extraData.get(SwitchBlockEntity.WALL_ORIENTATION);
+        String baseRotation = extraData.get(SwitchBlockEntity.BASE_ROTATION);
+        String toggleRotation = extraData.get(SwitchBlockEntity.TOGGLE_ROTATION);
+        Boolean hasToggleBlock = extraData.get(SwitchBlockEntity.HAS_TOGGLE_BLOCK);
 
         return new ModelCacheKey(
                 state != null ? state.toString() : "null",
@@ -1437,8 +1455,8 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
 
         public boolean isDefaultTextures() {
             // Check if using default texture IDs (0 = null/default)
-            boolean defaultTextures = (toggleTextureId == 0 || toggleTextureId == getTextureId(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) &&
-                                     (baseTextureId == 0 || baseTextureId == getTextureId(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE));
+            boolean defaultTextures = (toggleTextureId == 0 || toggleTextureId == getTextureId(SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE)) &&
+                                     (baseTextureId == 0 || baseTextureId == getTextureId(SwitchBlockEntity.DEFAULT_BASE_TEXTURE));
             
             // Check if using default flags (all 0 = defaults)
             int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b11;
@@ -1478,10 +1496,10 @@ public class SwitchesLeverDynamicModel implements IDynamicBakedModel {
                 sb.append("ghost,opacity=").append(ghostOpacity);
             } else {
                 // Decode texture IDs for display
-                if (toggleTextureId != 0 && toggleTextureId != getTextureId(SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)) {
+                if (toggleTextureId != 0 && toggleTextureId != getTextureId(SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE)) {
                     sb.append("toggleId=").append(toggleTextureId).append(",");
                 }
-                if (baseTextureId != 0 && baseTextureId != getTextureId(SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE)) {
+                if (baseTextureId != 0 && baseTextureId != getTextureId(SwitchBlockEntity.DEFAULT_BASE_TEXTURE)) {
                     sb.append("baseId=").append(baseTextureId).append(",");
                 }
                 

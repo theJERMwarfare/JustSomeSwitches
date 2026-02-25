@@ -1,6 +1,6 @@
 package net.justsomeswitches.gui.components;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.gui.SwitchesTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
@@ -166,7 +166,7 @@ public class DropdownManager {
     }
     /** Handles power dropdown option selection. */
     public boolean handlePowerDropdownSelection(double mouseX, double mouseY, int dropdownX, int dropdownY) {
-        SwitchesLeverBlockEntity.PowerMode[] modes = SwitchesLeverBlockEntity.PowerMode.values();
+        SwitchBlockEntity.PowerMode[] modes = SwitchBlockEntity.PowerMode.values();
         int dropdownHeight = modes.length * 12;
         
         // Check if click is in dropdown popup area
@@ -330,7 +330,7 @@ public class DropdownManager {
     }
     /** Renders a power mode dropdown button. */
     public void renderPowerDropdownButton(@Nonnull GuiGraphics graphics, int x, int y,
-                                         SwitchesLeverBlockEntity.PowerMode powerMode, boolean isOpen) {
+                                         SwitchBlockEntity.PowerMode powerMode, boolean isOpen) {
         // Draw background
         graphics.fill(x, y, x + POWER_DROPDOWN_WIDTH, y + POWER_DROPDOWN_HEIGHT, 0xFFC6C6C6);
 
@@ -477,9 +477,9 @@ public class DropdownManager {
     }
     /** Renders a power mode dropdown popup. */
     public void renderPowerDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
-                                        SwitchesLeverBlockEntity.PowerMode currentMode,
+                                        SwitchBlockEntity.PowerMode currentMode,
                                         int mouseX, int mouseY) {
-        SwitchesLeverBlockEntity.PowerMode[] modes = SwitchesLeverBlockEntity.PowerMode.values();
+        SwitchBlockEntity.PowerMode[] modes = SwitchBlockEntity.PowerMode.values();
         int popupHeight = modes.length * 12;
         
         // Elevate z-order
@@ -497,7 +497,7 @@ public class DropdownManager {
         
         // Draw options
         for (int i = 0; i < modes.length; i++) {
-            SwitchesLeverBlockEntity.PowerMode mode = modes[i];
+            SwitchBlockEntity.PowerMode mode = modes[i];
             int optionY = y + (i * 12);
             
             // Highlight on hover or selection

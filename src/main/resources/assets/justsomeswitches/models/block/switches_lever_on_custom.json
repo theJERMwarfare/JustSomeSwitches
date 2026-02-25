@@ -51,5 +51,6 @@
       "unpowered": "minecraft:block/redstone_block",
       "powered": "minecraft:block/lime_concrete_powder"
     }
-  }
+  },
+  "toggle_rotation_compensation": 1
 }

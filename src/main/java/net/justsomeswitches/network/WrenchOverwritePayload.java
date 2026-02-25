@@ -1,6 +1,6 @@
 package net.justsomeswitches.network;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
@@ -84,7 +84,7 @@ public record WrenchOverwritePayload(
             }
             
 
-            if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
+            if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
                 return;
             }
             
@@ -100,7 +100,7 @@ public record WrenchOverwritePayload(
     }
     
     private static void handleOverwriteConfirmed(SwitchesWrenchItem wrench, ItemStack wrenchStack,
-                                               SwitchesLeverBlockEntity blockEntity, ServerPlayer player) {
+                                               SwitchBlockEntity blockEntity, ServerPlayer player) {
         if (!blockEntity.getGuiToggleItem().isEmpty()) {
             if (!player.addItem(blockEntity.getGuiToggleItem().copy())) {
                 player.drop(blockEntity.getGuiToggleItem().copy(), false);
@@ -117,7 +117,7 @@ public record WrenchOverwritePayload(
         
         blockEntity.resetToggleTexture();
         blockEntity.resetBaseTexture();
-        blockEntity.setPowerMode(SwitchesLeverBlockEntity.PowerMode.DEFAULT);
+        blockEntity.setPowerMode(SwitchBlockEntity.PowerMode.DEFAULT);
         blockEntity.setToggleTextureRotation(net.justsomeswitches.util.TextureRotation.NORMAL);
         blockEntity.setBaseTextureRotation(net.justsomeswitches.util.TextureRotation.NORMAL);
         
@@ -147,30 +147,6 @@ public record WrenchOverwritePayload(
     
     /** Opens the missing block GUI for the player. */
     private static void openMissingBlockGUI(ServerPlayer player, BlockPos blockPos, java.util.List<String> missingBlocks) {
-        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
-            @Override
-            @javax.annotation.Nonnull
-            public net.minecraft.network.chat.Component getDisplayName() {
-                String title = missingBlocks.size() == 1 ? "Block Not Found In Inventory" : "Blocks Not Found In Inventory";
-                return net.minecraft.network.chat.Component.literal(title);
-            }
-
-            @Override
-            @javax.annotation.Nonnull
-            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId, 
-                                                                                 @javax.annotation.Nonnull net.minecraft.world.entity.player.Inventory playerInventory, 
-                                                                                 @javax.annotation.Nonnull net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.WrenchMissingBlockMenu(containerId, playerInventory, blockPos, missingBlocks);
-            }
-        };
-
-
-        player.openMenu(menuProvider, buf -> {
-            buf.writeBlockPos(blockPos);
-            buf.writeInt(missingBlocks.size());
-            for (String missingBlock : missingBlocks) {
-                buf.writeUtf(missingBlock);
-            }
-        });
+        NetworkHandler.openMissingBlockGUI(player, blockPos, missingBlocks);
     }
 }

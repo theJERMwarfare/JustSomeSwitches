@@ -1,6 +1,7 @@
 package net.justsomeswitches.item;
 
-import net.justsomeswitches.block.SwitchesLeverBlock;
+import net.justsomeswitches.block.AbstractSwitchBlock;
+import net.justsomeswitches.block.ISwitchBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
@@ -13,10 +14,10 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nonnull;
 
-/** Block item for switches lever with proper placement handling. */
-public class SwitchesLeverBlockItem extends BlockItem {
+/** Block item for all advanced switch blocks with proper placement handling. */
+public class SwitchBlockItem extends BlockItem {
 
-    public SwitchesLeverBlockItem(Block block, Properties properties) {
+    public SwitchBlockItem(Block block, Properties properties) {
         super(block, properties);
     }
 
@@ -27,8 +28,8 @@ public class SwitchesLeverBlockItem extends BlockItem {
         BlockPos clickedPos = context.getClickedPos();
         BlockState clickedState = level.getBlockState(clickedPos);
 
-        // When clicking on a Switches Lever, check the block's response
-        if (clickedState.getBlock() instanceof SwitchesLeverBlock && context.getPlayer() != null) {
+        // When clicking on any advanced switch block, check the block's response
+        if (clickedState.getBlock() instanceof ISwitchBlock && context.getPlayer() != null) {
             net.minecraft.world.phys.BlockHitResult hitResult = new net.minecraft.world.phys.BlockHitResult(
                 context.getClickLocation(), context.getClickedFace(), clickedPos, context.isInside());
             
@@ -58,15 +59,13 @@ public class SwitchesLeverBlockItem extends BlockItem {
                 context.getHand(), context.getItemInHand(), 
                 new net.minecraft.world.phys.BlockHitResult(context.getClickLocation(), clickedFace, targetPos, context.isInside()));
         
-        SwitchesLeverBlock leverBlock = (SwitchesLeverBlock) this.getBlock();
-        BlockState blockState = leverBlock.getStateForPlacement(placeContext);
-        
+        AbstractSwitchBlock switchBlock = (AbstractSwitchBlock) this.getBlock();
+        BlockState blockState = switchBlock.getStateForPlacement(placeContext);
         if (blockState == null) {
             return InteractionResult.FAIL;
         }
-        
         if (level.setBlock(targetPos, blockState, Block.UPDATE_ALL_IMMEDIATE)) {
-            leverBlock.setPlacedBy(level, targetPos, blockState, context.getPlayer(), context.getItemInHand());
+            switchBlock.setPlacedBy(level, targetPos, blockState, context.getPlayer(), context.getItemInHand());
             
             if (context.getPlayer() != null && !context.getPlayer().getAbilities().instabuild) {
                 context.getItemInHand().shrink(1);

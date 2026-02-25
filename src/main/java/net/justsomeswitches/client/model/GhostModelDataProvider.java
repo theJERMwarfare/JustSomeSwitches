@@ -1,6 +1,6 @@
 package net.justsomeswitches.client.model;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
@@ -55,17 +55,17 @@ public class GhostModelDataProvider {
         String cacheKey = createCacheKey(state, wallOrientation);
         return ghostModelDataCache.computeIfAbsent(cacheKey, key -> {
             ModelData ghostData = ModelData.builder()
-                .with(SwitchesLeverBlockEntity.GHOST_MODE, true)
-                .with(SwitchesLeverBlockEntity.GHOST_ALPHA, 0.75f)
-                .with(SwitchesLeverBlockEntity.GHOST_STATE, state)
-                .with(SwitchesLeverBlockEntity.WALL_ORIENTATION, wallOrientation)
-                .with(SwitchesLeverBlockEntity.TOGGLE_TEXTURE, SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE)
-                .with(SwitchesLeverBlockEntity.BASE_TEXTURE, SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE)
-                .with(SwitchesLeverBlockEntity.FACE_SELECTION, "all,all")
-                .with(SwitchesLeverBlockEntity.POWER_MODE, "DEFAULT")
-                .with(SwitchesLeverBlockEntity.BASE_ROTATION, "NORMAL")
-                .with(SwitchesLeverBlockEntity.TOGGLE_ROTATION, "NORMAL")
-                .with(SwitchesLeverBlockEntity.INVERTED, false)
+                .with(SwitchBlockEntity.GHOST_MODE, true)
+                .with(SwitchBlockEntity.GHOST_ALPHA, 0.75f)
+                .with(SwitchBlockEntity.GHOST_STATE, state)
+                .with(SwitchBlockEntity.WALL_ORIENTATION, wallOrientation)
+                .with(SwitchBlockEntity.TOGGLE_TEXTURE, SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE)
+                .with(SwitchBlockEntity.BASE_TEXTURE, SwitchBlockEntity.DEFAULT_BASE_TEXTURE)
+                .with(SwitchBlockEntity.FACE_SELECTION, "all,all")
+                .with(SwitchBlockEntity.POWER_MODE, "DEFAULT")
+                .with(SwitchBlockEntity.BASE_ROTATION, "NORMAL")
+                .with(SwitchBlockEntity.TOGGLE_ROTATION, "NORMAL")
+                .with(SwitchBlockEntity.INVERTED, false)
                 .build();
             if (ghostModelDataCache.size() > 100) {
                 cleanupCache();

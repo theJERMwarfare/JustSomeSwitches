@@ -1,7 +1,7 @@
 package net.justsomeswitches.init;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -14,11 +14,11 @@ public class JustSomeSwitchesModBlockEntities {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, JustSomeSwitchesMod.MODID);
 
     /** Switches Lever block entity - handles texture storage, client-server sync, and item dropping. */
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SwitchesLeverBlockEntity>> SWITCHES_LEVER =
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SwitchBlockEntity>> SWITCHES_LEVER =
             BLOCK_ENTITIES.register("switches_lever", () ->
                     //noinspection DataFlowIssue - Null data fixer is standard for mod block entities
                     BlockEntityType.Builder.of(
-                            SwitchesLeverBlockEntity::new,
+                            SwitchBlockEntity::new,
                             JustSomeSwitchesModBlocks.SWITCHES_LEVER.get()
                     ).build(null)
             );

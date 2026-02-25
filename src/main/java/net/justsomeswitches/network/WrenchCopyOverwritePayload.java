@@ -1,6 +1,6 @@
 package net.justsomeswitches.network;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
@@ -83,7 +83,7 @@ public record WrenchCopyOverwritePayload(
             }
             
 
-            if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
+            if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
                 return;
             }
             
@@ -99,7 +99,7 @@ public record WrenchCopyOverwritePayload(
     }
     
     private static void handleCopyOverwriteConfirmed(SwitchesWrenchItem wrench, ItemStack wrenchStack,
-                                                   @SuppressWarnings("unused") SwitchesLeverBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
+                                                   @SuppressWarnings("unused") SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
         wrench.clearAllSettingsServer(wrenchStack);
         NetworkHandler.sendActionBarMessage(player, "Previous Texture Settings Cleared", NetworkHandler.MessageType.SUCCESS);
         openCopyTextureGUI(player, blockPos);

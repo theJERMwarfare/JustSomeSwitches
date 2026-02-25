@@ -1,6 +1,6 @@
 package net.justsomeswitches.network;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
@@ -89,7 +89,7 @@ public record WrenchCopySelectionPayload(
                     payload.copyBaseBlock(), payload.copyBaseFace(), payload.copyBaseRotation(), 
                     payload.copyIndicators()));
             BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
-            if (!(blockEntity instanceof SwitchesLeverBlockEntity switchEntity)) {
+            if (!(blockEntity instanceof SwitchBlockEntity switchEntity)) {
                 return;
             }
             ItemStack mainHandStack = player.getMainHandItem();

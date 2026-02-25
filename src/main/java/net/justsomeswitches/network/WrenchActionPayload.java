@@ -1,6 +1,6 @@
 package net.justsomeswitches.network;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
@@ -79,7 +79,7 @@ public record WrenchActionPayload(
             if (!(stack.getItem() instanceof SwitchesWrenchItem wrench)) {
                 return;
             }
-            if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
+            if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
                 return;
             }
             switch (payload.action()) {
@@ -92,12 +92,12 @@ public record WrenchActionPayload(
     
     @SuppressWarnings("unused") // Parameters kept for API consistency
     private static void handleCopyAction(SwitchesWrenchItem wrench, ItemStack stack, 
-                                       SwitchesLeverBlockEntity blockEntity, ServerPlayer player) {
+                                       SwitchBlockEntity blockEntity, ServerPlayer player) {
         NetworkHandler.sendActionBarMessage(player, "Use Copy GUI for copying settings", NetworkHandler.MessageType.INFO);
     }
     
     private static void handlePasteAction(SwitchesWrenchItem wrench, ItemStack stack,
-                                        SwitchesLeverBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
+                                        SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
         if (!wrench.hasCopiedSettingsServer(stack)) {
             return;
         }
@@ -131,32 +131,7 @@ public record WrenchActionPayload(
     
     /** Opens the missing block GUI for the player. */
     private static void openMissingBlockGUI(ServerPlayer player, BlockPos blockPos, java.util.List<String> missingBlocks) {
-        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
-            @Override
-            @javax.annotation.Nonnull
-            public net.minecraft.network.chat.Component getDisplayName() {
-                String title = missingBlocks.size() == 1 ? "Block Not Found In Inventory" : "Blocks Not Found In Inventory";
-                return net.minecraft.network.chat.Component.literal(title);
-            }
-
-            @Override
-            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
-            @javax.annotation.Nullable
-            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId, 
-                                                                                 net.minecraft.world.entity.player.Inventory playerInventory, 
-                                                                                 net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.WrenchMissingBlockMenu(containerId, playerInventory, blockPos, missingBlocks);
-            }
-        };
-
-        // Open the menu with block position and missing blocks data
-        player.openMenu(menuProvider, buf -> {
-            buf.writeBlockPos(blockPos);
-            buf.writeInt(missingBlocks.size());
-            for (String missingBlock : missingBlocks) {
-                buf.writeUtf(missingBlock);
-            }
-        });
+        NetworkHandler.openMissingBlockGUI(player, blockPos, missingBlocks);
     }
     
     /** Opens the overwrite confirmation GUI for the player. */

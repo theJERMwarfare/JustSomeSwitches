@@ -1,6 +1,6 @@
 package net.justsomeswitches.network;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.SwitchesWrenchItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
@@ -95,7 +95,7 @@ public record WrenchMissingBlockPayload(
             }
             
             // Verify the block is still a switch
-            if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
+            if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
                 return;
             }
             
@@ -113,7 +113,7 @@ public record WrenchMissingBlockPayload(
     }
     
     private static void handlePartialApply(SwitchesWrenchItem wrench, ItemStack wrenchStack,
-                                         SwitchesLeverBlockEntity blockEntity, ServerPlayer player) {
+                                         SwitchBlockEntity blockEntity, ServerPlayer player) {
         // Apply settings for categories that don't require missing blocks
         CopyPasteService.PasteResult result = wrench.applyPartialSettingsFromWrenchServer(wrenchStack, blockEntity, player);
         

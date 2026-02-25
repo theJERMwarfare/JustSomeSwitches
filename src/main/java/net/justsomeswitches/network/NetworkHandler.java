@@ -158,6 +158,32 @@ public class NetworkHandler {
         INFO      // Blue text
     }
     
+    /** Opens the missing block GUI for the player. Shared by WrenchActionPayload and WrenchOverwritePayload. */
+    public static void openMissingBlockGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos, @Nonnull java.util.List<String> missingBlocks) {
+        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
+            @Override
+            @Nonnull
+            public net.minecraft.network.chat.Component getDisplayName() {
+                String title = missingBlocks.size() == 1 ? "Block Not Found In Inventory" : "Blocks Not Found In Inventory";
+                return net.minecraft.network.chat.Component.literal(title);
+            }
+            @Override
+            @SuppressWarnings("NullableProblems")
+            @javax.annotation.Nullable
+            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId,
+                                                                                 net.minecraft.world.entity.player.Inventory playerInventory,
+                                                                                 net.minecraft.world.entity.player.Player player) {
+                return new net.justsomeswitches.gui.WrenchMissingBlockMenu(containerId, playerInventory, blockPos, missingBlocks);
+            }
+        };
+        player.openMenu(menuProvider, buf -> {
+            buf.writeBlockPos(blockPos);
+            buf.writeInt(missingBlocks.size());
+            for (String missingBlock : missingBlocks) {
+                buf.writeUtf(missingBlock);
+            }
+        });
+    }
     /** Sends wrench overwrite response to server. */
     public static void sendWrenchOverwrite(@Nonnull BlockPos blockPos, boolean overwrite) {
         PacketDistributor.SERVER.noArg().send(new WrenchOverwritePayload(blockPos, overwrite));

@@ -1,6 +1,6 @@
 package net.justsomeswitches.gui;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -17,7 +17,7 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     private final ContainerLevelAccess levelAccess;
-    private SwitchesLeverBlockEntity blockEntity;
+    private SwitchBlockEntity blockEntity;
     
     private boolean copyToggleBlock = true;
     private boolean copyToggleFace = true;
@@ -43,7 +43,7 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
         this.levelAccess.execute((level, pos) -> {
             try {
                 BlockEntity entity = level.getBlockEntity(pos);
-                if (entity instanceof SwitchesLeverBlockEntity leverEntity) {
+                if (entity instanceof SwitchBlockEntity leverEntity) {
                     this.blockEntity = leverEntity;
                 }
             } catch (Exception e) {
@@ -66,7 +66,7 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
         
         return levelAccess.evaluate((level, pos) -> {
             BlockEntity entity = level.getBlockEntity(pos);
-            return entity instanceof SwitchesLeverBlockEntity && 
+            return entity instanceof SwitchBlockEntity && 
                    player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0;
         }, true);
     }
@@ -103,7 +103,7 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
         return blockPos;
     }
     
-    public SwitchesLeverBlockEntity getBlockEntity() {
+    public SwitchBlockEntity getBlockEntity() {
         return blockEntity;
     }
     
@@ -167,14 +167,14 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     public String getToggleTexturePathForPreview() {
         if (blockEntity == null) return null;
         String texturePath = blockEntity.getToggleTexturePath();
-        return texturePath.equals(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.DEFAULT_TOGGLE_TEXTURE) ? null : texturePath;
+        return texturePath.equals(net.justsomeswitches.blockentity.SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE) ? null : texturePath;
     }
     
     /** Returns base texture path for face preview. */
     public String getBaseTexturePathForPreview() {
         if (blockEntity == null) return null;
         String texturePath = blockEntity.getBaseTexturePath();
-        return texturePath.equals(net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.DEFAULT_BASE_TEXTURE) ? null : texturePath;
+        return texturePath.equals(net.justsomeswitches.blockentity.SwitchBlockEntity.DEFAULT_BASE_TEXTURE) ? null : texturePath;
     }
     
     /** Returns toggle texture rotation. */
@@ -191,8 +191,8 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     
     /** Returns power mode for indicator previews. */
     @SuppressWarnings("unused")
-    public net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.PowerMode getPowerMode() {
-        if (blockEntity == null) return net.justsomeswitches.blockentity.SwitchesLeverBlockEntity.PowerMode.DEFAULT;
+    public net.justsomeswitches.blockentity.SwitchBlockEntity.PowerMode getPowerMode() {
+        if (blockEntity == null) return net.justsomeswitches.blockentity.SwitchBlockEntity.PowerMode.DEFAULT;
         return blockEntity.getPowerMode();
     }
     

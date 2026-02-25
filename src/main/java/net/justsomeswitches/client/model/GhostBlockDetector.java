@@ -1,7 +1,8 @@
 package net.justsomeswitches.client.model;
 
-import net.justsomeswitches.block.SwitchesLeverBlock;
-import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
+import net.justsomeswitches.block.AbstractSwitchBlock;
+import net.justsomeswitches.block.ISwitchBlock;
+import net.justsomeswitches.item.SwitchBlockItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -112,7 +113,7 @@ public class GhostBlockDetector {
         if (stack.isEmpty()) {
             return false;
         }
-        return stack.getItem() == JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get();
+        return stack.getItem() instanceof SwitchBlockItem;
     }
 
     /** Calculates target position for block placement based on hit result. */
@@ -131,11 +132,17 @@ public class GhostBlockDetector {
         if (distanceToTarget > getPlayerReachDistance(player) + 2.0) {
             return false;
         }
+        if (!(stack.getItem() instanceof net.minecraft.world.item.BlockItem blockItem)) {
+            return false;
+        }
+        net.minecraft.world.level.block.Block block = blockItem.getBlock();
+        if (!(block instanceof ISwitchBlock)) {
+            return false;
+        }
         BlockPlaceContext context = new BlockPlaceContext(
             level, player, InteractionHand.MAIN_HAND, stack, hit
         );
-        SwitchesLeverBlock leverBlock = JustSomeSwitchesModBlocks.SWITCHES_LEVER.get();
-        BlockState proposedState = leverBlock.getStateForPlacement(context);
+        BlockState proposedState = ((AbstractSwitchBlock) block).getStateForPlacement(context);
         return proposedState != null && proposedState.canSurvive(level, targetPos);
     }
 
@@ -143,12 +150,18 @@ public class GhostBlockDetector {
     @Nullable
     private BlockState calculateGhostState(@SuppressWarnings("unused") @Nonnull BlockPos pos, @Nonnull ItemStack stack,
                                           @Nonnull BlockHitResult hit, @Nonnull Player player) {
+        if (!(stack.getItem() instanceof net.minecraft.world.item.BlockItem blockItem)) {
+            return null;
+        }
+        net.minecraft.world.level.block.Block block = blockItem.getBlock();
+        if (!(block instanceof AbstractSwitchBlock switchBlock)) {
+            return null;
+        }
         Level level = player.level();
         BlockPlaceContext context = new BlockPlaceContext(
             level, player, InteractionHand.MAIN_HAND, stack, hit
         );
-        SwitchesLeverBlock leverBlock = JustSomeSwitchesModBlocks.SWITCHES_LEVER.get();
-        return leverBlock.getStateForPlacement(context);
+        return switchBlock.getStateForPlacement(context);
     }
 
     /** Calculates wall orientation for ghost preview replicating SwitchesLeverBlock logic. */

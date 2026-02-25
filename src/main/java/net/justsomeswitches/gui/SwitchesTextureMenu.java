@@ -1,6 +1,6 @@
 package net.justsomeswitches.gui;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.blockentity.tinting.FaceTintData;
 import net.justsomeswitches.blockentity.tinting.OverlayLayer;
 import net.justsomeswitches.network.NetworkHandler;
@@ -47,12 +47,12 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
     private final ItemStackHandler textureItemHandler;
     private final BlockPos blockPos;
     private final Level level;
-    private SwitchesLeverBlockEntity blockEntity;
+    private SwitchBlockEntity blockEntity;
 
 
     private String baseTextureVariable = "all";
     private String toggleTextureVariable = "all";
-    private SwitchesLeverBlockEntity.PowerMode powerMode = SwitchesLeverBlockEntity.PowerMode.DEFAULT;
+    private SwitchBlockEntity.PowerMode powerMode = SwitchBlockEntity.PowerMode.DEFAULT;
     private TextureRotation baseTextureRotation = TextureRotation.NORMAL;
     private TextureRotation toggleTextureRotation = TextureRotation.NORMAL;
 
@@ -207,7 +207,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
                 blockEntity.setToggleTexture(texturePath);
                 blockEntity.updateTextures();
             }
-            analyzeTinting(toggleItem);
+            analyzeTinting(toggleItem, true);
         } finally {
             blockEntity.setSyncSuppressed(false);
         }
@@ -226,7 +226,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         if (!level.isClientSide) return;
         blockEntity.setSyncSuppressed(true);
         try {
-            FaceSelectionData.RawTextureSelection selection = 
+            FaceSelectionData.RawTextureSelection selection =
                 FaceSelectionData.createRawTextureSelection(baseItem, "all");
             // Always resolve actual variable name (e.g. "pattern" for terracotta, not "all")
             String resolvedVariable = FaceSelectionData.getDefaultVariable(selection.availableVariables());
@@ -237,7 +237,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
                 blockEntity.setBaseTexture(texturePath);
                 blockEntity.updateTextures();
             }
-            analyzeTinting(baseItem);
+            analyzeTinting(baseItem, false);
         } finally {
             blockEntity.setSyncSuppressed(false);
         }
@@ -304,56 +304,57 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         return FaceSelectionData.createRawTextureSelection(baseItem, baseTextureVariable);
     }
 
-    /** Analyzes tinting for all faces of a block and stores in block entity. */
-    private void analyzeTinting(@Nonnull ItemStack item) {
+    /** Analyzes tinting for all faces of a block and stores in the correct category on the block entity. */
+    private void analyzeTinting(@Nonnull ItemStack item, boolean isToggle) {
         if (!(item.getItem() instanceof BlockItem blockItem)) {
             return;
         }
-        
         Block block = blockItem.getBlock();
         BlockState blockState = block.defaultBlockState();
-        
-        // Store source block state for universal tinting delegation
-        blockEntity.setSourceBlockState(blockState);
-        
+        // Store source block state for the correct category
+        if (isToggle) {
+            blockEntity.setToggleSourceBlockState(blockState);
+        } else {
+            blockEntity.setBaseSourceBlockState(blockState);
+        }
         int tintedFaces = 0;
         int overlayFaces = 0;
-        
         for (Direction direction : Direction.values()) {
-            // Analyze tinting
             FaceTintData tintData = DynamicBlockModelAnalyzer.analyzeTinting(blockState, direction);
-            blockEntity.setTintData(direction, tintData);
-            
+            if (isToggle) {
+                blockEntity.setToggleTintData(direction, tintData);
+            } else {
+                blockEntity.setBaseTintData(direction, tintData);
+            }
             if (tintData.getTintIndex() >= 0) {
                 tintedFaces++;
             }
-            
-            // Analyze overlays (Phase 4: Universal overlay detection)
             java.util.List<OverlayLayer> overlayLayers = DynamicBlockModelAnalyzer.analyzeOverlays(blockState, direction);
-            blockEntity.setOverlayLayers(direction, overlayLayers);
-            
+            if (isToggle) {
+                blockEntity.setToggleOverlayLayers(direction, overlayLayers);
+            } else {
+                blockEntity.setBaseOverlayLayers(direction, overlayLayers);
+            }
             if (overlayLayers.size() > 1) {
                 overlayFaces++;
             }
         }
-        
         if (tintedFaces > 0) {
             net.justsomeswitches.JustSomeSwitchesMod.LOGGER.info(
-                "Tinting detected: {} - {} tinted faces",
-                block.getName().getString(), tintedFaces
+                "Tinting detected: {} [{}] - {} tinted faces",
+                block.getName().getString(), isToggle ? "toggle" : "base", tintedFaces
             );
         }
-        
         if (overlayFaces > 0) {
             net.justsomeswitches.JustSomeSwitchesMod.LOGGER.info(
-                "Overlay detected: {} - {} faces with multiple layers",
-                block.getName().getString(), overlayFaces
+                "Overlay detected: {} [{}] - {} faces with multiple layers",
+                block.getName().getString(), isToggle ? "toggle" : "base", overlayFaces
             );
         }
     }
 
     /** Handles power mode selection change. */
-    public void setPowerMode(@Nonnull SwitchesLeverBlockEntity.PowerMode mode) {
+    public void setPowerMode(@Nonnull SwitchBlockEntity.PowerMode mode) {
         if (blockEntity == null) return;
         
         this.powerMode = mode;
@@ -366,7 +367,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
 
     /** Returns current power mode for GUI rendering. */
     @Nonnull
-    public SwitchesLeverBlockEntity.PowerMode getPowerMode() {
+    public SwitchBlockEntity.PowerMode getPowerMode() {
         if (blockEntity != null) {
             this.powerMode = blockEntity.getPowerMode();
         }
@@ -514,10 +515,10 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
 
 
     @Nullable
-    private SwitchesLeverBlockEntity getBlockEntity() {
+    private SwitchBlockEntity getBlockEntity() {
         if (blockPos != null && level != null) {
             var blockEntity = level.getBlockEntity(blockPos);
-            if (blockEntity instanceof SwitchesLeverBlockEntity switchBlockEntity) {
+            if (blockEntity instanceof SwitchBlockEntity switchBlockEntity) {
                 return switchBlockEntity;
             }
         }
@@ -629,7 +630,7 @@ public class SwitchesTextureMenu extends AbstractContainerMenu {
         }
 
 
-        if (!(level.getBlockState(blockPos).getBlock() instanceof net.justsomeswitches.block.SwitchesLeverBlock)) {
+        if (!(level.getBlockState(blockPos).getBlock() instanceof net.justsomeswitches.block.ISwitchBlock)) {
             return false;
         }
 

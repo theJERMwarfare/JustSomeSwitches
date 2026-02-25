@@ -1,7 +1,7 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.util.TextureRotation;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
@@ -98,7 +98,7 @@ public record TextureVariableUpdatePayload(
             SecurityUtils.logSecurityEvent(player, "TEXTURE_VARIABLE_UPDATE", payload.blockPos(), 
                 "Category: " + payload.category() + ", Variable: " + payload.variable());
             BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
-            if (!(blockEntity instanceof SwitchesLeverBlockEntity switchEntity)) {
+            if (!(blockEntity instanceof SwitchBlockEntity switchEntity)) {
                 return;
             }
             switch (payload.category()) {
@@ -114,7 +114,7 @@ public record TextureVariableUpdatePayload(
                 }
                 case "power" -> {
                     try {
-                        SwitchesLeverBlockEntity.PowerMode powerMode = SwitchesLeverBlockEntity.PowerMode.valueOf(payload.variable().toUpperCase());
+                        SwitchBlockEntity.PowerMode powerMode = SwitchBlockEntity.PowerMode.valueOf(payload.variable().toUpperCase());
                         switchEntity.setPowerMode(powerMode);
                         switchEntity.updateTextures();
                     } catch (IllegalArgumentException e) {

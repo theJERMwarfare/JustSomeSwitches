@@ -450,7 +450,7 @@ public final class TightSwitchShapes {
 
     /**
      * Applies wall orientation rotation to an already wall-placed shape.
-     * Matches the rotation logic in SwitchesLeverDynamicModel.WALL_ROTATION_CACHE:
+     * Matches the rotation logic in SwitchDynamicModel.WALL_ROTATION_CACHE:
      * N/S walls rotate around Z axis, E/W walls rotate around X axis.
      */
     private static VoxelShape applyWallOrientationRotation(VoxelShape wallShape, String orientation, Direction wallDir) {

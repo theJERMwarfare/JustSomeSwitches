@@ -11,7 +11,7 @@ import net.justsomeswitches.block.BasicButtonsInvertedBlock;
 import net.justsomeswitches.block.BasicSlideBlock;
 import net.justsomeswitches.block.BasicSlideInvertedBlock;
 import net.justsomeswitches.item.SwitchesWrenchItem;
-import net.justsomeswitches.item.SwitchesLeverBlockItem;
+import net.justsomeswitches.item.SwitchBlockItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -130,8 +130,8 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Switches Lever item - uses custom placement behavior. */
-    public static final DeferredHolder<Item, SwitchesLeverBlockItem> SWITCHES_LEVER_ITEM =
-            ITEMS.register("switches_lever", () -> new SwitchesLeverBlockItem(
+    public static final DeferredHolder<Item, SwitchBlockItem> SWITCHES_LEVER_ITEM =
+            ITEMS.register("switches_lever", () -> new SwitchBlockItem(
                     SWITCHES_LEVER.get(),
                     new Item.Properties()
             ));

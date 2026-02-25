@@ -33,6 +33,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
     private final Map<String, String> jsonVariables;
     private final SwitchesGeometryLoader.PowerModeConfig powerModeConfig;
     private final String baseModelLocation;
+    private final int toggleRotationCompensation;
 
     public SwitchesGeometry(@Nonnull Map<String, String> baseTextures,
                          @Nonnull Map<String, String> toggleTextures,
@@ -40,7 +41,8 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
                          @Nonnull Map<String, SwitchesGeometryLoader.WallOrientationData> orientationTransforms,
                          @Nonnull Map<String, String> jsonVariables,
                          @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
-                         @Nonnull String baseModelLocation) {
+                         @Nonnull String baseModelLocation,
+                         int toggleRotationCompensation) {
         this.baseTextures = new HashMap<>(baseTextures);
         this.toggleTextures = new HashMap<>(toggleTextures);
         this.powerTextures = new HashMap<>(powerTextures);
@@ -48,6 +50,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
         this.jsonVariables = new HashMap<>(jsonVariables);
         this.powerModeConfig = powerModeConfig;
         this.baseModelLocation = baseModelLocation;
+        this.toggleRotationCompensation = toggleRotationCompensation;
     }
 
     @Override
@@ -61,13 +64,14 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
         Map<String, TextureAtlasSprite> resolvedSprites = resolveAllTextures(spriteGetter);
         Map<String, Matrix4f> bakedTransforms = bakeOrientationTransforms();
         BakedModel baseCustomModel = getCustomBaseModel(baker, modelState, spriteGetter);
-        return new SwitchesLeverDynamicModel(
+        return new SwitchDynamicModel(
                 resolvedSprites,
                 bakedTransforms,
                 jsonVariables,
                 powerModeConfig,
                 baseCustomModel,
-                overrides
+                overrides,
+                toggleRotationCompensation
         );
     }
 

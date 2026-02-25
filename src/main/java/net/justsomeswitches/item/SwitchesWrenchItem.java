@@ -1,8 +1,8 @@
 package net.justsomeswitches.item;
 
 import net.justsomeswitches.gui.SwitchesTextureMenu;
-import net.justsomeswitches.block.SwitchesLeverBlock;
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.block.ISwitchBlock;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.network.NetworkHandler;
 import net.justsomeswitches.network.WrenchActionPayload;
@@ -107,7 +107,7 @@ public class SwitchesWrenchItem extends Item {
     }
     
     private boolean isSwitchBlock(@Nonnull Block block) {
-        return block instanceof SwitchesLeverBlock;
+        return block instanceof ISwitchBlock;
     }
     
     private InteractionResult handleStandardGUI(@Nonnull UseOnContext context) {
@@ -121,7 +121,7 @@ public class SwitchesWrenchItem extends Item {
         Player player = context.getPlayer();
         ItemStack stack = context.getItemInHand();
         
-        if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity blockEntity)) {
+        if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
             return InteractionResult.FAIL;
         }
         
@@ -151,7 +151,7 @@ public class SwitchesWrenchItem extends Item {
         
         Level level = context.getLevel();
         BlockPos blockPos = context.getClickedPos();
-        if (!(level.getBlockEntity(blockPos) instanceof SwitchesLeverBlockEntity)) {
+        if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity)) {
             return InteractionResult.FAIL;
         }
         
@@ -276,19 +276,19 @@ public class SwitchesWrenchItem extends Item {
     
     /** Server-side paste operation - delegated to service. */
     @SuppressWarnings("unused") // Called from network handlers
-    public CopyPasteService.PasteResult applySettingsFromWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity, Player player) {
+    public CopyPasteService.PasteResult applySettingsFromWrenchServer(ItemStack stack, SwitchBlockEntity blockEntity, Player player) {
         return CopyPasteService.applySettingsFromWrench(stack, blockEntity, player);
     }
     
     /** Server-side partial paste operation - delegated to service. */
     @SuppressWarnings("unused") // Called from network handlers
-    public CopyPasteService.PasteResult applyPartialSettingsFromWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity, Player player) {
+    public CopyPasteService.PasteResult applyPartialSettingsFromWrenchServer(ItemStack stack, SwitchBlockEntity blockEntity, Player player) {
         return CopyPasteService.applyPartialSettingsFromWrench(stack, blockEntity, player);
     }
     
     /** Server-side copy operation - delegated to service. */
     @SuppressWarnings("unused") // Called from network handlers
-    public void copySelectedSettingsToWrench(ItemStack stack, SwitchesLeverBlockEntity blockEntity,
+    public void copySelectedSettingsToWrench(ItemStack stack, SwitchBlockEntity blockEntity,
                                             boolean copyToggleBlock, boolean copyToggleFace, boolean copyToggleRotation,
                                             boolean copyIndicators, boolean copyBaseBlock, boolean copyBaseFace,
                                             boolean copyBaseRotation) {
@@ -303,7 +303,7 @@ public class SwitchesWrenchItem extends Item {
     }
     
     @SuppressWarnings("unused") // Called from network handlers
-    public boolean hasIdenticalSettingsServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity) {
+    public boolean hasIdenticalSettingsServer(ItemStack stack, SwitchBlockEntity blockEntity) {
         return CopyPasteService.hasIdenticalSettings(stack, blockEntity);
     }
     
@@ -317,7 +317,7 @@ public class SwitchesWrenchItem extends Item {
     }
     
     @SuppressWarnings("unused") // Called from network handlers
-    public void copySettingsToWrenchServer(ItemStack stack, SwitchesLeverBlockEntity blockEntity) {
+    public void copySettingsToWrenchServer(ItemStack stack, SwitchBlockEntity blockEntity) {
         CopyPasteService.copySettingsToWrench(stack, blockEntity);
     }
     

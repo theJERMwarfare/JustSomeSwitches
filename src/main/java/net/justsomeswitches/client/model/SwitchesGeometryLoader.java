@@ -45,6 +45,10 @@ public class SwitchesGeometryLoader implements IGeometryLoader<SwitchesGeometry>
             baseModelLocation = jsonObject.get("base_model").getAsString();
         }
         PowerModeConfig powerModeConfig = parsePowerModeConfig(jsonObject);
+        int toggleRotationCompensation = 0;
+        if (jsonObject.has("toggle_rotation_compensation")) {
+            toggleRotationCompensation = jsonObject.get("toggle_rotation_compensation").getAsInt();
+        }
         return new SwitchesGeometry(
                 baseTextures,
                 toggleTextures,
@@ -52,7 +56,8 @@ public class SwitchesGeometryLoader implements IGeometryLoader<SwitchesGeometry>
                 orientationTransforms,
                 variableMap,
                 powerModeConfig,
-                baseModelLocation
+                baseModelLocation,
+                toggleRotationCompensation
         );
     }
 

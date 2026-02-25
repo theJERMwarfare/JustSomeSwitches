@@ -1,6 +1,6 @@
 package net.justsomeswitches.gui.components;
 
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.gui.SwitchesTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
@@ -22,7 +22,7 @@ public class FaceSelectionHandler {
     private ItemStack previousRightItem = ItemStack.EMPTY;
     private String previousBaseTexture = null;
     private String previousToggleTexture = null;
-    private SwitchesLeverBlockEntity.PowerMode previousPowerMode = null;
+    private SwitchBlockEntity.PowerMode previousPowerMode = null;
     /**
      * Creates a new face selection handler.
      */

@@ -2,7 +2,7 @@ package net.justsomeswitches.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.justsomeswitches.blockentity.SwitchesLeverBlockEntity;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -131,7 +131,7 @@ public class GhostWorldRenderer {
             }
             RenderType renderType = RenderType.translucent();
             BakedModel model = blockRenderer.getBlockModel(state);
-            if (model instanceof SwitchesLeverDynamicModel dynamicModel) {
+            if (model instanceof SwitchDynamicModel dynamicModel) {
                 renderWithDynamicModel(dynamicModel, state, pos, ghostModelData, renderType, poseStack, bufferSource);
             } else {
                 renderWithStandardModel(model, state, pos, ghostModelData, renderType, poseStack, bufferSource);
@@ -146,8 +146,23 @@ public class GhostWorldRenderer {
         }
     }
 
+    /** Calculates dimmed packed light level for ghost preview at a position. */
+    private static int calculateGhostLightLevel(@Nonnull BlockPos pos) {
+        try {
+            var level = Minecraft.getInstance().level;
+            if (level == null) throw new IllegalStateException("Level is null");
+            int fullLight = net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos);
+            int skyLight = (fullLight >> 20) & 15;
+            int blockLight = (fullLight >> 4) & 15;
+            skyLight = Math.max(0, (int)(skyLight * 0.7f));
+            blockLight = Math.max(0, (int)(blockLight * 0.7f));
+            return (skyLight << 20) | (blockLight << 4);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
     /** Renders ghost block using manual alpha transparency with texture-based filtering. */
-    private static void renderWithDynamicModel(@Nonnull SwitchesLeverDynamicModel dynamicModel,
+    private static void renderWithDynamicModel(@Nonnull SwitchDynamicModel dynamicModel,
                                               @Nonnull BlockState state,
                                               @Nonnull BlockPos pos,
                                               @Nonnull ModelData modelData,
@@ -157,19 +172,7 @@ public class GhostWorldRenderer {
         var buffer = bufferSource.getBuffer(renderType);
         RandomSource random = RandomSource.create();
         random.setSeed(state.getSeed(pos));
-        int packedLight;
-        try {
-            var level = Minecraft.getInstance().level;
-            if (level == null) throw new IllegalStateException("Level is null");
-            int fullLight = net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos);
-            int skyLight = (fullLight >> 20) & 15;
-            int blockLight = (fullLight >> 4) & 15;
-            skyLight = Math.max(0, (int)(skyLight * 0.7f));
-            blockLight = Math.max(0, (int)(blockLight * 0.7f));
-            packedLight = (skyLight << 20) | (blockLight << 4);
-        } catch (Exception e) {
-            packedLight = 0;
-        }
+        int packedLight = calculateGhostLightLevel(pos);
         int packedOverlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
         float alpha = 0.75f;
         for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.values()) {
@@ -207,35 +210,9 @@ public class GhostWorldRenderer {
                 (textureName.contains("lever") && textureName.contains("on"))) {
                 return true;
             }
-            if (hasPoweredUVMapping(quad)) {
-                return true;
-            }
         } catch (Exception e) {
             // Intentionally ignore UV mapping errors - safe default is false
         }
-        return false;
-    }
-
-    /** Checks if quad has UV mapping that suggests powered texture. */
-    private static boolean hasPoweredUVMapping(@Nonnull BakedQuad quad) {
-        try {
-            int[] vertices = quad.getVertices();
-            for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
-                int baseIndex = vertexIndex * 8;
-                float u = Float.intBitsToFloat(vertices[baseIndex + 4]);
-                float v = Float.intBitsToFloat(vertices[baseIndex + 5]);
-                if (isPoweredUVRange(u, v)) {
-                    return true;
-                }
-            }
-        } catch (Exception ignored) {
-            // UV analysis failure is non-critical — fall through to default
-        }
-        return false;
-    }
-
-    /** Determines if UV coordinates are in powered texture range. */
-    private static boolean isPoweredUVRange(@SuppressWarnings("unused") float u, @SuppressWarnings("unused") float v) {
         return false;
     }
 
@@ -261,19 +238,7 @@ public class GhostWorldRenderer {
         var buffer = bufferSource.getBuffer(renderType);
         RandomSource random = RandomSource.create();
         random.setSeed(state.getSeed(pos));
-        int packedLight;
-        try {
-            var level = Minecraft.getInstance().level;
-            if (level == null) throw new IllegalStateException("Level is null");
-            int fullLight = net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos);
-            int skyLight = (fullLight >> 20) & 15;
-            int blockLight = (fullLight >> 4) & 15;
-            skyLight = Math.max(0, (int)(skyLight * 0.7f));
-            blockLight = Math.max(0, (int)(blockLight * 0.7f));
-            packedLight = (skyLight << 20) | (blockLight << 4);
-        } catch (Exception e) {
-            packedLight = 0;
-        }
+        int packedLight = calculateGhostLightLevel(pos);
         int packedOverlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
         float alpha = 0.75f;
         for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.values()) {
@@ -296,10 +261,10 @@ public class GhostWorldRenderer {
     @Nonnull
     private static ModelData createGhostModelData(@Nonnull BlockState state, @Nonnull String wallOrientation) {
         return ModelData.builder()
-                .with(SwitchesLeverBlockEntity.GHOST_MODE, true)
-                .with(SwitchesLeverBlockEntity.GHOST_ALPHA, 0.75f)
-                .with(SwitchesLeverBlockEntity.GHOST_STATE, state)
-                .with(SwitchesLeverBlockEntity.WALL_ORIENTATION, wallOrientation)
+                .with(SwitchBlockEntity.GHOST_MODE, true)
+                .with(SwitchBlockEntity.GHOST_ALPHA, 0.75f)
+                .with(SwitchBlockEntity.GHOST_STATE, state)
+                .with(SwitchBlockEntity.WALL_ORIENTATION, wallOrientation)
                 .build();
     }
 }
