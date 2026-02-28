@@ -1,6 +1,6 @@
 {
   "loader": "justsomeswitches:switches_loader",
-  "base_model": "justsomeswitches:custom/switchesleveron",
+  "base_model": "justsomeswitches:custom/switchesrocker",
   "texture_categories": {
     "base": {
       "default": "minecraft:block/stone",
@@ -41,7 +41,7 @@
     "all": "all",
     "north": "north",
     "south": "south",
-    "east": "east", 
+    "east": "east",
     "west": "west",
     "up": "up",
     "down": "down"
@@ -52,5 +52,5 @@
       "powered": "minecraft:block/lime_concrete_powder"
     }
   },
-  "toggle_rotation_compensation": 1
+  "toggle_rotation_compensation": 0
 }

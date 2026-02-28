@@ -34,6 +34,7 @@ public final class TightSwitchShapes {
         MODEL_TYPES.put(BasicSlideBlock.class, SwitchModelType.SLIDE);
         MODEL_TYPES.put(BasicSlideInvertedBlock.class, SwitchModelType.SLIDE);
         MODEL_TYPES.put(SwitchesLeverBlock.class, SwitchModelType.LEVER);
+        MODEL_TYPES.put(SwitchesRockerBlock.class, SwitchModelType.ROCKER);
         INVERTED_FLAGS.put(BasicLeverBlock.class, false);
         INVERTED_FLAGS.put(BasicLeverInvertedBlock.class, true);
         INVERTED_FLAGS.put(BasicRockerBlock.class, false);
@@ -43,6 +44,7 @@ public final class TightSwitchShapes {
         INVERTED_FLAGS.put(BasicSlideBlock.class, false);
         INVERTED_FLAGS.put(BasicSlideInvertedBlock.class, true);
         INVERTED_FLAGS.put(SwitchesLeverBlock.class, false);
+        INVERTED_FLAGS.put(SwitchesRockerBlock.class, false);
     }
 
     // ========================================================================
@@ -153,8 +155,8 @@ public final class TightSwitchShapes {
     // ========================================================================
 
     private static final Map<SwitchModelType, Map<Boolean, EnumMap<AttachFace, EnumMap<Direction, VoxelShape>>>> SHAPE_CACHE = new HashMap<>();
-    private static final Map<String, Map<Boolean, EnumMap<Direction, VoxelShape>>> WALL_ORIENTATION_CACHE = new HashMap<>();
-    private static final Map<Boolean, EnumMap<Direction, VoxelShape>> SWITCHES_CEILING_CACHE = new HashMap<>();
+    private static final Map<SwitchModelType, Map<String, Map<Boolean, EnumMap<Direction, VoxelShape>>>> WALL_ORIENTATION_CACHE = new HashMap<>();
+    private static final Map<SwitchModelType, Map<Boolean, EnumMap<Direction, VoxelShape>>> SWITCHES_CEILING_CACHE = new HashMap<>();
 
     static {
         for (SwitchModelType type : SwitchModelType.values()) {
@@ -175,27 +177,35 @@ public final class TightSwitchShapes {
             }
             SHAPE_CACHE.put(type, poweredMap);
         }
-        for (String orientation : new String[]{"left", "right", "top", "bottom", "center"}) {
+        for (SwitchModelType type : SwitchModelType.values()) {
+            Map<String, Map<Boolean, EnumMap<Direction, VoxelShape>>> orientationMap = new HashMap<>();
+            for (String orientation : new String[]{"left", "right", "top", "bottom", "center"}) {
+                Map<Boolean, EnumMap<Direction, VoxelShape>> poweredMap = new HashMap<>();
+                for (boolean powered : new boolean[]{false, true}) {
+                    EnumMap<Direction, VoxelShape> dirMap = new EnumMap<>(Direction.class);
+                    for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+                        VoxelShape wallShape = SHAPE_CACHE.get(type).get(powered).get(AttachFace.WALL).get(dir);
+                        dirMap.put(dir, applyWallOrientationRotation(wallShape, orientation, dir));
+                    }
+                    poweredMap.put(powered, dirMap);
+                }
+                orientationMap.put(orientation, poweredMap);
+            }
+            WALL_ORIENTATION_CACHE.put(type, orientationMap);
+        }
+        // Advanced switches ceiling has swapped east/west Y rotations vs Basic blocks
+        for (SwitchModelType type : SwitchModelType.values()) {
             Map<Boolean, EnumMap<Direction, VoxelShape>> poweredMap = new HashMap<>();
             for (boolean powered : new boolean[]{false, true}) {
+                VoxelShape baseShape = getBaseShape(type, powered);
                 EnumMap<Direction, VoxelShape> dirMap = new EnumMap<>(Direction.class);
                 for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
-                    VoxelShape wallShape = SHAPE_CACHE.get(SwitchModelType.LEVER).get(powered).get(AttachFace.WALL).get(dir);
-                    dirMap.put(dir, applyWallOrientationRotation(wallShape, orientation, dir));
+                    int yRot = getSwitchesLeverCeilingYRotation(dir);
+                    dirMap.put(dir, rotateShape(baseShape, 180, yRot));
                 }
                 poweredMap.put(powered, dirMap);
             }
-            WALL_ORIENTATION_CACHE.put(orientation, poweredMap);
-        }
-        // SwitchesLever ceiling has swapped east/west Y rotations vs Basic blocks
-        for (boolean powered : new boolean[]{false, true}) {
-            VoxelShape baseShape = powered ? LEVER_ON_BASE : LEVER_OFF_BASE;
-            EnumMap<Direction, VoxelShape> dirMap = new EnumMap<>(Direction.class);
-            for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
-                int yRot = getSwitchesLeverCeilingYRotation(dir);
-                dirMap.put(dir, rotateShape(baseShape, 180, yRot));
-            }
-            SWITCHES_CEILING_CACHE.put(powered, dirMap);
+            SWITCHES_CEILING_CACHE.put(type, poweredMap);
         }
     }
 
@@ -215,15 +225,15 @@ public final class TightSwitchShapes {
         return SHAPE_CACHE.get(type).get(effectivePowered).get(face).get(dir);
     }
 
-    /** Returns tight-fitting shape for SwitchesLeverBlock with wall orientation support. */
-    public static VoxelShape getTightSwitchesShape(AttachFace face, Direction dir, boolean powered, String wallOrientation) {
-        if (face == AttachFace.WALL && !wallOrientation.isEmpty() && WALL_ORIENTATION_CACHE.containsKey(wallOrientation)) {
-            return WALL_ORIENTATION_CACHE.get(wallOrientation).get(powered).get(dir);
+    /** Returns tight-fitting shape for advanced switch variants with wall orientation support. */
+    public static VoxelShape getTightSwitchesShape(SwitchModelType modelType, AttachFace face, Direction dir, boolean powered, String wallOrientation) {
+        if (face == AttachFace.WALL && !wallOrientation.isEmpty() && WALL_ORIENTATION_CACHE.get(modelType).containsKey(wallOrientation)) {
+            return WALL_ORIENTATION_CACHE.get(modelType).get(wallOrientation).get(powered).get(dir);
         }
         if (face == AttachFace.CEILING) {
-            return SWITCHES_CEILING_CACHE.get(powered).get(dir);
+            return SWITCHES_CEILING_CACHE.get(modelType).get(powered).get(dir);
         }
-        return SHAPE_CACHE.get(SwitchModelType.LEVER).get(powered).get(face).get(dir);
+        return SHAPE_CACHE.get(modelType).get(powered).get(face).get(dir);
     }
 
     // ========================================================================

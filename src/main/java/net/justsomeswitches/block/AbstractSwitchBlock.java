@@ -340,10 +340,10 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
             if (attachFace == AttachFace.WALL && level.getBlockEntity(pos) instanceof SwitchBlockEntity be) {
                 String wallOrientation = be.getWallOrientation();
                 if (!wallOrientation.isEmpty()) {
-                    return TightSwitchShapes.getTightSwitchesShape(attachFace, direction, powered, wallOrientation);
+                    return TightSwitchShapes.getTightSwitchesShape(switchModelType, attachFace, direction, powered, wallOrientation);
                 }
             }
-            return TightSwitchShapes.getTightSwitchesShape(attachFace, direction, powered, "");
+            return TightSwitchShapes.getTightSwitchesShape(switchModelType, attachFace, direction, powered, "");
         }
         if (attachFace == AttachFace.WALL && level.getBlockEntity(pos) instanceof SwitchBlockEntity blockEntity) {
             String wallOrientation = blockEntity.getWallOrientation();

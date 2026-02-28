@@ -100,15 +100,18 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
     @Override
     protected void init() {
         super.init();
-        
+
+        // Update preview renderer font (null during constructor, available after super.init)
+        this.previewRenderer.setFont(this.font);
+
         // Initialize dropdown manager here (font must be available)
         this.dropdownManager = new DropdownManager(menu, this.font);
-        
+
         // Initialize face selection handler (must be after dropdown manager)
         this.faceSelectionHandler = new FaceSelectionHandler(menu, dropdownManager);
 
         menu.completeInitialization();
-        
+
         faceSelectionHandler.updateUIState();
         
         // Start batch mode - queue updates instead of executing immediately

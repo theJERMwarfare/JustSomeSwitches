@@ -20,8 +20,9 @@ public class ClientModEvents {
     public static void registerBlockColors(RegisterColorHandlersEvent.Block event) {
         SwitchBlockColorHandler colorHandler = new SwitchBlockColorHandler();
         
-        event.register(colorHandler, 
-            JustSomeSwitchesModBlocks.SWITCHES_LEVER.get()
+        event.register(colorHandler,
+            JustSomeSwitchesModBlocks.SWITCHES_LEVER.get(),
+            JustSomeSwitchesModBlocks.SWITCHES_ROCKER.get()
         );
         
         JustSomeSwitchesMod.LOGGER.info("Block color handlers registered for switches");

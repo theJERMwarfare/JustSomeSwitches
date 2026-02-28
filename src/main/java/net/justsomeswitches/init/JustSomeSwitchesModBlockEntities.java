@@ -13,13 +13,14 @@ public class JustSomeSwitchesModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, JustSomeSwitchesMod.MODID);
 
-    /** Switches Lever block entity - handles texture storage, client-server sync, and item dropping. */
+    /** Shared block entity for all advanced switch variants (lever, rocker, etc.). */
+    @SuppressWarnings("DataFlowIssue") // Null data fixer is standard for mod block entities
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SwitchBlockEntity>> SWITCHES_LEVER =
             BLOCK_ENTITIES.register("switches_lever", () ->
-                    //noinspection DataFlowIssue - Null data fixer is standard for mod block entities
                     BlockEntityType.Builder.of(
                             SwitchBlockEntity::new,
-                            JustSomeSwitchesModBlocks.SWITCHES_LEVER.get()
+                            JustSomeSwitchesModBlocks.SWITCHES_LEVER.get(),
+                            JustSomeSwitchesModBlocks.SWITCHES_ROCKER.get()
                     ).build(null)
             );
 }

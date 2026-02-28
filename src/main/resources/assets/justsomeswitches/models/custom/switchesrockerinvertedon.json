@@ -1,6 +1,12 @@
 {
 	"credit": "Made with Blockbench",
 	"ambientocclusion": false,
+	"textures": {
+		"base": "minecraft:block/stone",
+		"toggle": "minecraft:block/oak_planks",
+		"powered": "minecraft:block/redstone_block",
+		"unpowered": "minecraft:block/gray_concrete_powder"
+	},
 
 	"elements": [
 		{
@@ -9,11 +15,11 @@
 			"to": [11, 2, 13],
 			"rotation": {"angle": 0, "axis": "y", "origin": [5, 0, 3]},
 			"faces": {
-				"north": {"uv": [5, 13, 11, 15], "texture": "#base"},
-				"east": {"uv": [11, 3, 13, 13], "rotation": 90, "texture": "#base"},
-				"south": {"uv": [5, 1, 11, 3], "texture": "#base"},
-				"west": {"uv": [3, 3, 5, 13], "rotation": 270, "texture": "#base"},
-				"up": {"uv": [5, 3, 11, 13], "texture": "#base"},
+				"north": {"uv": [11, 13, 5, 15], "texture": "#base"},
+				"east": {"uv": [5, 13, 3, 3], "rotation": 90, "texture": "#base"},
+				"south": {"uv": [11, 3, 5, 1], "texture": "#base"},
+				"west": {"uv": [13, 13, 11, 3], "rotation": 270, "texture": "#base"},
+				"up": {"uv": [11, 13, 5, 3], "texture": "#base"},
 				"down": {"uv": [5, 3, 11, 13], "texture": "#base"}
 			}
 		},
@@ -23,9 +29,9 @@
 			"to": [9.999, 2.099, 8.999],
 			"rotation": {"angle": 0, "axis": "y", "origin": [8, 1.8, 8]},
 			"faces": {
-				"east": {"uv": [9, 6, 11, 10], "rotation": 90, "texture": "#toggle"},
-				"west": {"uv": [14, 6, 16, 10], "rotation": 270, "texture": "#toggle"},
-				"up": {"uv": [11, 6, 14, 10], "texture": "#toggle"}
+				"east": {"uv": [4, 12, 6, 8], "rotation": 90, "texture": "#toggle"},
+				"west": {"uv": [10, 12, 12, 8], "rotation": 270, "texture": "#toggle"},
+				"up": {"uv": [10, 12, 6, 8], "texture": "#toggle"}
 			}
 		},
 		{
@@ -34,9 +40,9 @@
 			"to": [10, 2.07716, 11.1148],
 			"rotation": {"angle": -22.5, "axis": "x", "origin": [8, 1.8, 8]},
 			"faces": {
-				"east": {"uv": [0, 6, 2, 9], "rotation": 270, "texture": "#toggle"},
-				"west": {"uv": [6, 6, 8, 9], "rotation": 90, "texture": "#toggle"},
-				"up": {"uv": [2, 6, 6, 9], "texture": "#toggle"}
+				"east": {"uv": [4, 6, 6, 9], "rotation": 270, "texture": "#toggle"},
+				"west": {"uv": [10, 6, 12, 9], "rotation": 90, "texture": "#toggle"},
+				"up": {"uv": [10, 9, 6, 6], "texture": "#toggle"}
 			}
 		},
 		{
