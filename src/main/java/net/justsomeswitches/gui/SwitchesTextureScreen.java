@@ -1,14 +1,18 @@
 package net.justsomeswitches.gui;
 
+import net.justsomeswitches.block.ISwitchBlock;
+import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.components.DropdownManager;
 import net.justsomeswitches.gui.components.FaceSelectionHandler;
 import net.justsomeswitches.gui.components.TexturePreviewRenderer;
 import net.justsomeswitches.network.NetworkHandler;
+import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nonnull;
@@ -78,6 +82,9 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
     // Component for handling all preview rendering
     private final TexturePreviewRenderer previewRenderer;
 
+    // Cached power modes for the current block variant
+    private SwitchBlockEntity.PowerMode[] powerModes;
+
     /** Creates a new switch texture customization screen. */
     public SwitchesTextureScreen(@Nonnull SwitchesTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
@@ -107,6 +114,9 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
         // Initialize dropdown manager here (font must be available)
         this.dropdownManager = new DropdownManager(menu, this.font);
 
+        // Cache power modes for this block variant
+        this.powerModes = DropdownManager.getModesForVariant(getBlockModelType());
+
         // Initialize face selection handler (must be after dropdown manager)
         this.faceSelectionHandler = new FaceSelectionHandler(menu, dropdownManager);
 
@@ -121,6 +131,17 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
         }
     }
     
+    /** Returns the SwitchModelType for the block this GUI is editing. */
+    private SwitchModelType getBlockModelType() {
+        if (menu.getBlockPos() != null && menu.getLevel() != null) {
+            Block block = menu.getLevel().getBlockState(menu.getBlockPos()).getBlock();
+            if (block instanceof ISwitchBlock switchBlock) {
+                return switchBlock.getSwitchModelType();
+            }
+        }
+        return SwitchModelType.LEVER;
+    }
+
     /** Flushes pending batch updates and clears texture caches when screen closes. */
     @Override
     public void onClose() {
@@ -203,8 +224,8 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
         }
         
         if (dropdownManager.isPowerDropdownOpen()) {
-            if (dropdownManager.handlePowerDropdownSelection(mouseX, mouseY, guiLeft + POWER_DROPDOWN_X, 
-                    guiTop + POWER_DROPDOWN_Y + POWER_DROPDOWN_HEIGHT)) {
+            if (dropdownManager.handlePowerDropdownSelection(mouseX, mouseY, guiLeft + POWER_DROPDOWN_X,
+                    guiTop + POWER_DROPDOWN_Y + POWER_DROPDOWN_HEIGHT, powerModes)) {
                 return true;
             }
         }
@@ -353,8 +374,8 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
         }
 
         if (dropdownManager.isPowerDropdownOpen()) {
-            dropdownManager.renderPowerDropdownPopup(graphics, guiLeft + POWER_DROPDOWN_X, 
-                    guiTop + POWER_DROPDOWN_Y + POWER_DROPDOWN_HEIGHT, menu.getPowerMode(), mouseX, mouseY);
+            dropdownManager.renderPowerDropdownPopup(graphics, guiLeft + POWER_DROPDOWN_X,
+                    guiTop + POWER_DROPDOWN_Y + POWER_DROPDOWN_HEIGHT, menu.getPowerMode(), mouseX, mouseY, powerModes);
         }
 
         if (dropdownManager.isLeftRotationDropdownOpen()) {

@@ -3,6 +3,7 @@ package net.justsomeswitches.init;
 import net.justsomeswitches.JustSomeSwitchesMod;
 import net.justsomeswitches.block.SwitchesLeverBlock;
 import net.justsomeswitches.block.SwitchesRockerBlock;
+import net.justsomeswitches.block.SwitchesSlideBlock;
 import net.justsomeswitches.block.BasicLeverBlock;
 import net.justsomeswitches.block.BasicLeverInvertedBlock;
 import net.justsomeswitches.block.BasicRockerBlock;
@@ -45,6 +46,16 @@ public class JustSomeSwitchesModBlocks {
     /** Switches Rocker block - customizable rocker with block entity for texture storage. */
     public static final DeferredHolder<Block, SwitchesRockerBlock> SWITCHES_ROCKER =
             BLOCKS.register("switches_rocker", () -> new SwitchesRockerBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.STONE)
+                            .strength(0.5F)
+                            .noOcclusion()
+                            .pushReaction(PushReaction.DESTROY)
+                            .noCollission()
+            ));
+    /** Switches Slide block - customizable slide switch with block entity for texture storage. */
+    public static final DeferredHolder<Block, SwitchesSlideBlock> SWITCHES_SLIDE =
+            BLOCKS.register("switches_slide", () -> new SwitchesSlideBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -151,6 +162,12 @@ public class JustSomeSwitchesModBlocks {
     public static final DeferredHolder<Item, SwitchBlockItem> SWITCHES_ROCKER_ITEM =
             ITEMS.register("switches_rocker", () -> new SwitchBlockItem(
                     SWITCHES_ROCKER.get(),
+                    new Item.Properties()
+            ));
+    /** Switches Slide item - uses custom placement behavior. */
+    public static final DeferredHolder<Item, SwitchBlockItem> SWITCHES_SLIDE_ITEM =
+            ITEMS.register("switches_slide", () -> new SwitchBlockItem(
+                    SWITCHES_SLIDE.get(),
                     new Item.Properties()
             ));
     /** Switches Wrench - opens texture customization GUI on shift-right-click. */

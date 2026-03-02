@@ -49,6 +49,8 @@ public class SwitchesGeometryLoader implements IGeometryLoader<SwitchesGeometry>
         if (jsonObject.has("toggle_rotation_compensation")) {
             toggleRotationCompensation = jsonObject.get("toggle_rotation_compensation").getAsInt();
         }
+        boolean isSlideModel = jsonObject.has("is_slide_model") &&
+                jsonObject.get("is_slide_model").getAsBoolean();
         return new SwitchesGeometry(
                 baseTextures,
                 toggleTextures,
@@ -57,7 +59,8 @@ public class SwitchesGeometryLoader implements IGeometryLoader<SwitchesGeometry>
                 variableMap,
                 powerModeConfig,
                 baseModelLocation,
-                toggleRotationCompensation
+                toggleRotationCompensation,
+                isSlideModel
         );
     }
 

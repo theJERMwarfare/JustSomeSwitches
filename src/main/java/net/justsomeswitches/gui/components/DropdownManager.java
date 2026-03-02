@@ -4,6 +4,7 @@ import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.gui.SwitchesTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
+import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -39,6 +40,22 @@ public class DropdownManager {
     public DropdownManager(@Nonnull SwitchesTextureMenu menu, @Nonnull Font font) {
         this.menu = menu;
         this.font = font;
+    }
+    /** Returns the filtered PowerMode array appropriate for the given switch variant. */
+    public static SwitchBlockEntity.PowerMode[] getModesForVariant(@Nonnull SwitchModelType modelType) {
+        if (modelType == SwitchModelType.SLIDE) {
+            return new SwitchBlockEntity.PowerMode[]{
+                SwitchBlockEntity.PowerMode.DEFAULT,
+                SwitchBlockEntity.PowerMode.ALT,
+                SwitchBlockEntity.PowerMode.NONE_TOGGLE,
+                SwitchBlockEntity.PowerMode.NONE_BASE
+            };
+        }
+        return new SwitchBlockEntity.PowerMode[]{
+            SwitchBlockEntity.PowerMode.DEFAULT,
+            SwitchBlockEntity.PowerMode.ALT,
+            SwitchBlockEntity.PowerMode.NONE
+        };
     }
     /**
      * Checks if any dropdown is currently open.
@@ -165,8 +182,8 @@ public class DropdownManager {
         return false;
     }
     /** Handles power dropdown option selection. */
-    public boolean handlePowerDropdownSelection(double mouseX, double mouseY, int dropdownX, int dropdownY) {
-        SwitchBlockEntity.PowerMode[] modes = SwitchBlockEntity.PowerMode.values();
+    public boolean handlePowerDropdownSelection(double mouseX, double mouseY, int dropdownX, int dropdownY,
+                                                @Nonnull SwitchBlockEntity.PowerMode[] modes) {
         int dropdownHeight = modes.length * 12;
         
         // Check if click is in dropdown popup area
@@ -346,13 +363,7 @@ public class DropdownManager {
         renderDropdownArrow(graphics, x + POWER_DROPDOWN_WIDTH - 10, y + 4, 6, isOpen, 0xFF000000);
         
         // Draw power mode text
-        String displayText = formatPowerModeText(powerMode.name());
-        graphics.pose().pushPose();
-        graphics.pose().scale(0.8f, 0.8f, 1.0f);
-        int fontHeight = this.font.lineHeight;
-        int centeredY = (int)((y + (POWER_DROPDOWN_HEIGHT - fontHeight) / 2.0 + 2) / 0.8f);
-        graphics.drawString(this.font, displayText, (int)((x + 3) / 0.8f), centeredY, 0xFF404040, false);
-        graphics.pose().popPose();
+        renderPowerModeText(graphics, x, y, POWER_DROPDOWN_HEIGHT, powerMode.name(), true, 0xFF404040);
     }
     /** Renders a dropdown arrow. */
     private void renderDropdownArrow(@Nonnull GuiGraphics graphics, int x, int y, int width, boolean isOpen, int color) {
@@ -478,8 +489,8 @@ public class DropdownManager {
     /** Renders a power mode dropdown popup. */
     public void renderPowerDropdownPopup(@Nonnull GuiGraphics graphics, int x, int y,
                                         SwitchBlockEntity.PowerMode currentMode,
-                                        int mouseX, int mouseY) {
-        SwitchBlockEntity.PowerMode[] modes = SwitchBlockEntity.PowerMode.values();
+                                        int mouseX, int mouseY,
+                                        @Nonnull SwitchBlockEntity.PowerMode[] modes) {
         int popupHeight = modes.length * 12;
         
         // Elevate z-order
@@ -511,24 +522,63 @@ public class DropdownManager {
             }
             
             // Draw text
-            String displayText = formatPowerModeText(mode.name());
-            graphics.pose().pushPose();
-            graphics.pose().scale(0.8f, 0.8f, 1.0f);
-            int fontHeight = this.font.lineHeight;
-            int centeredY = (int)((optionY + (12 - fontHeight) / 2.0 + 2) / 0.8f);
-            graphics.drawString(this.font, displayText, (int)((x + 3) / 0.8f), centeredY, 0xFF000000, false);
-            graphics.pose().popPose();
+            renderPowerModeText(graphics, x, optionY, 12, mode.name(), false, 0xFF000000);
         }
-        
+
         // Restore z-order
         graphics.pose().popPose();
     }
-    /** Formats power mode text for display (lowercase with capital first letter). */
+    /** Renders power mode text, using two-part rendering for None(Toggle)/None(Base). */
+    private void renderPowerModeText(@Nonnull GuiGraphics graphics, int x, int y,
+                                     int rowHeight, @Nonnull String modeName,
+                                     boolean hasArrow, int color) {
+        int fontHeight = this.font.lineHeight;
+        String suffix = switch (modeName) {
+            case "NONE_TOGGLE" -> "(Toggle)";
+            case "NONE_BASE" -> "(Base)";
+            default -> null;
+        };
+        if (suffix != null) {
+            // Two-part: "None" at 0.8f + suffix at computed scale to fit
+            float mainScale = 0.8f;
+            float mainWidthActual = this.font.width("None") * mainScale;
+            float arrowSpace = hasArrow ? 10 : 1;
+            float availableForSuffix = (POWER_DROPDOWN_WIDTH - arrowSpace) - 3 - mainWidthActual - 1;
+            float suffixScale = Math.min(0.6f, availableForSuffix / this.font.width(suffix));
+            suffixScale = Math.max(suffixScale, 0.35f);
+            float textTopY = y + (rowHeight - fontHeight) / 2.0f + 2;
+            float mainVisualHeight = fontHeight * mainScale;
+            float suffixVisualHeight = fontHeight * suffixScale;
+            // Render "None" at standard scale
+            graphics.pose().pushPose();
+            graphics.pose().scale(mainScale, mainScale, 1.0f);
+            int mainY = (int)(textTopY / mainScale);
+            graphics.drawString(this.font, "None", (int)((x + 3) / mainScale), mainY, color, false);
+            graphics.pose().popPose();
+            // Render suffix at computed scale, vertically centered with main text
+            float suffixX = x + 3 + mainWidthActual + 1;
+            float suffixTopY = textTopY + (mainVisualHeight - suffixVisualHeight) / 2;
+            graphics.pose().pushPose();
+            graphics.pose().scale(suffixScale, suffixScale, 1.0f);
+            graphics.drawString(this.font, suffix, (int)(suffixX / suffixScale),
+                    (int)(suffixTopY / suffixScale), color, false);
+            graphics.pose().popPose();
+        } else {
+            // Single-part rendering at standard scale
+            String displayText = formatPowerModeText(modeName);
+            float fontScale = 0.8f;
+            graphics.pose().pushPose();
+            graphics.pose().scale(fontScale, fontScale, 1.0f);
+            int centeredY = (int)((y + (rowHeight - fontHeight) / 2.0 + 2) / fontScale);
+            graphics.drawString(this.font, displayText, (int)((x + 3) / fontScale), centeredY, color, false);
+            graphics.pose().popPose();
+        }
+    }
+    /** Formats power mode enum name for display (simple modes only). */
     private String formatPowerModeText(String modeText) {
         if (modeText == null || modeText.isEmpty()) {
             return "default";
         }
-        
         String lowercase = modeText.toLowerCase();
         return Character.toUpperCase(lowercase.charAt(0)) + lowercase.substring(1);
     }

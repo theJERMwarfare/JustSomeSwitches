@@ -46,7 +46,7 @@
 			}
 		},
 		{
-			"name": "switch_indicator_upper",
+			"name": "switch_indicator_powered",
 			"from": [6, -1.07089, 5.11356],
 			"to": [10, 0.92911, 6.11356],
 			"light_emission": 8,
@@ -58,7 +58,7 @@
 			}
 		},
 		{
-			"name": "switch_indicator_lower",
+			"name": "switch_indicator_unpowered",
 			"from": [6.001, -1.13492, 9.98477],
 			"to": [9.999, 0.86308, 10.98277],
 			"light_emission": 8,

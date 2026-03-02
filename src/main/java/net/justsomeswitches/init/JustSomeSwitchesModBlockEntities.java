@@ -20,7 +20,8 @@ public class JustSomeSwitchesModBlockEntities {
                     BlockEntityType.Builder.of(
                             SwitchBlockEntity::new,
                             JustSomeSwitchesModBlocks.SWITCHES_LEVER.get(),
-                            JustSomeSwitchesModBlocks.SWITCHES_ROCKER.get()
+                            JustSomeSwitchesModBlocks.SWITCHES_ROCKER.get(),
+                            JustSomeSwitchesModBlocks.SWITCHES_SLIDE.get()
                     ).build(null)
             );
 }

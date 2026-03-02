@@ -77,7 +77,9 @@ public class SwitchBlockEntity extends BlockEntity {
     public enum PowerMode {
         DEFAULT,
         ALT,
-        NONE
+        NONE,
+        NONE_TOGGLE,
+        NONE_BASE
     }
 
     private PowerMode powerMode = PowerMode.DEFAULT;
@@ -392,10 +394,12 @@ public class SwitchBlockEntity extends BlockEntity {
     @Nonnull public TextureRotation getBaseTextureRotation() { return baseTextureRotation; }
     @Nonnull public TextureRotation getToggleTextureRotation() { return toggleTextureRotation; }
 
+    @SuppressWarnings("unused")
     @Nonnull
     public FaceTintData getToggleTintData(@Nonnull Direction face) {
         return toggleTintDataMap.getOrDefault(face, new FaceTintData());
     }
+    @SuppressWarnings("unused")
     @Nonnull
     public FaceTintData getBaseTintData(@Nonnull Direction face) {
         return baseTintDataMap.getOrDefault(face, new FaceTintData());
@@ -455,7 +459,7 @@ public class SwitchBlockEntity extends BlockEntity {
 
     public boolean hasPowerTextureOverrides() {
         return switch (powerMode) {
-            case ALT, NONE -> true;
+            case ALT, NONE, NONE_TOGGLE, NONE_BASE -> true;
             case DEFAULT -> false;
         };
     }
@@ -494,7 +498,8 @@ public class SwitchBlockEntity extends BlockEntity {
     public String getUnpoweredTexture() {
         return switch (powerMode) {
             case ALT -> ALT_UNPOWERED_TEXTURE;
-            case NONE -> toggleTexturePath;
+            case NONE, NONE_TOGGLE -> toggleTexturePath;
+            case NONE_BASE -> baseTexturePath;
             case DEFAULT -> "minecraft:block/gray_concrete_powder";
         };
     }
@@ -503,7 +508,8 @@ public class SwitchBlockEntity extends BlockEntity {
     public String getPoweredTexture() {
         return switch (powerMode) {
             case ALT -> ALT_POWERED_TEXTURE;
-            case NONE -> toggleTexturePath;
+            case NONE, NONE_TOGGLE -> toggleTexturePath;
+            case NONE_BASE -> baseTexturePath;
             case DEFAULT -> "minecraft:block/redstone_block";
         };
     }

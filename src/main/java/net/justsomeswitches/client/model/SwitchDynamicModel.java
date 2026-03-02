@@ -313,6 +313,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
 
     /** Number of +90° rotation steps to compensate for toggle model orientation (0=none, 1=+90°, 2=+180°, 3=+270°). */
     private final int toggleRotationSteps;
+    /** Whether this model is a slide variant (enables UV override for powered indicator in None modes). */
+    private final boolean isSlideModel;
 
     public SwitchDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
                              @SuppressWarnings("unused") @Nonnull Map<String, Matrix4f> orientationTransforms,
@@ -320,11 +322,13 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                              @SuppressWarnings("unused") @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
                              @Nonnull BakedModel vanillaLeverModel,
                              @Nonnull ItemOverrides itemOverrides,
-                             int toggleRotationSteps) {
+                             int toggleRotationSteps,
+                             boolean isSlideModel) {
         this.textureSprites = new HashMap<>(textureSprites);
         this.vanillaLeverModel = vanillaLeverModel;
         this.itemOverrides = itemOverrides;
         this.toggleRotationSteps = toggleRotationSteps;
+        this.isSlideModel = isSlideModel;
     }
     /**
      * Calculates Z-offset for overlay layer to prevent z-fighting.
@@ -708,7 +712,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             }
         }
         // If we have overlay layers, generate quads with render-type-conditional emission
-        if (overlayLayers != null && overlayLayers.size() > 1) {
+        if (overlayLayers != null) {
             TextureRotation overlayRotation = determineTextureRotation(
                     originalTextureName, baseTexture, extraData);
             List<BakedQuad> result = new ArrayList<>();
@@ -862,7 +866,81 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             }
         }
         
+        // UV override for slide powered indicator in None modes
+        if (isSlideModel && needsTextureReplacement
+                && isPoweredTexture(originalTextureName)
+                && isNoneIndicatorMode(powerMode)) {
+            return replaceQuadTextureWithUVOverride(originalQuad, finalSprite, quadTintIndex);
+        }
         return replaceQuadTexture(originalQuad, finalSprite, rotation, quadTintIndex);
+    }
+
+    /** Checks if the power mode is one of the slide-specific None indicator modes. */
+    private static boolean isNoneIndicatorMode(@Nullable String powerMode) {
+        return "NONE_TOGGLE".equals(powerMode) || "NONE_BASE".equals(powerMode);
+    }
+
+    /**
+     * Replaces quad texture with UV override for slide powered indicator blending.
+     * Remaps UVs from the original sprite's coordinate space to a target region on
+     * the new sprite, ensuring continuity with the unpowered indicator's UV mapping.
+     * Works in UV-space so it's independent of blockstate rotation.
+     */
+    @Nonnull
+    private BakedQuad replaceQuadTextureWithUVOverride(@Nonnull BakedQuad originalQuad,
+                                                      @Nonnull TextureAtlasSprite newSprite,
+                                                      int tintIndex) {
+        TextureAtlasSprite origSprite = originalQuad.getSprite();
+        int[] originalVertices = originalQuad.getVertices();
+        int[] newVertices = originalVertices.clone();
+        // Target UV region in model space (0-1 normalized), mapped so that:
+        // relU=0 (orig minU) → 6/16, relU=1 (orig maxU) → 10/16
+        // relV=0 (orig minV) → 8/16, relV=1 (orig maxV) → 4/16
+        // This places the powered indicator UV directly above the unpowered indicator's
+        // UV region (6,8)→(10,12) with continuous boundary at V=8/16.
+        float targetU0 = 6.0f / 16.0f;
+        float targetV0 = 8.0f / 16.0f;
+        float targetU1 = 10.0f / 16.0f;
+        float targetV1 = 4.0f / 16.0f;
+        // Convert atlas UVs to model-space UVs and find bounds
+        float origURange = origSprite.getU1() - origSprite.getU0();
+        float origVRange = origSprite.getV1() - origSprite.getV0();
+        float[] modelUs = new float[4];
+        float[] modelVs = new float[4];
+        float minU = Float.MAX_VALUE, maxU = -Float.MAX_VALUE;
+        float minV = Float.MAX_VALUE, maxV = -Float.MAX_VALUE;
+        for (int v = 0; v < 4; v++) {
+            float atlasU = Float.intBitsToFloat(originalVertices[v * 8 + 4]);
+            float atlasV = Float.intBitsToFloat(originalVertices[v * 8 + 5]);
+            modelUs[v] = origURange > 0 ? (atlasU - origSprite.getU0()) / origURange : 0;
+            modelVs[v] = origVRange > 0 ? (atlasV - origSprite.getV0()) / origVRange : 0;
+            minU = Math.min(minU, modelUs[v]);
+            maxU = Math.max(maxU, modelUs[v]);
+            minV = Math.min(minV, modelVs[v]);
+            maxV = Math.max(maxV, modelVs[v]);
+        }
+        float rangeU = maxU - minU;
+        float rangeV = maxV - minV;
+        float newURange = newSprite.getU1() - newSprite.getU0();
+        float newVRange = newSprite.getV1() - newSprite.getV0();
+        for (int v = 0; v < 4; v++) {
+            // Relative position within the quad's original UV bounds (0-1)
+            float relU = rangeU > 0 ? (modelUs[v] - minU) / rangeU : 0.0f;
+            float relV = rangeV > 0 ? (modelVs[v] - minV) / rangeV : 0.0f;
+            // Map to target model-space UV region
+            float targetModelU = targetU0 + relU * (targetU1 - targetU0);
+            float targetModelV = targetV0 + relV * (targetV1 - targetV0);
+            // Convert to atlas coordinates on new sprite
+            newVertices[v * 8 + 4] = Float.floatToIntBits(newSprite.getU0() + targetModelU * newURange);
+            newVertices[v * 8 + 5] = Float.floatToIntBits(newSprite.getV0() + targetModelV * newVRange);
+        }
+        return new BakedQuad(
+                newVertices,
+                tintIndex,
+                originalQuad.getDirection(),
+                newSprite,
+                originalQuad.isShade()
+        );
     }
 
     /**
@@ -878,10 +956,10 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         // Handle power textures (including DEFAULT mode)
         if (powerMode != null) {
             if (isPoweredTexture(originalTextureName)) {
-                return getPoweredReplacementTexture(powerMode, toggleTexture);
+                return getPoweredReplacementTexture(powerMode, toggleTexture, baseTexture);
             }
             if (isUnpoweredTexture(originalTextureName)) {
-                return getUnpoweredReplacementTexture(powerMode, toggleTexture);
+                return getUnpoweredReplacementTexture(powerMode, toggleTexture, baseTexture);
             }
         }
 
@@ -908,18 +986,21 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
      * Gets powered texture replacement based on power mode.
      */
     @Nonnull
-    private TextureAtlasSprite getPoweredReplacementTexture(@Nullable String powerMode, @Nullable String toggleTexture) {
+    private TextureAtlasSprite getPoweredReplacementTexture(@Nullable String powerMode,
+                                                           @Nullable String toggleTexture,
+                                                           @Nullable String baseTexture) {
         if ("ALT".equals(powerMode)) {
-            // ALT mode uses lime concrete powder for powered state
             TextureAtlasSprite altSprite = getTextureSprite("minecraft:block/lime_concrete_powder");
             if (altSprite != null) return altSprite;
-        } else if ("NONE".equals(powerMode)) {
-            // NONE mode uses toggle texture (or default toggle if not set)
+        } else if ("NONE".equals(powerMode) || "NONE_TOGGLE".equals(powerMode)) {
             String effectiveToggleTexture = toggleTexture != null ? toggleTexture : SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE;
             TextureAtlasSprite toggleSprite = getTextureSprite(effectiveToggleTexture);
             if (toggleSprite != null) return toggleSprite;
+        } else if ("NONE_BASE".equals(powerMode)) {
+            String effectiveBaseTexture = baseTexture != null ? baseTexture : SwitchBlockEntity.DEFAULT_BASE_TEXTURE;
+            TextureAtlasSprite baseSprite = getTextureSprite(effectiveBaseTexture);
+            if (baseSprite != null) return baseSprite;
         }
-        
         // DEFAULT mode and fallback: use redstone block
         TextureAtlasSprite fallback = getTextureSprite("minecraft:block/redstone_block");
         return fallback != null ? fallback : textureSprites.values().iterator().next();
@@ -929,18 +1010,21 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
      * Gets unpowered texture replacement based on power mode.
      */
     @Nonnull
-    private TextureAtlasSprite getUnpoweredReplacementTexture(@Nullable String powerMode, @Nullable String toggleTexture) {
+    private TextureAtlasSprite getUnpoweredReplacementTexture(@Nullable String powerMode,
+                                                             @Nullable String toggleTexture,
+                                                             @Nullable String baseTexture) {
         if ("ALT".equals(powerMode)) {
-            // ALT mode uses redstone block for unpowered state
             TextureAtlasSprite altSprite = getTextureSprite("minecraft:block/redstone_block");
             if (altSprite != null) return altSprite;
-        } else if ("NONE".equals(powerMode)) {
-            // NONE mode uses toggle texture (or default toggle if not set)
+        } else if ("NONE".equals(powerMode) || "NONE_TOGGLE".equals(powerMode)) {
             String effectiveToggleTexture = toggleTexture != null ? toggleTexture : SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE;
             TextureAtlasSprite toggleSprite = getTextureSprite(effectiveToggleTexture);
             if (toggleSprite != null) return toggleSprite;
+        } else if ("NONE_BASE".equals(powerMode)) {
+            String effectiveBaseTexture = baseTexture != null ? baseTexture : SwitchBlockEntity.DEFAULT_BASE_TEXTURE;
+            TextureAtlasSprite baseSprite = getTextureSprite(effectiveBaseTexture);
+            if (baseSprite != null) return baseSprite;
         }
-        
         // DEFAULT mode and fallback: use gray concrete powder
         TextureAtlasSprite fallback = getTextureSprite("minecraft:block/gray_concrete_powder");
         return fallback != null ? fallback : textureSprites.values().iterator().next();
@@ -1364,18 +1448,18 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         private final Direction side;
         private final int toggleTextureId;
         private final int baseTextureId;
-        private final int stateFlags; // Bitpacked: powerMode(2 bits) + wallOrientation(3 bits) + rotations(6 bits) + ghost(1 bit)
+        private final int stateFlags; // Bitpacked: powerMode(3 bits) + wallOrientation(3 bits) + rotations(6 bits) + ghost(1 bit)
         private final Float ghostOpacity;
         private final RenderType renderType;
         private final int hashCode;
-        
+
         // Bit positions for state flags
-        private static final int POWER_MODE_SHIFT = 0;    // Bits 0-1
-        private static final int WALL_ORIENT_SHIFT = 2;   // Bits 2-4
-        private static final int BASE_ROTATION_SHIFT = 5; // Bits 5-7
-        private static final int TOGGLE_ROTATION_SHIFT = 8; // Bits 8-10
-        private static final int GHOST_MODE_SHIFT = 11;   // Bit 11
-        private static final int HAS_TOGGLE_BLOCK_SHIFT = 12; // Bit 12
+        private static final int POWER_MODE_SHIFT = 0;    // Bits 0-2 (3 bits for 5 values)
+        private static final int WALL_ORIENT_SHIFT = 3;   // Bits 3-5
+        private static final int BASE_ROTATION_SHIFT = 6; // Bits 6-8
+        private static final int TOGGLE_ROTATION_SHIFT = 9; // Bits 9-11
+        private static final int GHOST_MODE_SHIFT = 12;   // Bit 12
+        private static final int HAS_TOGGLE_BLOCK_SHIFT = 13; // Bit 13
 
         public ModelCacheKey(@Nonnull String blockStateString, @Nullable Direction side,
                             @Nullable String toggleTexture, @Nullable String baseTexture,
@@ -1412,6 +1496,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                 case "DEFAULT" -> 0;
                 case "ALT" -> 1;
                 case "NONE" -> 2;
+                case "NONE_TOGGLE" -> 3;
+                case "NONE_BASE" -> 4;
                 default -> 0;
             };
         }
@@ -1459,10 +1545,10 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                                      (baseTextureId == 0 || baseTextureId == getTextureId(SwitchBlockEntity.DEFAULT_BASE_TEXTURE));
             
             // Check if using default flags (all 0 = defaults)
-            int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b11;
+            int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b111;
             int baseRotation = (stateFlags >> BASE_ROTATION_SHIFT) & 0b111;
             int toggleRotation = (stateFlags >> TOGGLE_ROTATION_SHIFT) & 0b111;
-            
+
             return defaultTextures && powerMode == 0 && baseRotation == 0 && toggleRotation == 0;
         }
 
@@ -1504,11 +1590,13 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                 }
                 
                 // Decode power mode
-                int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b11;
+                int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b111;
                 if (powerMode != 0) {
                     String mode = switch (powerMode) {
                         case 1 -> "ALT";
                         case 2 -> "NONE";
+                        case 3 -> "NONE_TOGGLE";
+                        case 4 -> "NONE_BASE";
                         default -> "DEFAULT";
                     };
                     sb.append("power=").append(mode).append(",");
