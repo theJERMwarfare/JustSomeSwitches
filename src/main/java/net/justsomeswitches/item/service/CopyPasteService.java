@@ -1,14 +1,17 @@
 package net.justsomeswitches.item.service;
 
+import net.justsomeswitches.block.ISwitchBlock;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.util.InventoryHelper;
 import net.justsomeswitches.util.NBTHelper;
 import net.justsomeswitches.util.TextureRotation;
+import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
 import net.justsomeswitches.util.WrenchConstants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -308,13 +311,32 @@ public class CopyPasteService {
     private static void applyPowerMode(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {
         if (settingsTag.contains(WrenchConstants.POWER_MODE_KEY)) {
             try {
-                SwitchBlockEntity.PowerMode powerMode = 
+                SwitchBlockEntity.PowerMode powerMode =
                     SwitchBlockEntity.PowerMode.valueOf(settingsTag.getString(WrenchConstants.POWER_MODE_KEY));
+                powerMode = normalizeForTargetVariant(powerMode, blockEntity);
                 blockEntity.setPowerMode(powerMode);
             } catch (IllegalArgumentException ignored) {
                 // Invalid power mode - ignore
             }
         }
+    }
+    /** Normalizes a power mode for the target block's variant type. */
+    private static SwitchBlockEntity.PowerMode normalizeForTargetVariant(
+            @Nonnull SwitchBlockEntity.PowerMode mode, @Nonnull SwitchBlockEntity blockEntity) {
+        Block block = blockEntity.getBlockState().getBlock();
+        boolean isSlide = block instanceof ISwitchBlock switchBlock &&
+                          switchBlock.getSwitchModelType() == SwitchModelType.SLIDE;
+        if (isSlide) {
+            if (mode == SwitchBlockEntity.PowerMode.NONE) {
+                return SwitchBlockEntity.PowerMode.NONE_TOGGLE;
+            }
+        } else {
+            if (mode == SwitchBlockEntity.PowerMode.NONE_TOGGLE ||
+                mode == SwitchBlockEntity.PowerMode.NONE_BASE) {
+                return SwitchBlockEntity.PowerMode.NONE;
+            }
+        }
+        return mode;
     }
     
     private static void applyToggleSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {

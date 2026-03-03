@@ -21,7 +21,8 @@ public class JustSomeSwitchesModBlockEntities {
                             SwitchBlockEntity::new,
                             JustSomeSwitchesModBlocks.SWITCHES_LEVER.get(),
                             JustSomeSwitchesModBlocks.SWITCHES_ROCKER.get(),
-                            JustSomeSwitchesModBlocks.SWITCHES_SLIDE.get()
+                            JustSomeSwitchesModBlocks.SWITCHES_SLIDE.get(),
+                            JustSomeSwitchesModBlocks.SWITCHES_BUTTONS.get()
                     ).build(null)
             );
 }
