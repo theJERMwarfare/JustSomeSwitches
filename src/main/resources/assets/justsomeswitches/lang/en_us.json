@@ -20,12 +20,12 @@
 
   "_comment1": "Future block translations:",
   "block.justsomeswitches.switches_rocker": "Switches Rocker",
-  "block.justsomeswitches.switches_button": "Switches Button",
+  "block.justsomeswitches.switches_buttons": "Switches Buttons",
   "block.justsomeswitches.switches_slide": "Switches Slide",
 
   "_comment2": "Future item translations:",
   "item.justsomeswitches.switches_rocker": "Switches Rocker",
-  "item.justsomeswitches.switches_button": "Switches Button",
+  "item.justsomeswitches.switches_buttons": "Switches Buttons",
   "item.justsomeswitches.switches_slide": "Switches Slide",
   "item.justsomeswitches.switches_wrench": "Switches Wrench",
 

@@ -24,6 +24,7 @@ public class JustSomeSwitchesModTabs {
                         output.accept(JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.SWITCHES_ROCKER_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.SWITCHES_SLIDE_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_BUTTONS_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.SWITCHES_WRENCH.get());
                         output.accept(JustSomeSwitchesModBlocks.BASIC_LEVER_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.BASIC_LEVER_INVERTED_ITEM.get());

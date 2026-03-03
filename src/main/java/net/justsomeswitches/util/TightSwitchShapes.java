@@ -36,6 +36,7 @@ public final class TightSwitchShapes {
         MODEL_TYPES.put(SwitchesLeverBlock.class, SwitchModelType.LEVER);
         MODEL_TYPES.put(SwitchesRockerBlock.class, SwitchModelType.ROCKER);
         MODEL_TYPES.put(SwitchesSlideBlock.class, SwitchModelType.SLIDE);
+        MODEL_TYPES.put(SwitchesButtonsBlock.class, SwitchModelType.BUTTONS);
         INVERTED_FLAGS.put(BasicLeverBlock.class, false);
         INVERTED_FLAGS.put(BasicLeverInvertedBlock.class, true);
         INVERTED_FLAGS.put(BasicRockerBlock.class, false);
@@ -47,6 +48,7 @@ public final class TightSwitchShapes {
         INVERTED_FLAGS.put(SwitchesLeverBlock.class, false);
         INVERTED_FLAGS.put(SwitchesRockerBlock.class, false);
         INVERTED_FLAGS.put(SwitchesSlideBlock.class, false);
+        INVERTED_FLAGS.put(SwitchesButtonsBlock.class, false);
     }
 
     // ========================================================================
