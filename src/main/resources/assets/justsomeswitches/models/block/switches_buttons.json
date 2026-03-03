@@ -1,0 +1,56 @@
+{
+  "loader": "justsomeswitches:switches_loader",
+  "base_model": "justsomeswitches:custom/switchesbuttons",
+  "texture_categories": {
+    "base": {
+      "default": "minecraft:block/stone",
+      "all": "minecraft:block/stone"
+    },
+    "toggle": {
+      "default": "minecraft:block/oak_planks",
+      "all": "minecraft:block/oak_planks"
+    },
+    "power": {
+      "unpowered": "minecraft:block/gray_concrete_powder",
+      "powered": "minecraft:block/redstone_block"
+    }
+  },
+  "orientations": {
+    "center": {
+      "rotation": {"x": 0, "y": 0, "z": 0},
+      "translation": {"x": 0.0, "y": 0.5, "z": 0.0}
+    },
+    "left": {
+      "rotation": {"x": 0, "y": 270, "z": 0},
+      "translation": {"x": -0.4, "y": 0.5, "z": 0.0}
+    },
+    "right": {
+      "rotation": {"x": 0, "y": 90, "z": 0},
+      "translation": {"x": 0.4, "y": 0.5, "z": 0.0}
+    },
+    "top": {
+      "rotation": {"x": -90, "y": 0, "z": 0},
+      "translation": {"x": 0.0, "y": 0.9, "z": 0.0}
+    },
+    "bottom": {
+      "rotation": {"x": 90, "y": 0, "z": 0},
+      "translation": {"x": 0.0, "y": 0.1, "z": 0.0}
+    }
+  },
+  "variables": {
+    "all": "all",
+    "north": "north",
+    "south": "south",
+    "east": "east",
+    "west": "west",
+    "up": "up",
+    "down": "down"
+  },
+  "power_modes": {
+    "alt": {
+      "unpowered": "minecraft:block/redstone_block",
+      "powered": "minecraft:block/lime_concrete_powder"
+    }
+  },
+  "toggle_rotation_compensation": 0
+}
