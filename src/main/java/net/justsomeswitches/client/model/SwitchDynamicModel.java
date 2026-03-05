@@ -1258,7 +1258,9 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             return new ModelCacheKey(
                 state != null ? state.toString() : "null",
                 side,
-                null, null, null, // No texture parameters for ghost preview
+                null, null, // No texture parameters for ghost preview
+                -1, -1, // No tint for ghost preview
+                null, // No power mode for ghost preview
                 wallOrientation,
                 null, null, // No rotation parameters for ghost preview
                 ghostMode,
@@ -1276,12 +1278,16 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         String baseRotation = extraData.get(SwitchBlockEntity.BASE_ROTATION);
         String toggleRotation = extraData.get(SwitchBlockEntity.TOGGLE_ROTATION);
         Boolean hasToggleBlock = extraData.get(SwitchBlockEntity.HAS_TOGGLE_BLOCK);
+        Integer toggleTintObj = extraData.get(SwitchBlockEntity.TOGGLE_TINT_INDEX);
+        Integer baseTintObj = extraData.get(SwitchBlockEntity.BASE_TINT_INDEX);
 
         return new ModelCacheKey(
                 state != null ? state.toString() : "null",
                 side,
                 toggleTexture,
                 baseTexture,
+                toggleTintObj != null ? toggleTintObj : -1,
+                baseTintObj != null ? baseTintObj : -1,
                 powerMode,
                 wallOrientation,
                 baseRotation,
@@ -1448,6 +1454,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         private final Direction side;
         private final int toggleTextureId;
         private final int baseTextureId;
+        private final int toggleTintIndex;
+        private final int baseTintIndex;
         private final int stateFlags; // Bitpacked: powerMode(3 bits) + wallOrientation(3 bits) + rotations(6 bits) + ghost(1 bit)
         private final Float ghostOpacity;
         private final RenderType renderType;
@@ -1463,6 +1471,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
 
         public ModelCacheKey(@Nonnull String blockStateString, @Nullable Direction side,
                             @Nullable String toggleTexture, @Nullable String baseTexture,
+                            int toggleTintIndex, int baseTintIndex,
                             @Nullable String powerMode, @Nullable String wallOrientation,
                             @Nullable String baseRotation, @Nullable String toggleRotation,
                             @Nullable Boolean ghostMode, @Nullable Float ghostOpacity,
@@ -1473,6 +1482,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             this.side = side;
             this.toggleTextureId = getTextureId(toggleTexture);
             this.baseTextureId = getTextureId(baseTexture);
+            this.toggleTintIndex = toggleTintIndex;
+            this.baseTintIndex = baseTintIndex;
             this.ghostOpacity = ghostOpacity;
             this.renderType = renderType;
             
@@ -1486,7 +1497,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             flags |= (hasToggleBlock != null && hasToggleBlock ? 1 : 0) << HAS_TOGGLE_BLOCK_SHIFT;
             this.stateFlags = flags;
 
-            this.hashCode = Objects.hash(blockStateId, side, toggleTextureId, baseTextureId, stateFlags, ghostOpacity, renderType);
+            this.hashCode = Objects.hash(blockStateId, side, toggleTextureId, baseTextureId, toggleTintIndex, baseTintIndex, stateFlags, ghostOpacity, renderType);
         }
         
         // Encoding helpers for bitpacking
@@ -1565,6 +1576,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                    Objects.equals(side, other.side) &&
                    toggleTextureId == other.toggleTextureId &&
                    baseTextureId == other.baseTextureId &&
+                   toggleTintIndex == other.toggleTintIndex &&
+                   baseTintIndex == other.baseTintIndex &&
                    stateFlags == other.stateFlags &&
                    Objects.equals(ghostOpacity, other.ghostOpacity) &&
                    Objects.equals(renderType, other.renderType);
