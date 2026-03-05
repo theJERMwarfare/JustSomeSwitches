@@ -1,23 +1,12 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [
-    " S ",
-    " L ",
-    " B "
-  ],
+  "pattern": [" S ", "DLT", " B "],
   "key": {
-    "S": {
-      "tag": "forge:rods/wooden"
-    },
-    "L": {
-      "item": "justsomeswitches:basic_buttons_inverted"
-    },
-    "B": {
-      "item": "minecraft:stone"
-    }
+    "S": {"tag": "forge:rods/wooden"},
+    "D": {"tag": "forge:dyes"},
+    "L": {"item": "justsomeswitches:basic_buttons_inverted"},
+    "T": {"tag": "minecraft:terracotta"},
+    "B": {"item": "minecraft:stone"}
   },
-  "result": {
-    "item": "justsomeswitches:switches_buttons",
-    "count": 1
-  }
+  "result": {"item": "justsomeswitches:switches_buttons", "count": 1}
 }

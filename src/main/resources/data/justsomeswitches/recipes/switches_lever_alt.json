@@ -1,11 +1,11 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [" S ", "DLT", " B "],
+  "pattern": [" S ", "TLD", " B "],
   "key": {
     "S": {"tag": "forge:rods/wooden"},
-    "D": {"tag": "forge:dyes"},
-    "L": {"item": "justsomeswitches:basic_lever_inverted"},
     "T": {"tag": "minecraft:terracotta"},
+    "L": {"item": "justsomeswitches:basic_lever"},
+    "D": {"tag": "forge:dyes"},
     "B": {"item": "minecraft:stone"}
   },
   "result": {"item": "justsomeswitches:switches_lever", "count": 1}
