@@ -18,6 +18,10 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
+    maven {
+        name = "BlameJared"
+        url = "https://maven.blamejared.com"
+    }
 }
 
 base {
@@ -89,6 +93,11 @@ configurations {
 
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
+    // JEI - compile against API only (mod works without JEI installed)
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    // JEI - full mod at runtime for testing
+    localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

@@ -14,16 +14,21 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -38,7 +43,7 @@ import javax.annotation.Nullable;
  * Provides shared placement, shape, tick, and block entity logic.
  * Subclasses only need to pass their SwitchModelType via constructor.
  */
-public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBlock, ISwitchBlock {
+public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBlock, ISwitchBlock, SimpleWaterloggedBlock {
     private final SwitchModelType switchModelType;
     private static final ThreadLocal<String> PENDING_WALL_ORIENTATION = new ThreadLocal<>();
     private static final VoxelShape FLOOR_NORTH_SOUTH = Block.box(5.0, 0.0, 3.0, 11.0, 6.0, 13.0);
@@ -53,6 +58,12 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     protected AbstractSwitchBlock(Properties properties, SwitchModelType switchModelType) {
         super(properties);
         this.switchModelType = switchModelType;
+        this.registerDefaultState(this.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, false));
+    }
+    @Override
+    protected void createBlockStateDefinition(@Nonnull StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(BlockStateProperties.WATERLOGGED);
     }
     @Override
     public SwitchModelType getSwitchModelType() {
@@ -197,17 +208,22 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
         Direction clickedFace = context.getClickedFace();
         Vec3 clickLocation = context.getClickLocation();
         Vec3 relativeHit = getRelativeHitLocation(clickLocation, clickedFace);
+        FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos());
+        boolean waterlogged = fluidState.is(Fluids.WATER);
         BlockState proposedState = switch (clickedFace) {
             case UP -> getFloorPlacement(relativeHit, context);
             case DOWN -> getCeilingPlacement(relativeHit, context);
             case NORTH, SOUTH, EAST, WEST -> getWallPlacement(clickedFace, relativeHit);
         };
-
+        proposedState = proposedState.setValue(BlockStateProperties.WATERLOGGED, waterlogged);
         if (proposedState.canSurvive(context.getLevel(), context.getClickedPos())) {
             return proposedState;
         }
-
-        return super.getStateForPlacement(context);
+        BlockState fallback = super.getStateForPlacement(context);
+        if (fallback != null) {
+            fallback = fallback.setValue(BlockStateProperties.WATERLOGGED, waterlogged);
+        }
+        return fallback;
     }
 
     /**
@@ -410,7 +426,21 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     public void animateTick(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource randomSource) {
         // No particles for switch blocks - empty method intentional
     }
-
+    @Override
+    @Nonnull
+    @SuppressWarnings("deprecation")
+    public FluidState getFluidState(@Nonnull BlockState state) {
+        return state.getValue(BlockStateProperties.WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
+    }
+    @Override
+    @Nonnull
+    public BlockState updateShape(@Nonnull BlockState state, @Nonnull Direction direction, @Nonnull BlockState neighborState,
+                                  @Nonnull LevelAccessor level, @Nonnull BlockPos pos, @Nonnull BlockPos neighborPos) {
+        if (state.getValue(BlockStateProperties.WATERLOGGED)) {
+            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }
     @Nonnull
     private Direction getAttachedDirection(@Nonnull BlockState state) {
         AttachFace attachFace = state.getValue(BlockStateProperties.ATTACH_FACE);

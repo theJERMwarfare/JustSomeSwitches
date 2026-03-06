@@ -10,13 +10,19 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -28,11 +34,26 @@ import javax.annotation.Nonnull;
  * Redstone behavior remains standard - emits signal strength 15 when powered.
  * Visual inversion handled purely by model files.
  */
-public class BasicLeverInvertedBlock extends LeverBlock {
+public class BasicLeverInvertedBlock extends LeverBlock implements SimpleWaterloggedBlock {
 
     /** Creates a new Basic Lever Inverted Block instance. */
     public BasicLeverInvertedBlock(Properties properties) {
         super(properties);
+        this.registerDefaultState(this.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, false));
+    }
+    @Override
+    protected void createBlockStateDefinition(@Nonnull StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(BlockStateProperties.WATERLOGGED);
+    }
+    @Override
+    public BlockState getStateForPlacement(@Nonnull BlockPlaceContext context) {
+        BlockState state = super.getStateForPlacement(context);
+        if (state != null) {
+            FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos());
+            state = state.setValue(BlockStateProperties.WATERLOGGED, fluidState.is(Fluids.WATER));
+        }
+        return state;
     }
 
 
@@ -106,6 +127,21 @@ public class BasicLeverInvertedBlock extends LeverBlock {
 
     }
 
+    @Override
+    @Nonnull
+    @SuppressWarnings("deprecation")
+    public FluidState getFluidState(@Nonnull BlockState state) {
+        return state.getValue(BlockStateProperties.WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
+    }
+    @Override
+    @Nonnull
+    public BlockState updateShape(@Nonnull BlockState state, @Nonnull Direction direction, @Nonnull BlockState neighborState,
+                                  @Nonnull LevelAccessor level, @Nonnull BlockPos pos, @Nonnull BlockPos neighborPos) {
+        if (state.getValue(BlockStateProperties.WATERLOGGED)) {
+            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }
     /** Returns the direction pointing to the block this lever is attached to. */
     @Nonnull
     private Direction getAttachedDirection(@Nonnull BlockState state) {
