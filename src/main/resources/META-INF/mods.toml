@@ -8,7 +8,7 @@ loaderVersion="${loader_version_range}"
 license="${mod_license}"
 
 # A URL to refer people to when problems occur with this mod
-#issueTrackerURL="https://github.com/theJERMwarfare/JustSomeSwitches/issues"
+issueTrackerURL="https://github.com/theJERMwarfare/JustSomeSwitches/issues"
 
 # A list of mods - how many allowed here is determined by the individual mod loader
 [[mods]]
@@ -18,6 +18,10 @@ modId="${mod_id}"
 
 # The human-readable display name for the mod.
 displayName="${mod_name}"
+
+# Mod logo file
+logoFile="justsomeswitches.png"
+logoBlur=false
 
 # The version number of the mod
 version="${mod_version}"
@@ -35,7 +39,7 @@ authors="${mod_authors}"
 description='''${mod_description}'''
 
 # Dependencies - IMPORTANT: Do NOT make the mod depend on itself!
-[[dependencies.${mod_id}]]
+[[dependencies.justsomeswitches]]
 # NeoForge dependency
 modId="neoforge"
 type="required"
@@ -47,10 +51,18 @@ ordering="NONE"
 side="BOTH"
 
 # Minecraft dependency
-[[dependencies.${mod_id}]]
+[[dependencies.justsomeswitches]]
 modId="minecraft"
 type="required"
 # This version range declares a minimum of the current minecraft version up to but not including the next major version
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
+
+# JEI soft dependency (optional - mod works without it)
+[[dependencies.justsomeswitches]]
+modId="jei"
+type="optional"
+versionRange="[17.3.0,)"
+ordering="AFTER"
+side="CLIENT"

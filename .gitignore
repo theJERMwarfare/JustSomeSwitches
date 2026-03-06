@@ -25,3 +25,13 @@ run-data
 debug
 
 repo
+
+# VS Code
+.vscode/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
