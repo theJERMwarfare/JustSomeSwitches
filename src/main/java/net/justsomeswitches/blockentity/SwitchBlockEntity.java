@@ -136,7 +136,7 @@ public class SwitchBlockEntity extends BlockEntity {
         // Resolve toggle tintIndex independently
         int toggleTintIndex = -1;
         for (Direction direction : Direction.values()) {
-            FaceTintData tintData = toggleTintDataMap.getOrDefault(direction, new FaceTintData());
+            FaceTintData tintData = toggleTintDataMap.getOrDefault(direction, FaceTintData.EMPTY);
             if (tintData.getTintIndex() >= 0) {
                 toggleTintIndex = tintData.getTintIndex();
                 break;
@@ -145,7 +145,7 @@ public class SwitchBlockEntity extends BlockEntity {
         // Resolve base tintIndex independently
         int baseTintIndex = -1;
         for (Direction direction : Direction.values()) {
-            FaceTintData tintData = baseTintDataMap.getOrDefault(direction, new FaceTintData());
+            FaceTintData tintData = baseTintDataMap.getOrDefault(direction, FaceTintData.EMPTY);
             if (tintData.getTintIndex() >= 0) {
                 baseTintIndex = tintData.getTintIndex();
                 break;
@@ -707,7 +707,7 @@ public class SwitchBlockEntity extends BlockEntity {
             for (Direction direction : Direction.values()) {
                 if (tag.contains(direction.getName())) {
                     CompoundTag layersTag = tag.getCompound(direction.getName());
-                    int count = layersTag.getInt("Count");
+                    int count = Math.min(layersTag.getInt("Count"), 16);
                     List<OverlayLayer> layers = new ArrayList<>();
                     for (int i = 0; i < count; i++) {
                         layers.add(OverlayLayer.load(layersTag.getCompound("Layer" + i)));

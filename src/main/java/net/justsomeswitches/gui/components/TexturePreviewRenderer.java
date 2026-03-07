@@ -55,10 +55,6 @@ public class TexturePreviewRenderer {
     /** Cached ResourceLocation objects to avoid repeated creation. */
     private final Map<String, ResourceLocation> resourceLocationCache = new HashMap<>();
 
-    /** Cached texture sprites for faster lookup. */
-    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") // Updated during caching operations
-    private final Map<String, TextureAtlasSprite> spriteCache = new HashMap<>();
-
     /** Cached sprite names to avoid repeated contents() calls. */
     private final Map<TextureAtlasSprite, String> spriteNameCache = new HashMap<>();
 
@@ -84,7 +80,6 @@ public class TexturePreviewRenderer {
      */
     public void clearCaches() {
         resourceLocationCache.clear();
-        spriteCache.clear();
         spriteNameCache.clear();
     }
 

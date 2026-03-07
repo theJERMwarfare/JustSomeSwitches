@@ -85,7 +85,7 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
 
-    /** Basic Lever Inverted block - simple lever with inverted signal. */
+    /** Basic Lever Inverted block - simple lever with inverted visual appearance. */
     public static final DeferredHolder<Block, BasicLeverInvertedBlock> BASIC_LEVER_INVERTED =
             BLOCKS.register("basic_lever_inverted", () -> new BasicLeverInvertedBlock(
                     BlockBehaviour.Properties.of()
@@ -107,7 +107,7 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
 
-    /** Basic Rocker Inverted block - simple rocker switch with inverted signal. */
+    /** Basic Rocker Inverted block - simple rocker switch with inverted visual appearance. */
     public static final DeferredHolder<Block, BasicRockerInvertedBlock> BASIC_ROCKER_INVERTED =
             BLOCKS.register("basic_rocker_inverted", () -> new BasicRockerInvertedBlock(
                     BlockBehaviour.Properties.of()
@@ -129,7 +129,7 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
 
-    /** Basic Buttons Inverted block - simple button switch with inverted signal. */
+    /** Basic Buttons Inverted block - simple button switch with inverted visual appearance. */
     public static final DeferredHolder<Block, BasicButtonsInvertedBlock> BASIC_BUTTONS_INVERTED =
             BLOCKS.register("basic_buttons_inverted", () -> new BasicButtonsInvertedBlock(
                     BlockBehaviour.Properties.of()
@@ -151,7 +151,7 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
 
-    /** Basic Slide Inverted block - simple slide switch with inverted signal. */
+    /** Basic Slide Inverted block - simple slide switch with inverted visual appearance. */
     public static final DeferredHolder<Block, BasicSlideInvertedBlock> BASIC_SLIDE_INVERTED =
             BLOCKS.register("basic_slide_inverted", () -> new BasicSlideInvertedBlock(
                     BlockBehaviour.Properties.of()

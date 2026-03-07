@@ -74,7 +74,7 @@ public class GhostBlockDetector {
         }
 
         BlockPos targetPos = calculatePlacementPosition(blockHit);
-        if (targetPos == null || !canPlaceAt(mc.level, targetPos, heldItem, player, blockHit)) {
+        if (!canPlaceAt(mc.level, targetPos, heldItem, player, blockHit)) {
             clearGhostPreview();
             return;
         }
@@ -91,11 +91,6 @@ public class GhostBlockDetector {
 
     /** Validates hit result is within reach distance. */
     private boolean isValidHitResult(@Nonnull BlockHitResult hit, @Nonnull Player player) {
-        @SuppressWarnings("ConstantValue") // BlockHitResult always has BLOCK type but kept for clarity
-        boolean isBlockHit = (hit.getType() == HitResult.Type.BLOCK);
-        if (!isBlockHit) {
-            return false;
-        }
         Vec3 eyePosition = player.getEyePosition();
         Vec3 hitLocation = hit.getLocation();
         double distanceToHit = eyePosition.distanceTo(hitLocation);
@@ -142,7 +137,7 @@ public class GhostBlockDetector {
         BlockPlaceContext context = new BlockPlaceContext(
             level, player, InteractionHand.MAIN_HAND, stack, hit
         );
-        BlockState proposedState = ((AbstractSwitchBlock) block).getStateForPlacement(context);
+        BlockState proposedState = block.getStateForPlacement(context);
         return proposedState != null && proposedState.canSurvive(level, targetPos);
     }
 
@@ -164,7 +159,7 @@ public class GhostBlockDetector {
         return switchBlock.getStateForPlacement(context);
     }
 
-    /** Calculates wall orientation for ghost preview replicating SwitchesLeverBlock logic. */
+    /** Calculates wall orientation for ghost preview replicating AbstractSwitchBlock logic. */
     @Nonnull
     private String calculateWallOrientation(@Nonnull BlockHitResult hit, @Nonnull BlockState previewState) {
         try {
@@ -194,7 +189,7 @@ public class GhostBlockDetector {
         return "center";
     }
 
-    /** Calculates relative hit position for wall placements replicating SwitchesLeverBlock logic. */
+    /** Calculates relative hit position for wall placements replicating AbstractSwitchBlock logic. */
     @Nonnull
     private Vec3 getRelativeHitLocationForWall(@Nonnull Vec3 clickLocation, @Nonnull Direction clickedFace) {
         double fracX = clickLocation.x - Math.floor(clickLocation.x);
