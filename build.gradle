@@ -31,9 +31,6 @@ base {
 // Mojang ships Java 17 to end users from 1.18 to 1.20.4, so your mod should target Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-//minecraft.accessTransformers.file rootProject.file('src/main/resources/META-INF/accesstransformer.cfg')
-//minecraft.accessTransformers.entry public net.minecraft.client.Minecraft textureManager # textureManager
-
 // Default run configurations.
 // These can be tweaked, removed, or duplicated as needed.
 runs {
@@ -148,36 +145,5 @@ idea {
     module {
         downloadSources = true
         downloadJavadoc = true
-    }
-}
-
-// Custom convenience tasks
-tasks.register('cleanBuild') {
-    group = 'build'
-    description = 'Clean build with fresh caches'
-    dependsOn 'clean', 'build'
-}
-
-tasks.register('quickRun') {
-    group = 'application'
-    description = 'Quick client run without rebuilding'
-    dependsOn 'runClient'
-}
-
-tasks.register('validateBuild') {
-    group = 'verification'
-    description = 'Validates build configuration and displays versions'
-    doLast {
-        println "=".repeat(60)
-        println "Build Configuration Validation"
-        println "=".repeat(60)
-        println "Mod ID:           ${mod_id}"
-        println "Mod Name:         ${mod_name}"
-        println "Mod Version:      ${mod_version}"
-        println "Minecraft:        ${minecraft_version}"
-        println "NeoForge:         ${neo_version}"
-        println "Java Toolchain:   ${java.toolchain.languageVersion.get()}"
-        println "Gradle:           ${gradle.gradleVersion}"
-        println "=".repeat(60)
     }
 }

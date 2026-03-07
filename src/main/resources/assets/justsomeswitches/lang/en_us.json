@@ -17,21 +17,13 @@
   "item.justsomeswitches.basic_slide_inverted": "Basic Slide Inverted",
   "block.justsomeswitches.switches_lever": "Switches Lever",
   "item.justsomeswitches.switches_lever": "Switches Lever",
-
-  "_comment1": "Future block translations:",
   "block.justsomeswitches.switches_rocker": "Switches Rocker",
-  "block.justsomeswitches.switches_buttons": "Switches Buttons",
-  "block.justsomeswitches.switches_slide": "Switches Slide",
-
-  "_comment2": "Future item translations:",
   "item.justsomeswitches.switches_rocker": "Switches Rocker",
+  "block.justsomeswitches.switches_buttons": "Switches Buttons",
   "item.justsomeswitches.switches_buttons": "Switches Buttons",
+  "block.justsomeswitches.switches_slide": "Switches Slide",
   "item.justsomeswitches.switches_slide": "Switches Slide",
   "item.justsomeswitches.switches_wrench": "Switches Wrench",
-
-  "_comment3": "Creative tab:",
   "itemGroup.justsomeswitches": "Just Some Switches",
-
-  "_comment4": "GUI translations:",
   "gui.justsomeswitches.switch_texture.title": "Customize Switch Texture"
 }
