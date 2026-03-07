@@ -4,7 +4,7 @@
   "key": {
     "S": {"tag": "forge:rods/wooden"},
     "D": {"tag": "forge:dyes"},
-    "L": {"item": "justsomeswitches:basic_buttons"},
+    "L": {"tag": "justsomeswitches:basic_buttons_variants"},
     "T": {"tag": "minecraft:terracotta"},
     "B": {"item": "minecraft:stone"}
   },
