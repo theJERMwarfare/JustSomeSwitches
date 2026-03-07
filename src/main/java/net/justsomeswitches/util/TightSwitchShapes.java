@@ -495,7 +495,7 @@ public final class TightSwitchShapes {
         };
     }
 
-    /** SwitchesLever ceiling has east/west Y rotations swapped vs Basic blocks. */
+    /** Advanced Switches ceiling has east/west Y rotations swapped vs Basic blocks. */
     private static int getSwitchesLeverCeilingYRotation(Direction dir) {
         return switch (dir) {
             case SOUTH -> 0;

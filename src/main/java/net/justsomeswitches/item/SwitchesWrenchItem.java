@@ -63,7 +63,8 @@ public class SwitchesWrenchItem extends Item {
     
     /** Handle right-clicking air with shift to clear stored settings. */
     @Override
-    public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level, Player player, net.minecraft.world.InteractionHand hand) {
+    @Nonnull
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(@Nonnull net.minecraft.world.level.Level level, @Nonnull Player player, @Nonnull net.minecraft.world.InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         
         if (player.isShiftKeyDown() && CopyPasteService.hasCopiedSettings(stack)) {
@@ -98,8 +99,8 @@ public class SwitchesWrenchItem extends Item {
         if (altPressed && cPressed) {
             return KeyAction.COPY;
         }
-        
-        if (altPressed && !cPressed) {
+
+        if (altPressed) {
             return KeyAction.PASTE;
         }
         
@@ -111,14 +112,17 @@ public class SwitchesWrenchItem extends Item {
     }
     
     private InteractionResult handleStandardGUI(@Nonnull UseOnContext context) {
-        return openGUIOnServer(context.getLevel(), context.getPlayer(), context.getClickedPos(), 
+        Player player = context.getPlayer();
+        if (player == null) return InteractionResult.FAIL;
+        return openGUIOnServer(context.getLevel(), player, context.getClickedPos(),
                               this::openTextureCustomizationGUI);
     }
     
     private InteractionResult handleCopyOperation(@Nonnull UseOnContext context) {
+        Player player = context.getPlayer();
+        if (player == null) return InteractionResult.FAIL;
         Level level = context.getLevel();
         BlockPos blockPos = context.getClickedPos();
-        Player player = context.getPlayer();
         ItemStack stack = context.getItemInHand();
         
         if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
@@ -143,22 +147,24 @@ public class SwitchesWrenchItem extends Item {
     }
     
     private InteractionResult handlePasteOperation(@Nonnull UseOnContext context) {
+        Player player = context.getPlayer();
+        if (player == null) return InteractionResult.FAIL;
         ItemStack stack = context.getItemInHand();
         if (!CopyPasteService.hasCopiedSettings(stack)) {
-            showActionBarMessage(context.getPlayer(), WrenchConstants.MSG_SETTINGS_NOT_COPIED, ActionBarMessageType.INFO);
+            showActionBarMessage(player, WrenchConstants.MSG_SETTINGS_NOT_COPIED, ActionBarMessageType.INFO);
             return InteractionResult.SUCCESS;
         }
-        
+
         Level level = context.getLevel();
         BlockPos blockPos = context.getClickedPos();
         if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity)) {
             return InteractionResult.FAIL;
         }
-        
+
         if (level.isClientSide) {
-            NetworkHandler.sendWrenchAction(blockPos, 
-                WrenchActionPayload.WrenchAction.PASTE, 
-                context.getPlayer().getUsedItemHand());
+            NetworkHandler.sendWrenchAction(blockPos,
+                WrenchActionPayload.WrenchAction.PASTE,
+                player.getUsedItemHand());
         }
         
         return InteractionResult.SUCCESS;
@@ -178,7 +184,8 @@ public class SwitchesWrenchItem extends Item {
         void openGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos);
     }
 
-    private void showActionBarMessage(Player player, String message, ActionBarMessageType type) {
+    @SuppressWarnings("resource") // Level lifecycle managed by Minecraft, not by us
+    private void showActionBarMessage(@Nonnull Player player, @Nonnull String message, @Nonnull ActionBarMessageType type) {
         if (player.level().isClientSide) {
             net.minecraft.network.chat.Component styledMessage = formatActionBarMessage(message, type);
             player.displayClientMessage(styledMessage, true);
@@ -206,8 +213,7 @@ public class SwitchesWrenchItem extends Item {
             }
 
             @Override
-            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
-            @Nullable
+            @Nonnull
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
                 return new SwitchesTextureMenu(containerId, playerInventory, blockPos);
             }
@@ -225,30 +231,9 @@ public class SwitchesWrenchItem extends Item {
             }
 
             @Override
-            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
-            @Nullable
+            @Nonnull
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
                 return new net.justsomeswitches.gui.WrenchCopyMenu(containerId, playerInventory, blockPos);
-            }
-        };
-
-        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
-    }
-    
-    @SuppressWarnings("unused") // May be used in future functionality
-    private void openOverwriteTextureGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
-        MenuProvider menuProvider = new MenuProvider() {
-            @Override
-            @Nonnull
-            public Component getDisplayName() {
-                return Component.literal(WrenchConstants.GUI_SETTINGS_ALREADY_STORED);
-            }
-
-            @Override
-            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
-            @Nullable
-            public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
-                return new net.justsomeswitches.gui.WrenchOverwriteMenu(containerId, playerInventory, blockPos);
             }
         };
 
@@ -264,8 +249,7 @@ public class SwitchesWrenchItem extends Item {
             }
 
             @Override
-            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
-            @Nullable
+            @Nonnull
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
                 return new net.justsomeswitches.gui.WrenchCopyOverwriteMenu(containerId, playerInventory, blockPos);
             }
@@ -317,17 +301,12 @@ public class SwitchesWrenchItem extends Item {
     }
     
     @SuppressWarnings("unused") // Called from network handlers
-    public void copySettingsToWrenchServer(ItemStack stack, SwitchBlockEntity blockEntity) {
-        CopyPasteService.copySettingsToWrench(stack, blockEntity);
-    }
-    
-    @SuppressWarnings("unused") // Called from network handlers
     public void clearAllSettingsServer(ItemStack stack) {
         CopyPasteService.clearAllSettings(stack);
     }
     
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level level, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
         
         if (CopyPasteService.hasCopiedSettings(stack)) {

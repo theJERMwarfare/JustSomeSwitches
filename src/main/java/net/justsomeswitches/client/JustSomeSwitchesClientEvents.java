@@ -13,7 +13,7 @@ public class JustSomeSwitchesClientEvents {
     private static int tickCounter = 0;
     private static final int UPDATE_INTERVAL = 2;
 
-    /** Client tick event handler for ghost preview updates every 2-3 ticks. */
+    /** Client tick event handler for ghost preview updates every 2 ticks. */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {

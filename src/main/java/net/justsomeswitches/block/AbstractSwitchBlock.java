@@ -71,7 +71,7 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     }
 
     /**
-     * Returns wall shape adjusted for lever orientation.
+     * Returns wall shape adjusted for switch orientation.
      */
     private VoxelShape getRotatedWallShape(Direction wallFace, String wallOrientation) {
         VoxelShape baseShape = switch (wallFace) {
@@ -168,7 +168,7 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     }
 
     /**
-     * Validates lever placement.
+     * Validates switch placement.
      */
     @Override
     public boolean canSurvive(@Nonnull BlockState state, @Nonnull net.minecraft.world.level.LevelReader level, @Nonnull BlockPos pos) {
@@ -202,7 +202,7 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     }
 
     /**
-     * Determines lever placement based on click location.
+     * Determines switch placement based on click location.
      */
     private BlockState getAdvancedPlacementState(@Nonnull BlockPlaceContext context) {
         Direction clickedFace = context.getClickedFace();

@@ -1,13 +1,11 @@
 package net.justsomeswitches.gui;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.justsomeswitches.util.DynamicBlockModelAnalyzer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /** Modern face selection system using Java 17+ records and streams. */
 public class FaceSelectionData {
@@ -48,14 +46,6 @@ public class FaceSelectionData {
         /** Checks if preview texture is available. */
         public boolean hasPreview() { 
             return previewTexture != null && !previewTexture.isEmpty(); 
-        }
-
-        /** Returns display options using stream operations. */
-        @Nonnull
-        public List<Component> getDisplayOptions() {
-            return availableVariables.stream()
-                    .map(Component::literal)
-                    .collect(Collectors.toUnmodifiableList());
         }
 
         /** Returns index of currently selected variable. */
@@ -148,20 +138,6 @@ public class FaceSelectionData {
         }
     }
 
-    /** Returns available variables for ItemStack. */
-    @Nonnull
-    public static List<String> getAvailableVariables(@Nonnull ItemStack itemStack) {
-        if (itemStack.isEmpty()) return List.of("all");
-
-        try {
-            var blockInfo = DynamicBlockModelAnalyzer.analyzeBlockDynamically(itemStack);
-            var variables = blockInfo.getAvailableVariables();
-            return variables.isEmpty() ? List.of("all") : List.copyOf(variables);
-        } catch (Exception e) {
-            return List.of("all");
-        }
-    }
-
     /** Creates fallback selection for blocks that can't be analyzed. */
     @Nonnull
     private static RawTextureSelection createFallbackSelection(@Nonnull ItemStack itemStack,
@@ -171,98 +147,4 @@ public class FaceSelectionData {
         return new RawTextureSelection(false, fallbackVariables, selectedVariable, null, itemStack);
     }
 
-    /** @deprecated Use RawTextureSelection record instead. */
-    @Deprecated
-    @SuppressWarnings("DeprecatedIsStillUsed") // Legacy compatibility
-    public static class DropdownState {
-        private final RawTextureSelection rawSelection;
-
-        public DropdownState(@Nonnull RawTextureSelection rawSelection) {
-            this.rawSelection = rawSelection;
-        }
-
-        @SuppressWarnings("unused") // Legacy API
-        public boolean isEnabled() { return rawSelection.enabled(); }
-        
-        @SuppressWarnings("unused") // Legacy API
-        @Nonnull 
-        public List<Component> getDisplayOptions() { return rawSelection.getDisplayOptions(); }
-        
-        @SuppressWarnings("unused") // Legacy API
-        @Nullable 
-        public String getPreviewTexture() { return rawSelection.previewTexture(); }
-        
-        @SuppressWarnings("unused") // Legacy API
-        public boolean hasPreview() { return rawSelection.hasPreview(); }
-    }
-
-    /** @deprecated Use RawTextureSelection.createDisabled() instead. */
-    @Deprecated
-    @Nonnull
-    public static DropdownState createDisabledState() {
-        return new DropdownState(RawTextureSelection.createDisabled());
-    }
-
-    /** Record for validation results with error information. */
-    public record ValidationResult(
-            boolean isValid,
-            @Nonnull String message,
-            @Nonnull Optional<String> suggestion
-    ) {
-        public ValidationResult {
-            message = Objects.requireNonNull(message, "Validation message cannot be null");
-            suggestion = Objects.requireNonNull(suggestion, "Suggestion optional cannot be null");
-        }
-
-        /** Creates successful validation result. */
-        public static ValidationResult success() {
-            return new ValidationResult(true, "Valid", Optional.empty());
-        }
-
-        /** Creates failed validation result with suggestion. */
-        public static ValidationResult failure(@Nonnull String message, @Nullable String suggestion) {
-            return new ValidationResult(false, message, Optional.ofNullable(suggestion));
-        }
-    }
-
-    /** Validates texture selection with comprehensive error reporting. */
-    @SuppressWarnings("unused") // Public API method
-    @Nonnull
-    public static ValidationResult validateSelection(@Nonnull ItemStack itemStack, @Nonnull String variable) {
-        if (itemStack.isEmpty()) {
-            return ValidationResult.failure("No block selected", "Place a block in the slot");
-        }
-
-        var availableVariables = getAvailableVariables(itemStack);
-        if (!availableVariables.contains(variable)) {
-            String suggestion = getDefaultVariable(availableVariables);
-            return ValidationResult.failure(
-                "Variable '%s' not available for this block".formatted(variable),
-                suggestion
-            );
-        }
-
-        return ValidationResult.success();
-    }
-
-    /** Record for selection statistics with performance metrics. */
-    @SuppressWarnings("unused") // Future analytics feature
-    public record SelectionStats(
-            int totalSelections,
-            @Nonnull Map<String, Integer> variableUsage,
-            double averageVariableCount
-    ) {
-        public SelectionStats {
-            variableUsage = Map.copyOf(variableUsage);
-        }
-
-        /** Returns most commonly used variable. */
-        @SuppressWarnings("unused") // Future analytics feature
-        @Nonnull
-        public Optional<String> getMostUsedVariable() {
-            return variableUsage.entrySet().stream()
-                    .max(Map.Entry.comparingByValue())
-                    .map(Map.Entry::getKey);
-        }
-    }
 }

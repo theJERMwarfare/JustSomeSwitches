@@ -6,6 +6,8 @@ import javax.annotation.Nonnull;
 
 /** Stores tinting information for a block face. */
 public class FaceTintData {
+    /** Shared sentinel for faces with no tint data — avoids allocations in hot paths. */
+    public static final FaceTintData EMPTY = new FaceTintData();
     private int tintIndex;
     
     public FaceTintData() {

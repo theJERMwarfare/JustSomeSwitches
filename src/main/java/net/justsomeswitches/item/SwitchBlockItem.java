@@ -44,13 +44,7 @@ public class SwitchBlockItem extends BlockItem {
         }
 
         Direction clickedFace = context.getClickedFace();
-        BlockPos targetPos;
-        
-        if (clickedFace == Direction.UP || clickedFace == Direction.DOWN) {
-            targetPos = context.getClickedPos().relative(clickedFace);
-        } else {
-            targetPos = context.getClickedPos().relative(clickedFace);
-        }
+        BlockPos targetPos = context.getClickedPos().relative(clickedFace);
         if (!level.getBlockState(targetPos).canBeReplaced() && !level.getBlockState(targetPos).isAir()) {
             return InteractionResult.FAIL;
         }

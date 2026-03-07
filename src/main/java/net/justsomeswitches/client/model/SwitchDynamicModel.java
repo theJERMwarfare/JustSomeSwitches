@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Dynamic model for lever blocks with custom texture support. */
+/** Dynamic model for switch blocks with custom texture support. */
 public class SwitchDynamicModel implements IDynamicBakedModel {
     private static final Logger LOGGER = LoggerFactory.getLogger(SwitchDynamicModel.class);
     
@@ -589,14 +589,14 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     }
     
     /**
-     * Generates quads specifically for ghost preview (default lever with correct orientation).
+     * Generates quads specifically for ghost preview (default switch with correct orientation).
      */
     @Nonnull
     private List<BakedQuad> generateGhostPreviewQuads(@Nullable BlockState state, @Nullable Direction side,
                                                      @Nonnull ModelData extraData, @Nonnull RandomSource rand,
                                                      @Nullable RenderType renderType) {
         
-        // Get base vanilla lever quads (no texture customization)
+        // Get base switch quads (no texture customization)
         List<BakedQuad> baseQuads = vanillaLeverModel.getQuads(state, side, rand, 
                 net.neoforged.neoforge.client.model.data.ModelData.EMPTY, renderType);
         
@@ -652,7 +652,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         for (BakedQuad quad : baseQuads) {
             // Determine which overlay data to use based on quad part type
             String texName = getTextureName(quad.getSprite());
-            boolean isToggle = isLeverMovingPart(texName);
+            boolean isToggle = isTogglePart(texName);
             Map<Direction, List<OverlayLayer>> overlayData = isToggle ? toggleOverlayData : baseOverlayData;
             List<BakedQuad> processedQuads = processQuadWithOverlaySupport(
                 quad, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData,
@@ -681,8 +681,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         TextureAtlasSprite originalSprite = originalQuad.getSprite();
         String originalTextureName = getTextureName(originalSprite);
         // Determine if this quad uses toggle or base texture
-        boolean isTogglePart = isLeverMovingPart(originalTextureName);
-        boolean isBasePart = isLeverBasePart(originalTextureName);
+        boolean isTogglePart = isTogglePart(originalTextureName);
+        boolean isBasePart = isBasePart(originalTextureName);
         // Face-selection-aware overlay lookup: only use overlays for the selected face
         // Only apply overlays when the part has a CUSTOM texture (not the default)
         boolean toggleHasCustomTexture = toggleTexture != null &&
@@ -802,14 +802,14 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     private TextureRotation determineTextureRotation(@Nonnull String originalTextureName,
                                                      @Nullable String baseTexture,
                                                      @Nonnull ModelData extraData) {
-        if (isLeverBasePart(originalTextureName) && baseTexture != null) {
+        if (isBasePart(originalTextureName) && baseTexture != null) {
             String rotStr = extraData.get(SwitchBlockEntity.BASE_ROTATION);
             if (rotStr != null) {
                 try { return TextureRotation.valueOf(rotStr); }
                 catch (IllegalArgumentException e) { return TextureRotation.NORMAL; }
             }
         }
-        if (isLeverMovingPart(originalTextureName)) {
+        if (isTogglePart(originalTextureName)) {
             Boolean hasToggleBlock = extraData.get(SwitchBlockEntity.HAS_TOGGLE_BLOCK);
             if (hasToggleBlock != null && hasToggleBlock) {
                 String rotStr = extraData.get(SwitchBlockEntity.TOGGLE_ROTATION);
@@ -854,8 +854,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         // Use replacement sprite if available, otherwise use original sprite
         TextureAtlasSprite finalSprite = needsTextureReplacement ? replacementSprite : originalSprite;
         // Determine tintIndex for this quad
-        boolean isToggleTexturePart = isLeverMovingPart(originalTextureName);
-        boolean isBaseTexturePart = isLeverBasePart(originalTextureName);
+        boolean isToggleTexturePart = isTogglePart(originalTextureName);
+        boolean isBaseTexturePart = isBasePart(originalTextureName);
         int quadTintIndex = originalQuad.getTintIndex(); // Default: preserve original
         if (needsTextureReplacement) {
             // Applying custom texture - use appropriate tintIndex from source block
@@ -964,7 +964,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         }
 
         // Handle toggle texture replacement
-        if (isLeverMovingPart(originalTextureName) && toggleTexture != null) {
+        if (isTogglePart(originalTextureName) && toggleTexture != null) {
             TextureAtlasSprite toggleSprite = getTextureSprite(toggleTexture);
             if (toggleSprite != null) {
                 return toggleSprite;
@@ -972,7 +972,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         }
 
         // Handle base texture replacement
-        if (isLeverBasePart(originalTextureName) && baseTexture != null) {
+        if (isBasePart(originalTextureName) && baseTexture != null) {
             TextureAtlasSprite baseSprite = getTextureSprite(baseTexture);
             if (baseSprite != null) {
                 return baseSprite;
@@ -1120,9 +1120,9 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     }
 
     /**
-     * Identifies lever moving parts for toggle texture.
+     * Identifies toggle (moving) parts for toggle texture.
      */
-    private boolean isLeverMovingPart(@Nonnull String originalTextureName) {
+    private boolean isTogglePart(@Nonnull String originalTextureName) {
 
         if (isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName)) {
             return false;
@@ -1139,9 +1139,9 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     }
 
     /**
-     * Identifies lever base parts for base texture.
+     * Identifies base (stationary) parts for base texture.
      */
-    private boolean isLeverBasePart(@Nonnull String originalTextureName) {
+    private boolean isBasePart(@Nonnull String originalTextureName) {
 
         if (isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName)) {
             return false;

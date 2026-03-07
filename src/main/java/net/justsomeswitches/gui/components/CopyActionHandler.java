@@ -52,20 +52,4 @@ public class CopyActionHandler {
     public void handleCancel(@Nonnull Runnable onClose) {
         onClose.run();
     }
-    /** Checks if at least one copy option is selected. */
-    public boolean hasAnySelection(@Nonnull WrenchCopyMenu menu) {
-        return menu.getCopyToggleBlock() || menu.getCopyToggleFace() || 
-               menu.getCopyToggleRotation() || menu.getCopyIndicators() ||
-               menu.getCopyBaseBlock() || menu.getCopyBaseFace() || 
-               menu.getCopyBaseRotation();
-    }
-    /** Validates copy operation readiness. */
-    @SuppressWarnings("unused") // May be used for future validation
-    public boolean canProceedWithCopy(@Nonnull WrenchCopyMenu menu) {
-        if (!hasAnySelection(menu)) {
-            return false;
-        }
-        BlockPos blockPos = menu.getBlockPos();
-        return blockPos != null;
-    }
 }
