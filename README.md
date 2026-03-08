@@ -106,4 +106,4 @@ Tag references from other mods must use `"required": false` to avoid errors if t
 
 **Requires:** Minecraft 1.20.4 · NeoForge 20.4.248+ · Java 17+
 
-**License:** [MIT](https://github.com/theJERMwarfare/JustSomeSwitches/blob/1.20.4/LICENSE)
+**License:** [MIT](https://github.com/theJERMwarfare/JustSomeSwitches/blob/main/LICENSE)
