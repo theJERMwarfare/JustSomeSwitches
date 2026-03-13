@@ -3,7 +3,7 @@ package net.justsomeswitches.client.model;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.neoforged.neoforge.client.model.geometry.IGeometryLoader;
+import net.minecraftforge.client.model.geometry.IGeometryLoader;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;

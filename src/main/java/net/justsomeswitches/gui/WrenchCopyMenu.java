@@ -27,7 +27,7 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     private boolean copyBaseFace = true;
     private boolean copyBaseRotation = true;
     
-    /** Client-side constructor required by NeoForge framework. */
+    /** Client-side constructor required by Forge framework. */
     @SuppressWarnings("unused")
     public WrenchCopyMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
         this(containerId, playerInventory, extraData.readBlockPos());

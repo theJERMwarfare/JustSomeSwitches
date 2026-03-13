@@ -1,18 +1,18 @@
 package net.justsomeswitches.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /** Common configuration shared between client and server for gameplay mechanics. */
 public class SwitchesCommonConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     /** Use tight-fitting hitboxes for Basic switch blocks (default: false). */
-    public static final ModConfigSpec.BooleanValue TIGHT_HITBOXES_BASIC;
+    public static final ForgeConfigSpec.BooleanValue TIGHT_HITBOXES_BASIC;
 
     /** Use tight-fitting hitboxes for Switches blocks (default: true). */
-    public static final ModConfigSpec.BooleanValue TIGHT_HITBOXES_SWITCHES;
+    public static final ForgeConfigSpec.BooleanValue TIGHT_HITBOXES_SWITCHES;
 
     static {
         BUILDER.push("Hitbox Settings");

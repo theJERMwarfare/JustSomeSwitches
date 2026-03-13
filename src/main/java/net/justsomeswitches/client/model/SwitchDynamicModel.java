@@ -14,8 +14,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.IDynamicBakedModel;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraftforge.client.model.IDynamicBakedModel;
+import net.minecraftforge.client.model.data.ModelData;
 import org.joml.Matrix4f;
 
 import javax.annotation.Nonnull;
@@ -250,7 +250,10 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
      */
     private static int getTextureId(@Nullable String texturePath) {
         if (texturePath == null) return 0;
-        return TEXTURE_ID_MAP.computeIfAbsent(texturePath, 
+        if (TEXTURE_ID_MAP.size() > 10000) {
+            clearAllCaches();
+        }
+        return TEXTURE_ID_MAP.computeIfAbsent(texturePath,
             path -> NEXT_TEXTURE_ID.incrementAndGet());
     }
     
@@ -258,6 +261,9 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
      * Gets or creates BlockState ID for cache key compression.
      */
     private static int getBlockStateId(@Nonnull String blockStateString) {
+        if (BLOCKSTATE_ID_MAP.size() > 10000) {
+            clearAllCaches();
+        }
         return BLOCKSTATE_ID_MAP.computeIfAbsent(blockStateString,
             state -> NEXT_BLOCKSTATE_ID.incrementAndGet());
     }
@@ -488,7 +494,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
 
 
         List<BakedQuad> baseQuads = vanillaLeverModel.getQuads(state, side, rand,
-                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, renderType);
+                net.minecraftforge.client.model.data.ModelData.EMPTY, renderType);
         // For cutoutMipped pass: vanilla lever has no cutoutMipped quads, but we need
         // template geometry to generate overlay quads with proper alpha transparency.
         // Get solid quads as templates when overlay data exists.
@@ -499,7 +505,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                     || (baseOverlayCheck != null && !baseOverlayCheck.isEmpty());
             if (hasOverlays) {
                 baseQuads = vanillaLeverModel.getQuads(state, side, rand,
-                        net.neoforged.neoforge.client.model.data.ModelData.EMPTY, RenderType.solid());
+                        net.minecraftforge.client.model.data.ModelData.EMPTY, RenderType.solid());
             }
         }
         if (baseQuads.isEmpty()) {
@@ -598,7 +604,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         
         // Get base switch quads (no texture customization)
         List<BakedQuad> baseQuads = vanillaLeverModel.getQuads(state, side, rand, 
-                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, renderType);
+                net.minecraftforge.client.model.data.ModelData.EMPTY, renderType);
         
         if (baseQuads.isEmpty()) {
             return baseQuads;
@@ -1334,7 +1340,19 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                 cacheEvictions.incrementAndGet();
             });
     }
-    
+    /** Clears all caches and ID maps when ID map growth exceeds safety threshold. */
+    private static void clearAllCaches() {
+        LOGGER.info("ID map safety limit reached, clearing all caches. Textures: {}, BlockStates: {}",
+            TEXTURE_ID_MAP.size(), BLOCKSTATE_ID_MAP.size());
+        GLOBAL_CACHE.clear();
+        TEXTURE_ID_MAP.clear();
+        BLOCKSTATE_ID_MAP.clear();
+        NEXT_TEXTURE_ID.set(0);
+        NEXT_BLOCKSTATE_ID.set(0);
+        cacheHits.set(0);
+        cacheMisses.set(0);
+        cacheEvictions.set(0);
+    }
     /**
      * Estimates cache memory usage in bytes.
      * Provides approximate memory footprint for monitoring.
@@ -1440,9 +1458,9 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     /** Returns render types including cutoutMipped for overlay textures with alpha transparency. */
     @Override
     @Nonnull
-    public net.neoforged.neoforge.client.ChunkRenderTypeSet getRenderTypes(
+    public net.minecraftforge.client.ChunkRenderTypeSet getRenderTypes(
             @Nonnull BlockState state, @Nonnull RandomSource rand, @Nonnull ModelData data) {
-        return net.neoforged.neoforge.client.ChunkRenderTypeSet.of(
+        return net.minecraftforge.client.ChunkRenderTypeSet.of(
             RenderType.solid(), RenderType.cutoutMipped());
     }
     /**

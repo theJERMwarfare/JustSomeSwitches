@@ -203,8 +203,8 @@ public class TexturePreviewRenderer {
         BakedModel baseModel = blockRenderer.getBlockModel(blockState);
         VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.solid());
         // Create comprehensive ModelData with all current GUI state including rotation
-        net.neoforged.neoforge.client.model.data.ModelData.Builder modelDataBuilder =
-                net.neoforged.neoforge.client.model.data.ModelData.builder();
+        net.minecraftforge.client.model.data.ModelData.Builder modelDataBuilder =
+                net.minecraftforge.client.model.data.ModelData.builder();
         // Add texture rotation states
         modelDataBuilder.with(SwitchBlockEntity.BASE_ROTATION,
                 menu.getBaseTextureRotation().name());
@@ -230,7 +230,7 @@ public class TexturePreviewRenderer {
         // Add face selection state
         String faceSelection = baseSelection.selectedVariable() + "," + toggleSelection.selectedVariable();
         modelDataBuilder.with(SwitchBlockEntity.FACE_SELECTION, faceSelection);
-        net.neoforged.neoforge.client.model.data.ModelData modelData = modelDataBuilder.build();
+        net.minecraftforge.client.model.data.ModelData modelData = modelDataBuilder.build();
         RandomSource random = RandomSource.create();
         int packedLight = net.minecraft.client.renderer.LightTexture.pack(15, 15);
         int packedOverlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;

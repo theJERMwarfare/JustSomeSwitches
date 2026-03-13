@@ -25,8 +25,8 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.ChatFormatting;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
@@ -81,7 +81,7 @@ public class SwitchesWrenchItem extends Item {
     }
     
     private KeyAction detectKeyAction() {
-        if (!net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
+        if (!net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
             return KeyAction.NONE;
         }
         
@@ -219,7 +219,7 @@ public class SwitchesWrenchItem extends Item {
             }
         };
 
-        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
+        net.minecraftforge.network.NetworkHooks.openScreen(player, menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
     
     private void openCopyTextureGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
@@ -237,7 +237,7 @@ public class SwitchesWrenchItem extends Item {
             }
         };
 
-        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
+        net.minecraftforge.network.NetworkHooks.openScreen(player, menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
     
     private void openCopyOverwriteGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
@@ -255,7 +255,7 @@ public class SwitchesWrenchItem extends Item {
             }
         };
 
-        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
+        net.minecraftforge.network.NetworkHooks.openScreen(player, menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
     
     /** Server-side paste operation - delegated to service. */

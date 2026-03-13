@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+
 import java.util.regex.Pattern;
 
 /** Security utilities for network packet validation and rate limiting. */
@@ -38,23 +38,19 @@ public class SecurityUtils {
      * Player rate limiting data structure
      */
     private static class PlayerRateLimit {
-        private final AtomicLong packetCount = new AtomicLong(0);
-        private volatile long windowStartTime = System.currentTimeMillis();
-        
+        private long packetCount = 0;
+        private long windowStartTime = System.currentTimeMillis();
         synchronized boolean isRateLimited() {
             long currentTime = System.currentTimeMillis();
-            
             if (currentTime - windowStartTime >= RATE_LIMIT_WINDOW_MS) {
                 windowStartTime = currentTime;
-                packetCount.set(0);
+                packetCount = 0;
             }
-            
-            long currentCount = packetCount.incrementAndGet();
-            return currentCount > MAX_PACKETS_PER_SECOND;
+            packetCount++;
+            return packetCount > MAX_PACKETS_PER_SECOND;
         }
-        
-        long getCurrentCount() {
-            return packetCount.get();
+        synchronized long getCurrentCount() {
+            return packetCount;
         }
     }
     

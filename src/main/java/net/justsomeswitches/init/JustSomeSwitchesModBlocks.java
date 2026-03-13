@@ -22,8 +22,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.RegistryObject;
 
 /** Registers all blocks and items including switch variants and tools. */
 public class JustSomeSwitchesModBlocks {
@@ -34,7 +34,7 @@ public class JustSomeSwitchesModBlocks {
             DeferredRegister.create(Registries.ITEM, JustSomeSwitchesMod.MODID);
 
     /** Switches Lever block - customizable lever with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesLeverBlock> SWITCHES_LEVER =
+    public static final RegistryObject<SwitchesLeverBlock> SWITCHES_LEVER =
             BLOCKS.register("switches_lever", () -> new SwitchesLeverBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -45,7 +45,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Switches Rocker block - customizable rocker with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesRockerBlock> SWITCHES_ROCKER =
+    public static final RegistryObject<SwitchesRockerBlock> SWITCHES_ROCKER =
             BLOCKS.register("switches_rocker", () -> new SwitchesRockerBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -55,7 +55,7 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
     /** Switches Slide block - customizable slide switch with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesSlideBlock> SWITCHES_SLIDE =
+    public static final RegistryObject<SwitchesSlideBlock> SWITCHES_SLIDE =
             BLOCKS.register("switches_slide", () -> new SwitchesSlideBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -65,7 +65,7 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
     /** Switches Buttons block - customizable buttons switch with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesButtonsBlock> SWITCHES_BUTTONS =
+    public static final RegistryObject<SwitchesButtonsBlock> SWITCHES_BUTTONS =
             BLOCKS.register("switches_buttons", () -> new SwitchesButtonsBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -75,7 +75,7 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
     /** Basic Lever block - simple lever without customization. */
-    public static final DeferredHolder<Block, BasicLeverBlock> BASIC_LEVER =
+    public static final RegistryObject<BasicLeverBlock> BASIC_LEVER =
             BLOCKS.register("basic_lever", () -> new BasicLeverBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -86,7 +86,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Lever Inverted block - simple lever with inverted visual appearance. */
-    public static final DeferredHolder<Block, BasicLeverInvertedBlock> BASIC_LEVER_INVERTED =
+    public static final RegistryObject<BasicLeverInvertedBlock> BASIC_LEVER_INVERTED =
             BLOCKS.register("basic_lever_inverted", () -> new BasicLeverInvertedBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -97,7 +97,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Rocker block - simple rocker switch without customization. */
-    public static final DeferredHolder<Block, BasicRockerBlock> BASIC_ROCKER =
+    public static final RegistryObject<BasicRockerBlock> BASIC_ROCKER =
             BLOCKS.register("basic_rocker", () -> new BasicRockerBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -108,7 +108,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Rocker Inverted block - simple rocker switch with inverted visual appearance. */
-    public static final DeferredHolder<Block, BasicRockerInvertedBlock> BASIC_ROCKER_INVERTED =
+    public static final RegistryObject<BasicRockerInvertedBlock> BASIC_ROCKER_INVERTED =
             BLOCKS.register("basic_rocker_inverted", () -> new BasicRockerInvertedBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -119,7 +119,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Buttons block - simple button switch without customization. */
-    public static final DeferredHolder<Block, BasicButtonsBlock> BASIC_BUTTONS =
+    public static final RegistryObject<BasicButtonsBlock> BASIC_BUTTONS =
             BLOCKS.register("basic_buttons", () -> new BasicButtonsBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -130,7 +130,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Buttons Inverted block - simple button switch with inverted visual appearance. */
-    public static final DeferredHolder<Block, BasicButtonsInvertedBlock> BASIC_BUTTONS_INVERTED =
+    public static final RegistryObject<BasicButtonsInvertedBlock> BASIC_BUTTONS_INVERTED =
             BLOCKS.register("basic_buttons_inverted", () -> new BasicButtonsInvertedBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -141,7 +141,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Slide block - simple slide switch without customization. */
-    public static final DeferredHolder<Block, BasicSlideBlock> BASIC_SLIDE =
+    public static final RegistryObject<BasicSlideBlock> BASIC_SLIDE =
             BLOCKS.register("basic_slide", () -> new BasicSlideBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -152,7 +152,7 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Slide Inverted block - simple slide switch with inverted visual appearance. */
-    public static final DeferredHolder<Block, BasicSlideInvertedBlock> BASIC_SLIDE_INVERTED =
+    public static final RegistryObject<BasicSlideInvertedBlock> BASIC_SLIDE_INVERTED =
             BLOCKS.register("basic_slide_inverted", () -> new BasicSlideInvertedBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
@@ -163,80 +163,80 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Switches Lever item - uses custom placement behavior. */
-    public static final DeferredHolder<Item, SwitchBlockItem> SWITCHES_LEVER_ITEM =
+    public static final RegistryObject<SwitchBlockItem> SWITCHES_LEVER_ITEM =
             ITEMS.register("switches_lever", () -> new SwitchBlockItem(
                     SWITCHES_LEVER.get(),
                     new Item.Properties()
             ));
 
     /** Switches Rocker item - uses custom placement behavior. */
-    public static final DeferredHolder<Item, SwitchBlockItem> SWITCHES_ROCKER_ITEM =
+    public static final RegistryObject<SwitchBlockItem> SWITCHES_ROCKER_ITEM =
             ITEMS.register("switches_rocker", () -> new SwitchBlockItem(
                     SWITCHES_ROCKER.get(),
                     new Item.Properties()
             ));
     /** Switches Slide item - uses custom placement behavior. */
-    public static final DeferredHolder<Item, SwitchBlockItem> SWITCHES_SLIDE_ITEM =
+    public static final RegistryObject<SwitchBlockItem> SWITCHES_SLIDE_ITEM =
             ITEMS.register("switches_slide", () -> new SwitchBlockItem(
                     SWITCHES_SLIDE.get(),
                     new Item.Properties()
             ));
     /** Switches Buttons item - uses custom placement behavior. */
-    public static final DeferredHolder<Item, SwitchBlockItem> SWITCHES_BUTTONS_ITEM =
+    public static final RegistryObject<SwitchBlockItem> SWITCHES_BUTTONS_ITEM =
             ITEMS.register("switches_buttons", () -> new SwitchBlockItem(
                     SWITCHES_BUTTONS.get(),
                     new Item.Properties()
             ));
     /** Switches Wrench - opens texture customization GUI on shift-right-click. */
-    public static final DeferredHolder<Item, SwitchesWrenchItem> SWITCHES_WRENCH =
+    public static final RegistryObject<SwitchesWrenchItem> SWITCHES_WRENCH =
             ITEMS.register("switches_wrench", () -> new SwitchesWrenchItem(
                     new Item.Properties()
                             .stacksTo(1)
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_LEVER_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_LEVER_ITEM =
             ITEMS.register("basic_lever", () -> new BlockItem(
                     BASIC_LEVER.get(),
                     new Item.Properties()
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_LEVER_INVERTED_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_LEVER_INVERTED_ITEM =
             ITEMS.register("basic_lever_inverted", () -> new BlockItem(
                     BASIC_LEVER_INVERTED.get(),
                     new Item.Properties()
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_ROCKER_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_ROCKER_ITEM =
             ITEMS.register("basic_rocker", () -> new BlockItem(
                     BASIC_ROCKER.get(),
                     new Item.Properties()
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_ROCKER_INVERTED_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_ROCKER_INVERTED_ITEM =
             ITEMS.register("basic_rocker_inverted", () -> new BlockItem(
                     BASIC_ROCKER_INVERTED.get(),
                     new Item.Properties()
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_BUTTONS_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_BUTTONS_ITEM =
             ITEMS.register("basic_buttons", () -> new BlockItem(
                     BASIC_BUTTONS.get(),
                     new Item.Properties()
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_BUTTONS_INVERTED_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_BUTTONS_INVERTED_ITEM =
             ITEMS.register("basic_buttons_inverted", () -> new BlockItem(
                     BASIC_BUTTONS_INVERTED.get(),
                     new Item.Properties()
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_SLIDE_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_SLIDE_ITEM =
             ITEMS.register("basic_slide", () -> new BlockItem(
                     BASIC_SLIDE.get(),
                     new Item.Properties()
             ));
 
-    public static final DeferredHolder<Item, BlockItem> BASIC_SLIDE_INVERTED_ITEM =
+    public static final RegistryObject<BlockItem> BASIC_SLIDE_INVERTED_ITEM =
             ITEMS.register("basic_slide_inverted", () -> new BlockItem(
                     BASIC_SLIDE_INVERTED.get(),
                     new Item.Properties()

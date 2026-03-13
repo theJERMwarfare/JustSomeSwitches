@@ -1,7 +1,7 @@
 # The name of the mod loader type to load - for regular FML @Mod mods it should be javafml
 modLoader="javafml"
 
-# A version range to match for said mod loader - for regular FML @Mod it will be the loader version
+# A version range to match for said mod loader - for regular FML @Mod it will be the Forge version
 loaderVersion="${loader_version_range}"
 
 # The license for your mod. This is mandatory metadata and allows for easier comprehension of your redistributive properties.
@@ -30,7 +30,7 @@ version="${mod_version}"
 displayURL="https://github.com/theJERMwarfare/JustSomeSwitches"
 
 # A text field displayed in the mod UI
-credits="Thanks to Minecraft and NeoForge"
+credits="Thanks to Minecraft and Forge"
 
 # A text field displayed in the mod UI
 authors="${mod_authors}"
@@ -40,11 +40,11 @@ description='''${mod_description}'''
 
 # Dependencies - IMPORTANT: Do NOT make the mod depend on itself!
 [[dependencies.justsomeswitches]]
-# NeoForge dependency
-modId="neoforge"
-type="required"
+# Forge dependency
+modId="forge"
+mandatory=true
 # The version range of the dependency
-versionRange="${neo_version_range}"
+versionRange="${forge_version_range}"
 # An ordering relationship for the dependency
 ordering="NONE"
 # Side this dependency is applied on - BOTH, CLIENT, or SERVER
@@ -53,7 +53,7 @@ side="BOTH"
 # Minecraft dependency
 [[dependencies.justsomeswitches]]
 modId="minecraft"
-type="required"
+mandatory=true
 # This version range declares a minimum of the current minecraft version up to but not including the next major version
 versionRange="${minecraft_version_range}"
 ordering="NONE"
@@ -62,7 +62,7 @@ side="BOTH"
 # JEI soft dependency (optional - mod works without it)
 [[dependencies.justsomeswitches]]
 modId="jei"
-type="optional"
-versionRange="[17.3.0,)"
+mandatory=false
+versionRange="[15.20.0,)"
 ordering="AFTER"
 side="CLIENT"

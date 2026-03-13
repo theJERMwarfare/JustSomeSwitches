@@ -5,8 +5,8 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.RegistryObject;
 
 /** Registers all creative tabs containing mod items. */
 public class JustSomeSwitchesModTabs {
@@ -16,7 +16,7 @@ public class JustSomeSwitchesModTabs {
 
     /** Just Some Switches creative tab - contains all switch variants and tools. */
     @SuppressWarnings("unused")
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> JUST_SOME_SWITCHES_TAB =
+    public static final RegistryObject<CreativeModeTab> JUST_SOME_SWITCHES_TAB =
             CREATIVE_MODE_TABS.register("just_some_switches_tab", () -> CreativeModeTab.builder()
                     .icon(() -> new ItemStack(JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get()))
                     .title(Component.translatable("itemGroup.justsomeswitches"))

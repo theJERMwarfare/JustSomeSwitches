@@ -11,10 +11,9 @@ import javax.annotation.Nonnull;
  */
 public class CheckboxRenderer {
     private static final int CHECKBOX_SIZE = 16;
-    private static final ResourceLocation CHECKBOX = new ResourceLocation("widget/checkbox");
-    private static final ResourceLocation CHECKBOX_HIGHLIGHTED = new ResourceLocation("widget/checkbox_highlighted");
-    private static final ResourceLocation CHECKBOX_SELECTED = new ResourceLocation("widget/checkbox_selected");
-    private static final ResourceLocation CHECKBOX_SELECTED_HIGHLIGHTED = new ResourceLocation("widget/checkbox_selected_highlighted");
+    private static final int SPRITE_SIZE = 20;
+    private static final int TEXTURE_SIZE = 64;
+    private static final ResourceLocation CHECKBOX_TEXTURE = new ResourceLocation("textures/gui/checkbox.png");
     private final CheckboxPosition[] checkboxPositions = {
         new CheckboxPosition(15, 25, 154, 23, "Toggle Block"),     // Toggle Block
         new CheckboxPosition(15, 47, 154, 45, "Toggle Face"),      // Toggle Face
@@ -48,17 +47,10 @@ public class CheckboxRenderer {
         boolean isChecked = getCheckboxState(index, menu);
         boolean isHovered = mouseX >= x && mouseX < x + CHECKBOX_SIZE &&
                            mouseY >= y && mouseY < y + CHECKBOX_SIZE;
-        ResourceLocation checkboxSprite;
-        if (isChecked && isHovered) {
-            checkboxSprite = CHECKBOX_SELECTED_HIGHLIGHTED;
-        } else if (isChecked) {
-            checkboxSprite = CHECKBOX_SELECTED;
-        } else if (isHovered) {
-            checkboxSprite = CHECKBOX_HIGHLIGHTED;
-        } else {
-            checkboxSprite = CHECKBOX;
-        }
-        graphics.blitSprite(checkboxSprite, x, y, CHECKBOX_SIZE, CHECKBOX_SIZE);
+        float u = isHovered ? SPRITE_SIZE : 0;
+        float v = isChecked ? SPRITE_SIZE : 0;
+        graphics.blit(CHECKBOX_TEXTURE, x, y, CHECKBOX_SIZE, CHECKBOX_SIZE,
+                u, v, SPRITE_SIZE, SPRITE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
     }
     /** Gets checkbox state for given index. */
     public boolean getCheckboxState(int index, @Nonnull WrenchCopyMenu menu) {

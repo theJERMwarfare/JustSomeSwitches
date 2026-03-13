@@ -4,8 +4,8 @@ import net.justsomeswitches.JustSomeSwitchesMod;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.RegistryObject;
 
 /** Registers all block entities for texture customization and NBT storage. */
 public class JustSomeSwitchesModBlockEntities {
@@ -15,7 +15,7 @@ public class JustSomeSwitchesModBlockEntities {
 
     /** Shared block entity for all advanced switch variants (lever, rocker, etc.). */
     @SuppressWarnings("DataFlowIssue") // Null data fixer is standard for mod block entities
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SwitchBlockEntity>> SWITCHES_LEVER =
+    public static final RegistryObject<BlockEntityType<SwitchBlockEntity>> SWITCHES_LEVER =
             BLOCK_ENTITIES.register("switches_lever", () ->
                     BlockEntityType.Builder.of(
                             SwitchBlockEntity::new,

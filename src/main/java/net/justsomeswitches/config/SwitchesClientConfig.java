@@ -1,15 +1,15 @@
 package net.justsomeswitches.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /** Client-side configuration affecting local client's visual/UI experience only. */
 public class SwitchesClientConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     /** Controls whether ghost preview of switch blocks is shown during placement (default: true). */
-    public static final ModConfigSpec.BooleanValue SHOW_SWITCHES_PREVIEW;
+    public static final ForgeConfigSpec.BooleanValue SHOW_SWITCHES_PREVIEW;
 
     static {
         BUILDER.push("Visual Settings");

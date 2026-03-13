@@ -1,17 +1,17 @@
 package net.justsomeswitches.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /** Server-side configuration affecting gameplay mechanics, synchronized to clients. */
 public class SwitchesServerConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     /** Controls whether blocks with BlockEntities can be used for texture customization (default: false). */
-    public static final ModConfigSpec.BooleanValue ALLOW_BLOCK_ENTITIES;
+    public static final ForgeConfigSpec.BooleanValue ALLOW_BLOCK_ENTITIES;
     /** Controls whether the Switches Wrench can instantly break mod blocks (default: false = wrench CAN break). */
-    public static final ModConfigSpec.BooleanValue DISABLE_WRENCH_INSTANT_BREAK;
+    public static final ForgeConfigSpec.BooleanValue DISABLE_WRENCH_INSTANT_BREAK;
 
     static {
         BUILDER.push("Block Validation");
