@@ -1,7 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    { "item": "justsomeswitches:basic_buttons" }
-  ],
-  "result": { "item": "justsomeswitches:basic_buttons_inverted", "count": 1 }
-}

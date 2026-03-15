@@ -5,11 +5,11 @@ import net.justsomeswitches.client.color.SwitchBlockColorHandler;
 import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 
 /** Client-side mod event handler for registering color handlers. */
-@Mod.EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, value = Dist.CLIENT)
 public class ClientModEvents {
     
     /**

@@ -27,7 +27,7 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 176;
 
-    private static final ResourceLocation GUI_BACKGROUND = new ResourceLocation("justsomeswitches", "textures/gui/switch_texture_gui.png");
+    private static final ResourceLocation GUI_BACKGROUND = ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/switch_texture_gui.png");
 
     // 3D Preview
     private static final int PREVIEW_CENTER_X = 81;

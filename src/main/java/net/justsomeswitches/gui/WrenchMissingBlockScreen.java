@@ -16,7 +16,7 @@ import java.util.List;
 public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMissingBlockMenu> {
     
     private static final ResourceLocation BACKGROUND_TEXTURE = 
-        new ResourceLocation("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
+        ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
     private static final int GUI_WIDTH = 200;
     private static final int GUI_HEIGHT = 94;
     
@@ -75,7 +75,7 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
         int maxTextWidth = 182;
         
         if (missingBlocks.size() == 1) {
-            String missingText = missingBlocks.get(0);
+            String missingText = missingBlocks.getFirst();
             float baseScale = 0.7f;
             int fullTextWidth = font.width(missingText);
             float dynamicScale = Math.min(baseScale, (float)maxTextWidth / fullTextWidth);

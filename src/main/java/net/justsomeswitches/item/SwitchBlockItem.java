@@ -33,7 +33,7 @@ public class SwitchBlockItem extends BlockItem {
             net.minecraft.world.phys.BlockHitResult hitResult = new net.minecraft.world.phys.BlockHitResult(
                 context.getClickLocation(), context.getClickedFace(), clickedPos, context.isInside());
             
-            InteractionResult blockResult = clickedState.use(level, context.getPlayer(), context.getHand(), hitResult);
+            InteractionResult blockResult = clickedState.useWithoutItem(level, context.getPlayer(), hitResult);
             
             // If block returns PASS, proceed with item placement logic
             // If block returns SUCCESS/CONSUME, respect that and don't place

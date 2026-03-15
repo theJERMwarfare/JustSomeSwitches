@@ -13,7 +13,7 @@ public class SwitchesModTags {
         /** Blacklist tag rejecting blocks regardless of properties (data/justsomeswitches/tags/blocks/switches_blocked.json). */
         public static final TagKey<Block> SWITCHES_BLOCKED = create("switches_blocked");
         private static TagKey<Block> create(String name) {
-            return TagKey.create(Registries.BLOCK, new ResourceLocation(JustSomeSwitchesMod.MODID, name));
+            return TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(JustSomeSwitchesMod.MODID, name));
         }
     }
 }

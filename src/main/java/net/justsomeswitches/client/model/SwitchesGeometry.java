@@ -62,8 +62,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
                           @Nonnull ModelBaker baker,
                           @Nonnull Function<Material, TextureAtlasSprite> spriteGetter,
                           @Nonnull ModelState modelState,
-                          @Nonnull ItemOverrides overrides,
-                          @Nonnull ResourceLocation modelLocation) {
+                          @Nonnull ItemOverrides overrides) {
         Map<String, TextureAtlasSprite> resolvedSprites = resolveAllTextures(spriteGetter);
         Map<String, Matrix4f> bakedTransforms = bakeOrientationTransforms();
         BakedModel baseCustomModel = getCustomBaseModel(baker, modelState, spriteGetter);
@@ -86,7 +85,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
         Map<String, TextureAtlasSprite> resolvedSprites = new HashMap<>();
         for (Map.Entry<String, String> entry : baseTextures.entrySet()) {
             String key = "base_" + entry.getKey();
-            ResourceLocation textureLocation = new ResourceLocation(entry.getValue());
+            ResourceLocation textureLocation = ResourceLocation.parse(entry.getValue());
             Material material = new Material(
                     net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS,
                     textureLocation
@@ -95,7 +94,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
         }
         for (Map.Entry<String, String> entry : toggleTextures.entrySet()) {
             String key = "toggle_" + entry.getKey();
-            ResourceLocation textureLocation = new ResourceLocation(entry.getValue());
+            ResourceLocation textureLocation = ResourceLocation.parse(entry.getValue());
             Material material = new Material(
                     net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS,
                     textureLocation
@@ -104,15 +103,15 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
         }
         for (Map.Entry<String, String> entry : powerTextures.entrySet()) {
             String key = "power_" + entry.getKey();
-            ResourceLocation textureLocation = new ResourceLocation(entry.getValue());
+            ResourceLocation textureLocation = ResourceLocation.parse(entry.getValue());
             Material material = new Material(
                     net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS,
                     textureLocation
             );
             resolvedSprites.put(key, spriteGetter.apply(material));
         }
-        ResourceLocation altUnpoweredLocation = new ResourceLocation(powerModeConfig.altUnpoweredTexture);
-        ResourceLocation altPoweredLocation = new ResourceLocation(powerModeConfig.altPoweredTexture);
+        ResourceLocation altUnpoweredLocation = ResourceLocation.parse(powerModeConfig.altUnpoweredTexture);
+        ResourceLocation altPoweredLocation = ResourceLocation.parse(powerModeConfig.altPoweredTexture);
         Material altUnpoweredMaterial = new Material(
                 net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS,
                 altUnpoweredLocation
@@ -156,7 +155,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
                                         @Nonnull ModelState modelState,
                                         @Nonnull Function<Material, TextureAtlasSprite> spriteGetter) {
         try {
-            ResourceLocation customModelLocation = new ResourceLocation(baseModelLocation);
+            ResourceLocation customModelLocation = ResourceLocation.parse(baseModelLocation);
             BakedModel result = baker.bake(customModelLocation, modelState, spriteGetter);
             if (result != null) {
                 return result;
@@ -165,7 +164,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
             // Intentionally fall through to vanilla model if custom model fails
         }
         try {
-            ResourceLocation vanillaLeverLocation = new ResourceLocation("minecraft:block/lever");
+            ResourceLocation vanillaLeverLocation = ResourceLocation.parse("minecraft:block/lever");
             BakedModel vanillaResult = baker.bake(vanillaLeverLocation, modelState, spriteGetter);
             if (vanillaResult != null) {
                 return vanillaResult;
@@ -209,7 +208,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
             public TextureAtlasSprite getParticleIcon() {
                 return net.minecraft.client.Minecraft.getInstance()
                     .getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
-                    .apply(new ResourceLocation("minecraft:missingno"));
+                    .apply(ResourceLocation.parse("minecraft:missingno"));
             }
 
             @Override

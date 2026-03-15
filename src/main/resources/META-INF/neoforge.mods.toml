@@ -63,6 +63,6 @@ side="BOTH"
 [[dependencies.justsomeswitches]]
 modId="jei"
 type="optional"
-versionRange="[17.3.0,)"
+versionRange="[19.27,)"
 ordering="AFTER"
 side="CLIENT"

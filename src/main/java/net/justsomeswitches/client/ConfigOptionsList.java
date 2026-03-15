@@ -17,7 +17,6 @@ import java.util.List;
 public class ConfigOptionsList extends ContainerObjectSelectionList<ConfigOptionsList.Entry> {
     public ConfigOptionsList(Minecraft minecraft, int width, int height, int y, int itemHeight) {
         super(minecraft, width, height, y, itemHeight);
-        setRenderBackground(false);
         setRenderHeader(false, 0);
     }
     @Override

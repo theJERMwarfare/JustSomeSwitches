@@ -4,11 +4,11 @@ import net.justsomeswitches.JustSomeSwitchesMod;
 import net.justsomeswitches.gui.*;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 /** Client-side event handler for menu screen registration. */
-@Mod.EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, value = Dist.CLIENT)
 public class ClientEventHandler {
 
     /** Registers menu screens for client-side GUI handling. */

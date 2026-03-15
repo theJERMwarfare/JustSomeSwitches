@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
 public class WrenchOverwriteScreen extends AbstractContainerScreen<WrenchOverwriteMenu> {
     
     private static final ResourceLocation BACKGROUND_TEXTURE = 
-        new ResourceLocation("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
+        ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
     private static final int GUI_WIDTH = 200;
     private static final int GUI_HEIGHT = 94;
     

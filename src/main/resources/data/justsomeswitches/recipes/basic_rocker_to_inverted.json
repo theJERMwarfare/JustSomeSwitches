@@ -1,7 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    { "item": "justsomeswitches:basic_rocker" }
-  ],
-  "result": { "item": "justsomeswitches:basic_rocker_inverted", "count": 1 }
-}

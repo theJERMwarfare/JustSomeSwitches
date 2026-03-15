@@ -156,7 +156,7 @@ public class DynamicBlockModelAnalyzer {
     private static JsonObject loadBlockModelDirect(@Nonnull String namespace, @Nonnull String blockName) {
         try {
             ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
-            ResourceLocation modelLocation = new ResourceLocation(namespace, "models/block/" + blockName + ".json");
+            ResourceLocation modelLocation = ResourceLocation.fromNamespaceAndPath(namespace, "models/block/" + blockName + ".json");
 
             Optional<Resource> resourceOpt = resourceManager.getResource(modelLocation);
             if (resourceOpt.isPresent()) {
@@ -254,7 +254,7 @@ public class DynamicBlockModelAnalyzer {
                 return createFallbackInfo(blockId);
             }
             String registryName = parts[0] + ":" + parts[1].substring(6);
-            ResourceLocation blockLoc = new ResourceLocation(registryName);
+            ResourceLocation blockLoc = ResourceLocation.parse(registryName);
             // Registry.get() never returns null (returns air for unknown blocks)
             Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(blockLoc);
             BlockState blockState = block.defaultBlockState();
@@ -267,7 +267,7 @@ public class DynamicBlockModelAnalyzer {
             for (int i = 0; i < faceDirections.length; i++) {
                 List<BakedQuad> quads = model.getQuads(blockState, faceDirections[i], random, ModelData.EMPTY, null);
                 if (!quads.isEmpty()) {
-                    ResourceLocation spriteName = quads.get(0).getSprite().contents().name();
+                    ResourceLocation spriteName = quads.getFirst().getSprite().contents().name();
                     Optional<String> ctmBase = ConnectedTextureHandler.getBaseTexture(spriteName);
                     String texturePath = ctmBase.orElse(spriteName.toString());
                     textureVariables.put(variableNames[i], texturePath);
@@ -344,7 +344,7 @@ public class DynamicBlockModelAnalyzer {
                                                   ModelData.EMPTY, null);
             
             if (!quads.isEmpty()) {
-                BakedQuad quad = quads.get(0);
+                BakedQuad quad = quads.getFirst();
                 int tintIndex = quad.getTintIndex();
                 tintData.setTintIndex(tintIndex);
             }

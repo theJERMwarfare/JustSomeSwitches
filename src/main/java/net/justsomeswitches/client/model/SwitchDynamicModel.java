@@ -757,7 +757,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             if (selectedDir != null) {
                 List<OverlayLayer> faceLayers = overlayData.get(selectedDir);
                 if (faceLayers != null && !faceLayers.isEmpty()) {
-                    int faceTint = faceLayers.get(0).getTintIndex();
+                    int faceTint = faceLayers.getFirst().getTintIndex();
                     if (isBasePart) {
                         resolvedBaseTintIndex = (faceTint >= 0) ? faceTint + BASE_TINT_OFFSET : faceTint;
                     } else if (isTogglePart) {
@@ -1193,7 +1193,7 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     /** Returns cached ResourceLocation to reduce object allocations. */
     @Nonnull
     private ResourceLocation getCachedResourceLocation(@Nonnull String path) {
-        return resourceLocationCache.computeIfAbsent(path, ResourceLocation::new);
+        return resourceLocationCache.computeIfAbsent(path, ResourceLocation::parse);
     }
     
     /**

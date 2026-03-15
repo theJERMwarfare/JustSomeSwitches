@@ -30,7 +30,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
 
 /** Optimized switches wrench with copy/paste functionality. */
@@ -306,30 +305,30 @@ public class SwitchesWrenchItem extends Item {
     }
     
     @Override
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level level, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
-        super.appendHoverText(stack, level, tooltip, flag);
+    public void appendHoverText(@Nonnull ItemStack stack, @Nonnull Item.TooltipContext context, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
         
         if (CopyPasteService.hasCopiedSettings(stack)) {
-            addStoredSettingsTooltip(stack, tooltip);
+            addStoredSettingsTooltip(stack, tooltip, context);
         }
         
         addControlsTooltip(tooltip);
     }
     
-    private void addStoredSettingsTooltip(@Nonnull ItemStack stack, @Nonnull List<Component> tooltip) {
+    private void addStoredSettingsTooltip(@Nonnull ItemStack stack, @Nonnull List<Component> tooltip, @Nonnull Item.TooltipContext context) {
         tooltip.add(Component.literal("⚙ Settings Stored").withStyle(ChatFormatting.YELLOW));
         tooltip.add(Component.empty());
-        
+
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
         if (settingsTag != null) {
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_BLOCK_KEY, "Toggle Block: ", true);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_FACE_KEY, "Toggle Face: ", false);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_BLOCK_KEY, "Base Block: ", true);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_FACE_KEY, "Base Face: ", false);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_ROTATION_KEY, "Toggle Rotation: ", false);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_ROTATION_KEY, "Base Rotation: ", false);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.POWER_MODE_KEY, "Indicators: ", false);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_BLOCK_KEY, "Toggle Block: ", true, context);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_FACE_KEY, "Toggle Face: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_BLOCK_KEY, "Base Block: ", true, context);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_FACE_KEY, "Base Face: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_ROTATION_KEY, "Toggle Rotation: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_ROTATION_KEY, "Base Rotation: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.POWER_MODE_KEY, "Indicators: ", false, context);
             
             if (tooltip.size() > WrenchConstants.TOOLTIP_MAX_LINES) {
                 tooltip.add(Component.literal("...").withStyle(ChatFormatting.GRAY));
@@ -341,13 +340,13 @@ public class SwitchesWrenchItem extends Item {
                    .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GRAY));
     }
     
-    private void addSettingIfPresent(@Nonnull List<Component> tooltip, @Nonnull CompoundTag settingsTag, 
-                                   @Nonnull String key, @Nonnull String prefix, boolean isItem) {
+    private void addSettingIfPresent(@Nonnull List<Component> tooltip, @Nonnull CompoundTag settingsTag,
+                                   @Nonnull String key, @Nonnull String prefix, boolean isItem, @Nonnull Item.TooltipContext context) {
         if (settingsTag.contains(key)) {
             String value;
-            if (isItem) {
+            if (isItem && context.registries() != null) {
                 // Remove brackets around item names for cleaner display
-                value = ItemStack.of(settingsTag.getCompound(key)).getDisplayName().getString();
+                value = ItemStack.parseOptional(context.registries(), settingsTag.getCompound(key)).getDisplayName().getString();
             } else {
                 String rawValue = settingsTag.getString(key);
                 value = formatSettingValue(key, rawValue);

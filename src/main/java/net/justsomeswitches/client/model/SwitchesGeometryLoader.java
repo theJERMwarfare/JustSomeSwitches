@@ -14,7 +14,7 @@ import java.util.Map;
 public class SwitchesGeometryLoader implements IGeometryLoader<SwitchesGeometry> {
 
     public static final SwitchesGeometryLoader INSTANCE = new SwitchesGeometryLoader();
-    public static final ResourceLocation ID = new ResourceLocation(
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(
             "justsomeswitches", "switches_loader");
 
     @Override

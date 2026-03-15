@@ -7,14 +7,14 @@
   ],
   "key": {
     "S": {
-      "tag": "minecraft:slabs"
+      "tag": "c:rods/wooden"
     },
     "L": {
       "item": "minecraft:lever"
     }
   },
   "result": {
-    "item": "justsomeswitches:basic_slide_inverted",
-    "count": 1
+    "count": 1,
+    "id": "justsomeswitches:basic_lever_inverted"
   }
 }

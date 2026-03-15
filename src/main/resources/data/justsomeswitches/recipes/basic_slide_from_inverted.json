@@ -1,7 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    { "item": "justsomeswitches:basic_slide_inverted" }
-  ],
-  "result": { "item": "justsomeswitches:basic_slide", "count": 1 }
-}

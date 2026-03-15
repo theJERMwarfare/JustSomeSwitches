@@ -11,10 +11,10 @@ import javax.annotation.Nonnull;
  */
 public class CheckboxRenderer {
     private static final int CHECKBOX_SIZE = 16;
-    private static final ResourceLocation CHECKBOX = new ResourceLocation("widget/checkbox");
-    private static final ResourceLocation CHECKBOX_HIGHLIGHTED = new ResourceLocation("widget/checkbox_highlighted");
-    private static final ResourceLocation CHECKBOX_SELECTED = new ResourceLocation("widget/checkbox_selected");
-    private static final ResourceLocation CHECKBOX_SELECTED_HIGHLIGHTED = new ResourceLocation("widget/checkbox_selected_highlighted");
+    private static final ResourceLocation CHECKBOX = ResourceLocation.withDefaultNamespace("widget/checkbox");
+    private static final ResourceLocation CHECKBOX_HIGHLIGHTED = ResourceLocation.withDefaultNamespace("widget/checkbox_highlighted");
+    private static final ResourceLocation CHECKBOX_SELECTED = ResourceLocation.withDefaultNamespace("widget/checkbox_selected");
+    private static final ResourceLocation CHECKBOX_SELECTED_HIGHLIGHTED = ResourceLocation.withDefaultNamespace("widget/checkbox_selected_highlighted");
     private final CheckboxPosition[] checkboxPositions = {
         new CheckboxPosition(15, 25, 154, 23, "Toggle Block"),     // Toggle Block
         new CheckboxPosition(15, 47, 154, 45, "Toggle Face"),      // Toggle Face

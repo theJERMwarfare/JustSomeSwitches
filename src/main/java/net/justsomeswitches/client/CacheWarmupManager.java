@@ -8,7 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  * Pre-caches common vanilla blocks after model baking to improve cache hit rate from 60% to 95%+.
  * Runs asynchronously (~50-100ms) reducing first access time from 5-10ms to less than 0.1ms for cached blocks.
  */
-@Mod.EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, value = Dist.CLIENT)
 public class CacheWarmupManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheWarmupManager.class);
     /** Common vanilla blocks pre-cached for optimal performance (building, decorative, animated textures). */

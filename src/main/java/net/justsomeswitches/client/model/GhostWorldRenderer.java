@@ -15,7 +15,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 /** World rendering system for ghost block previews during translucent stage. */
-@Mod.EventBusSubscriber(modid = "justsomeswitches", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = "justsomeswitches", value = Dist.CLIENT)
 public class GhostWorldRenderer {
 
     /** Renders a quad with manual alpha transparency using white color with ghost alpha. */
@@ -43,16 +43,15 @@ public class GhostWorldRenderer {
             float u = Float.intBitsToFloat(vertices[baseIndex + 4]);
             float v = Float.intBitsToFloat(vertices[baseIndex + 5]);
             int normalData = vertices[baseIndex + 6];
-            buffer.vertex(poseStack.last().pose(), x, y, z)
-                  .color(255, 255, 255, ghostAlpha)
-                  .uv(u, v)
-                  .overlayCoords(packedOverlay)
-                  .uv2(packedLight)
-                  .normal(poseStack.last().normal(),
+            buffer.addVertex(poseStack.last(), x, y, z)
+                  .setColor(255, 255, 255, ghostAlpha)
+                  .setUv(u, v)
+                  .setOverlay(packedOverlay)
+                  .setLight(packedLight)
+                  .setNormal(poseStack.last(),
                          (normalData & 0xFF) / 127.0f - 1.0f,
                          ((normalData >> 8) & 0xFF) / 127.0f - 1.0f,
-                         ((normalData >> 16) & 0xFF) / 127.0f - 1.0f)
-                  .endVertex();
+                         ((normalData >> 16) & 0xFF) / 127.0f - 1.0f);
         }
     }
 
@@ -93,7 +92,7 @@ public class GhostWorldRenderer {
             poseStack,
             bufferSource,
             blockRenderer,
-            event.getPartialTick()
+            event.getPartialTick().getGameTimeDeltaPartialTick(false)
         );
         bufferSource.endBatch();
     }

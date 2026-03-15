@@ -6,10 +6,10 @@
 
 ### New Model Styles
 
-- **Lever** — Classic light switch/lever style
-- **Rocker** — Rocker switch style
-- **Slide** — Slide switch style with indicator blending modes
-- **Buttons** — Two button switch style (toggles on/off like a lever, does not auto-depress like a vanilla button)
+- **Lever** - Classic light switch/lever style
+- **Rocker** - Rocker switch style
+- **Slide** - Slide switch style with indicator blending modes
+- **Buttons** - Two button switch style (toggles on/off like a lever, does not auto-depress like a vanilla button)
 
 ### Basic Blocks
 
@@ -65,26 +65,26 @@
 
 The mod automatically accepts most solid, full-cube blocks as texture sources. For finer control, two block tags let you override this:
 
-- **`justsomeswitches:switches_allowed`** — Blocks in this tag bypass all checks and are always accepted
-- **`justsomeswitches:switches_blocked`** — Blocks in this tag are always rejected (takes priority over allowed)
+- **`justsomeswitches:switches_allowed`** - Blocks in this tag bypass all checks and are always accepted
+- **`justsomeswitches:switches_blocked`** - Blocks in this tag are always rejected (takes priority over allowed)
 
 To customize, create a datapack with the tag file at:
-`data/justsomeswitches/tags/blocks/switches_allowed.json` or `switches_blocked.json`
+`data/justsomeswitches/tags/block/switches_allowed.json` or `switches_blocked.json`
 
 Tag references from other mods must use `"required": false` to avoid errors if that mod isn't installed.
 
 ### Config Options
 
 **Client** (`justsomeswitches-client.toml`)
-- `showSwitchesPreview` — Show ghost preview during placement (default: `true`)
+- `showSwitchesPreview` - Show ghost preview during placement (default: `true`)
 
 **Common** (`justsomeswitches-common.toml`)
-- `tightHitboxesBasic` — Use tight-fitting hitboxes for Basic switch blocks (default: `false`)
-- `tightHitboxesSwitches` — Use tight-fitting hitboxes for Switches blocks (default: `true`)
+- `tightHitboxesBasic` - Use tight-fitting hitboxes for Basic switch blocks (default: `false`)
+- `tightHitboxesSwitches` - Use tight-fitting hitboxes for Switches blocks (default: `true`)
 
 **Server** (`justsomeswitches-server.toml`)
-- `allowBlockEntities` — Allow blocks with BlockEntities as texture sources (default: `false`) — may cause crashes with certain modded blocks
-- `disableWrenchInstantBreak` — Disable wrench instant breaking (default: `false`) — useful for multiplayer servers
+- `allowBlockEntities` - Allow blocks with BlockEntities as texture sources (default: `false`) - may cause crashes with certain modded blocks
+- `disableWrenchInstantBreak` - Disable wrench instant breaking (default: `false`) - useful for multiplayer servers
 
 ---
 
@@ -97,13 +97,13 @@ Tag references from other mods must use `"required": false` to avoid errors if t
 ### FAQ
 
 **What blocks work as texture sources?**
-- Almost any solid, full-cube block — including glazed terracotta, waxed copper, and animated textures.
+- Almost any solid, full-cube block - including glazed terracotta, waxed copper, and animated textures.
 
 **Can I use this mod in my modpack?**
 - Yes, this mod is MIT licensed. Feel free to include it.
 
 ---
 
-**Requires:** Minecraft 1.20.4 · NeoForge 20.4.248+ · Java 17+
+**Requires:** Minecraft 1.21.1 - NeoForge 21.1.219+ - Java 21+
 
 **License:** [MIT](https://github.com/theJERMwarfare/JustSomeSwitches/blob/main/LICENSE)

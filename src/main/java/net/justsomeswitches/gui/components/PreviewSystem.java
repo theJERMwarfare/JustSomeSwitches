@@ -215,7 +215,7 @@ public class PreviewSystem {
     /** Gets texture sprite (same as SwitchTextureScreen). */
     private TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
         try {
-            ResourceLocation textureLocation = new ResourceLocation(texturePath);
+            ResourceLocation textureLocation = ResourceLocation.parse(texturePath);
             TextureAtlasSprite sprite = Minecraft.getInstance()
                     .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                     .apply(textureLocation);
@@ -228,7 +228,7 @@ public class PreviewSystem {
             }
             if (texturePath.contains("_top") || texturePath.contains("_side") || texturePath.contains("_front")) {
                 String basePath = texturePath.replaceAll("_(top|side|front)$", "");
-                ResourceLocation fallbackLocation = new ResourceLocation(basePath);
+                ResourceLocation fallbackLocation = ResourceLocation.parse(basePath);
                 TextureAtlasSprite fallbackSprite = Minecraft.getInstance()
                         .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
                         .apply(fallbackLocation);

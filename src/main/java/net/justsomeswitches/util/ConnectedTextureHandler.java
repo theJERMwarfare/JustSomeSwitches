@@ -37,7 +37,7 @@ public class ConnectedTextureHandler {
             return Optional.empty();
         }
         try {
-            ResourceLocation metaLocation = new ResourceLocation(
+            ResourceLocation metaLocation = ResourceLocation.fromNamespaceAndPath(
                 texturePath.getNamespace(),
                 "textures/" + texturePath.getPath() + ".png.mcmeta"
             );
@@ -73,7 +73,7 @@ public class ConnectedTextureHandler {
     private static Optional<String> tryCommonBaseTextureNames(@Nonnull ResourceLocation texturePath) {
         String[] commonSuffixes = {"_base", "_0", "_standalone"};
         for (String suffix : commonSuffixes) {
-            ResourceLocation candidatePath = new ResourceLocation(
+            ResourceLocation candidatePath = ResourceLocation.fromNamespaceAndPath(
                 texturePath.getNamespace(),
                 "textures/" + texturePath.getPath() + suffix + ".png"
             );

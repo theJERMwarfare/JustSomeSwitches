@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
@@ -145,14 +144,12 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public int getLightBlock(@Nonnull BlockState state, @Nonnull BlockGetter worldIn, @Nonnull BlockPos pos) {
         return 0;
     }
 
     @Override
     @Nonnull
-    @SuppressWarnings("deprecation")
     public RenderShape getRenderShape(@Nonnull BlockState state) {
         return RenderShape.MODEL;
     }
@@ -162,7 +159,6 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
         return getAdvancedPlacementState(context);
     }
     @Override
-    @SuppressWarnings("deprecation")
     public boolean canBeReplaced(@Nonnull BlockState state, @Nonnull BlockPlaceContext useContext) {
         return false;
     }
@@ -389,8 +385,8 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     }
     @Override
     @Nonnull
-    public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player,
-                                 @Nonnull InteractionHand hand, @Nonnull BlockHitResult hit) {
+    public InteractionResult useWithoutItem(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player,
+                                 @Nonnull BlockHitResult hit) {
         if (player.isShiftKeyDown()) {
             return InteractionResult.PASS;
         }
@@ -413,7 +409,6 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
         return InteractionResult.CONSUME;
     }
     @Override
-    @SuppressWarnings("deprecation")
     public void tick(@Nonnull BlockState state, @Nonnull net.minecraft.server.level.ServerLevel level, @Nonnull BlockPos pos, @Nonnull net.minecraft.util.RandomSource random) {
         if (level.getBlockEntity(pos) instanceof SwitchBlockEntity blockEntity) {
             blockEntity.endNBTProtection();
@@ -428,7 +423,6 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
     }
     @Override
     @Nonnull
-    @SuppressWarnings("deprecation")
     public FluidState getFluidState(@Nonnull BlockState state) {
         return state.getValue(BlockStateProperties.WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
@@ -462,7 +456,6 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
         super.onRemove(state, level, pos, newState, isMoving);
     }
     @Override
-    @SuppressWarnings("deprecation")
     public void neighborChanged(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos,
                                 @Nonnull Block neighborBlock, @Nonnull BlockPos neighborPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, neighborBlock, neighborPos, isMoving);

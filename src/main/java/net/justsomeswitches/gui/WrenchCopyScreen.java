@@ -18,7 +18,7 @@ public class WrenchCopyScreen extends AbstractContainerScreen<WrenchCopyMenu> {
     
     // UI constants
     private static final ResourceLocation GUI_TEXTURE = 
-        new ResourceLocation("justsomeswitches", "textures/gui/wrench_copy_gui.png");
+        ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/wrench_copy_gui.png");
     private static final int GUI_WIDTH = 187;
     private static final int GUI_HEIGHT = 240;
     

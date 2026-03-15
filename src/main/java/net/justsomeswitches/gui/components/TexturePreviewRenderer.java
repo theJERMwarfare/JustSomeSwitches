@@ -252,7 +252,7 @@ public class TexturePreviewRenderer {
         for (BakedQuad quad : quads) {
             float brightness = getFaceBrightnessMultiplier(quad.getDirection());
             vertexConsumer.putBulkData(poseStack.last(), quad,
-                    brightness, brightness, brightness, packedLight, packedOverlay);
+                    brightness, brightness, brightness, 1.0f, packedLight, packedOverlay);
         }
     }
     /**
@@ -352,7 +352,7 @@ public class TexturePreviewRenderer {
      */
     @Nonnull
     private ResourceLocation getCachedResourceLocation(@Nonnull String path) {
-        return resourceLocationCache.computeIfAbsent(path, ResourceLocation::new);
+        return resourceLocationCache.computeIfAbsent(path, ResourceLocation::parse);
     }
     /**
      * Returns cached sprite name, caching if needed.

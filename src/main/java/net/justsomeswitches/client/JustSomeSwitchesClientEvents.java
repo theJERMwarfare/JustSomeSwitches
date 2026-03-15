@@ -3,11 +3,11 @@ package net.justsomeswitches.client;
 import net.justsomeswitches.client.model.GhostBlockDetector;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.event.TickEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 
-/** FORGE bus event handlers for ghost preview client tick updates. */
-@Mod.EventBusSubscriber(modid = "justsomeswitches", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+/** GAME bus event handlers for ghost preview client tick updates. */
+@EventBusSubscriber(modid = "justsomeswitches", value = Dist.CLIENT)
 public class JustSomeSwitchesClientEvents {
 
     private static int tickCounter = 0;
@@ -15,10 +15,7 @@ public class JustSomeSwitchesClientEvents {
 
     /** Client tick event handler for ghost preview updates every 2 ticks. */
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public static void onClientTick(ClientTickEvent.Post event) {
         tickCounter++;
         if (tickCounter < UPDATE_INTERVAL) {
             return;

@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "DLT",
+    " B "
+  ],
+  "key": {
+    "S": {
+      "tag": "c:rods/wooden"
+    },
+    "D": {
+      "tag": "c:dyes"
+    },
+    "L": {
+      "tag": "justsomeswitches:basic_buttons_variants"
+    },
+    "T": {
+      "tag": "minecraft:terracotta"
+    },
+    "B": {
+      "item": "minecraft:stone"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "justsomeswitches:switches_buttons"
+  }
+}

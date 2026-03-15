@@ -6,7 +6,10 @@ import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
@@ -550,8 +553,8 @@ public class SwitchBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(@Nonnull CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    protected void saveAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
         nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
@@ -561,12 +564,14 @@ public class SwitchBlockEntity extends BlockEntity {
         nbt.putString(BASE_ROTATION_KEY, baseTextureRotation.name());
         nbt.putString(TOGGLE_ROTATION_KEY, toggleTextureRotation.name());
         if (!guiToggleItem.isEmpty()) {
-            nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
+            Tag toggleItemTag = guiToggleItem.saveOptional(registries);
+            nbt.put("gui_toggle_item", toggleItemTag);
         }
         if (!guiBaseItem.isEmpty()) {
-            nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
+            Tag baseItemTag = guiBaseItem.saveOptional(registries);
+            nbt.put("gui_base_item", baseItemTag);
         }
-        
+
         saveCategoryTintData(nbt, "ToggleTintData", toggleTintDataMap);
         saveCategoryTintData(nbt, "BaseTintData", baseTintDataMap);
         saveCategoryOverlayData(nbt, "ToggleOverlayData", toggleOverlayDataMap);
@@ -612,8 +617,8 @@ public class SwitchBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(@Nonnull CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         if (skipNextNBTLoad) {
             skipNextNBTLoad = false;
             return;
@@ -653,10 +658,10 @@ public class SwitchBlockEntity extends BlockEntity {
         this.baseTextureRotation = parseTextureRotation(nbt.getString(BASE_ROTATION_KEY));
         this.toggleTextureRotation = parseTextureRotation(nbt.getString(TOGGLE_ROTATION_KEY));
         this.guiToggleItem = nbt.contains("gui_toggle_item") ?
-                ItemStack.of(nbt.getCompound("gui_toggle_item")) : ItemStack.EMPTY;
+                ItemStack.parseOptional(registries, nbt.getCompound("gui_toggle_item")) : ItemStack.EMPTY;
         this.guiBaseItem = nbt.contains("gui_base_item") ?
-                ItemStack.of(nbt.getCompound("gui_base_item")) : ItemStack.EMPTY;
-        
+                ItemStack.parseOptional(registries, nbt.getCompound("gui_base_item")) : ItemStack.EMPTY;
+
         loadCategoryTintData(nbt, "ToggleTintData", toggleTintDataMap);
         loadCategoryTintData(nbt, "BaseTintData", baseTintDataMap);
         // Backwards compatibility: load old shared "TintData" into toggle map if new keys absent
@@ -722,7 +727,7 @@ public class SwitchBlockEntity extends BlockEntity {
         if (nbt.contains(key)) {
             CompoundTag stateTag = nbt.getCompound(key);
             String blockName = stateTag.getString("Name");
-            Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(new net.minecraft.resources.ResourceLocation(blockName));
+            Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(net.minecraft.resources.ResourceLocation.parse(blockName));
             return block.defaultBlockState();
         }
         return null;
@@ -733,11 +738,16 @@ public class SwitchBlockEntity extends BlockEntity {
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
-
+    /** Routes data packet updates through handleUpdateTag for proper client-side refresh. */
+    @Override
+    public void onDataPacket(@Nonnull Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt,
+                             @Nonnull HolderLookup.Provider registries) {
+        handleUpdateTag(pkt.getTag(), registries);
+    }
     @Override
     @Nonnull
-    public CompoundTag getUpdateTag() {
-        CompoundTag nbt = super.getUpdateTag();
+    public CompoundTag getUpdateTag(@Nonnull HolderLookup.Provider registries) {
+        CompoundTag nbt = super.getUpdateTag(registries);
         nbt.putString(BASE_TEXTURE_KEY, baseTexturePath);
         nbt.putString(TOGGLE_TEXTURE_KEY, toggleTexturePath);
         nbt.putString(BASE_VARIABLE_KEY, baseTextureVariable);
@@ -747,12 +757,14 @@ public class SwitchBlockEntity extends BlockEntity {
         nbt.putString(BASE_ROTATION_KEY, baseTextureRotation.name());
         nbt.putString(TOGGLE_ROTATION_KEY, toggleTextureRotation.name());
         if (!guiToggleItem.isEmpty()) {
-            nbt.put("gui_toggle_item", guiToggleItem.save(new CompoundTag()));
+            Tag toggleItemTag = guiToggleItem.saveOptional(registries);
+            nbt.put("gui_toggle_item", toggleItemTag);
         }
         if (!guiBaseItem.isEmpty()) {
-            nbt.put("gui_base_item", guiBaseItem.save(new CompoundTag()));
+            Tag baseItemTag = guiBaseItem.saveOptional(registries);
+            nbt.put("gui_base_item", baseItemTag);
         }
-        
+
         saveCategoryTintData(nbt, "ToggleTintData", toggleTintDataMap);
         saveCategoryTintData(nbt, "BaseTintData", baseTintDataMap);
         saveCategoryOverlayData(nbt, "ToggleOverlayData", toggleOverlayDataMap);
@@ -763,50 +775,47 @@ public class SwitchBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void onDataPacket(@Nonnull net.minecraft.network.Connection net, @Nonnull ClientboundBlockEntityDataPacket pkt) {
-        CompoundTag nbt = pkt.getTag();
-        if (nbt != null) {
-            // Preserve client-analyzed tinting/overlay data before server sync overwrites it.
-            // analyzeTinting() runs client-only; server never receives this data directly,
-            // so server sync packets contain empty overlay/tint maps that would wipe client state.
-            Map<Direction, List<OverlayLayer>> preservedToggleOverlays = new HashMap<>(toggleOverlayDataMap);
-            Map<Direction, List<OverlayLayer>> preservedBaseOverlays = new HashMap<>(baseOverlayDataMap);
-            Map<Direction, FaceTintData> preservedToggleTints = new HashMap<>(toggleTintDataMap);
-            Map<Direction, FaceTintData> preservedBaseTints = new HashMap<>(baseTintDataMap);
-            BlockState preservedToggleSource = toggleSourceBlockState;
-            BlockState preservedBaseSource = baseSourceBlockState;
-            // Clear NBT protection flag - network data is authoritative and must be loaded
-            skipNextNBTLoad = false;
-            load(nbt);
-            // Restore client-analyzed data if server update didn't include any
-            if (toggleOverlayDataMap.isEmpty() && !preservedToggleOverlays.isEmpty()) {
-                toggleOverlayDataMap.putAll(preservedToggleOverlays);
-            }
-            if (baseOverlayDataMap.isEmpty() && !preservedBaseOverlays.isEmpty()) {
-                baseOverlayDataMap.putAll(preservedBaseOverlays);
-            }
-            if (toggleTintDataMap.isEmpty() && !preservedToggleTints.isEmpty()) {
-                toggleTintDataMap.putAll(preservedToggleTints);
-            }
-            if (baseTintDataMap.isEmpty() && !preservedBaseTints.isEmpty()) {
-                baseTintDataMap.putAll(preservedBaseTints);
-            }
-            if (toggleSourceBlockState == null && preservedToggleSource != null) {
-                toggleSourceBlockState = preservedToggleSource;
-            }
-            if (baseSourceBlockState == null && preservedBaseSource != null) {
-                baseSourceBlockState = preservedBaseSource;
-            }
-            // Re-analyze tint/overlay from current items (client-only BakedModel APIs)
-            // Ensures freshness after wrench paste, world reload, or any server sync
-            if (level != null && level.isClientSide) {
-                reanalyzeClientData();
-            }
-            requestModelDataUpdate();
-            if (level != null) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(),
-                    Block.UPDATE_CLIENTS);
-            }
+    public void handleUpdateTag(@Nonnull CompoundTag nbt, @Nonnull HolderLookup.Provider registries) {
+        // Preserve client-analyzed tinting/overlay data before server sync overwrites it.
+        // analyzeTinting() runs client-only; server never receives this data directly,
+        // so server sync packets contain empty overlay/tint maps that would wipe client state.
+        Map<Direction, List<OverlayLayer>> preservedToggleOverlays = new HashMap<>(toggleOverlayDataMap);
+        Map<Direction, List<OverlayLayer>> preservedBaseOverlays = new HashMap<>(baseOverlayDataMap);
+        Map<Direction, FaceTintData> preservedToggleTints = new HashMap<>(toggleTintDataMap);
+        Map<Direction, FaceTintData> preservedBaseTints = new HashMap<>(baseTintDataMap);
+        BlockState preservedToggleSource = toggleSourceBlockState;
+        BlockState preservedBaseSource = baseSourceBlockState;
+        // Clear NBT protection flag - network data is authoritative and must be loaded
+        skipNextNBTLoad = false;
+        loadAdditional(nbt, registries);
+        // Restore client-analyzed data if server update didn't include any
+        if (toggleOverlayDataMap.isEmpty() && !preservedToggleOverlays.isEmpty()) {
+            toggleOverlayDataMap.putAll(preservedToggleOverlays);
+        }
+        if (baseOverlayDataMap.isEmpty() && !preservedBaseOverlays.isEmpty()) {
+            baseOverlayDataMap.putAll(preservedBaseOverlays);
+        }
+        if (toggleTintDataMap.isEmpty() && !preservedToggleTints.isEmpty()) {
+            toggleTintDataMap.putAll(preservedToggleTints);
+        }
+        if (baseTintDataMap.isEmpty() && !preservedBaseTints.isEmpty()) {
+            baseTintDataMap.putAll(preservedBaseTints);
+        }
+        if (toggleSourceBlockState == null && preservedToggleSource != null) {
+            toggleSourceBlockState = preservedToggleSource;
+        }
+        if (baseSourceBlockState == null && preservedBaseSource != null) {
+            baseSourceBlockState = preservedBaseSource;
+        }
+        // Re-analyze tint/overlay from current items (client-only BakedModel APIs)
+        // Ensures freshness after wrench paste, world reload, or any server sync
+        if (level != null && level.isClientSide) {
+            reanalyzeClientData();
+        }
+        requestModelDataUpdate();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(),
+                Block.UPDATE_CLIENTS);
         }
     }
 }

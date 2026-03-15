@@ -34,7 +34,7 @@ public class OverlayLayer {
     /** Loads overlay layer data from NBT. */
     @Nonnull
     public static OverlayLayer load(@Nonnull CompoundTag tag) {
-        ResourceLocation sprite = new ResourceLocation(tag.getString("Sprite"));
+        ResourceLocation sprite = ResourceLocation.parse(tag.getString("Sprite"));
         int tintIndex = tag.getInt("TintIndex");
         int order = tag.getInt("Order");
         return new OverlayLayer(sprite, tintIndex, order);

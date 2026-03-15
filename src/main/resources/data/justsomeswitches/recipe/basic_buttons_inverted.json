@@ -14,7 +14,7 @@
     }
   },
   "result": {
-    "item": "justsomeswitches:basic_buttons_inverted",
-    "count": 1
+    "count": 1,
+    "id": "justsomeswitches:basic_buttons_inverted"
   }
 }

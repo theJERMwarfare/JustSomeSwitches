@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "TLD",
+    " B "
+  ],
+  "key": {
+    "S": {
+      "tag": "c:rods/wooden"
+    },
+    "T": {
+      "tag": "minecraft:terracotta"
+    },
+    "L": {
+      "tag": "justsomeswitches:basic_slides"
+    },
+    "D": {
+      "tag": "c:dyes"
+    },
+    "B": {
+      "item": "minecraft:stone"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "justsomeswitches:switches_slide"
+  }
+}

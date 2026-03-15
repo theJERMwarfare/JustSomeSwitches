@@ -1,7 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    { "item": "justsomeswitches:basic_lever" }
-  ],
-  "result": { "item": "justsomeswitches:basic_lever_inverted", "count": 1 }
-}
