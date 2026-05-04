@@ -14,9 +14,11 @@ public final class WrenchConstants {
     public static final String TOGGLE_BLOCK_KEY = "toggle_block";
     public static final String TOGGLE_FACE_KEY = "toggle_face";
     public static final String TOGGLE_ROTATION_KEY = "toggle_rotation";
+    public static final String TOGGLE_TEXTURE_PATH_KEY = "toggle_texture_path";
     public static final String BASE_BLOCK_KEY = "base_block";
     public static final String BASE_FACE_KEY = "base_face";
     public static final String BASE_ROTATION_KEY = "base_rotation";
+    public static final String BASE_TEXTURE_PATH_KEY = "base_texture_path";
     public static final String POWER_MODE_KEY = "power_mode";
     
     public static final int TOOLTIP_MAX_LINES = 8;
@@ -30,11 +32,8 @@ public final class WrenchConstants {
     public static final String MSG_MISSING_BLOCKS_GUI = "SHOW_MISSING_BLOCK_GUI";
     
     public static final String GUI_COPY_TEXTURE_TITLE = "Copy Texture Settings";
-    public static final String GUI_SETTINGS_ALREADY_STORED = "Settings Already Stored";
     public static final String GUI_DIFFERENT_SETTINGS_FOUND = "Different Settings Found";
     
     public static final String CATEGORY_TOGGLE = "Toggle";
     public static final String CATEGORY_BASE = "Base";
-    
-    public static final String NETWORK_PROTOCOL_VERSION = "1";
 }

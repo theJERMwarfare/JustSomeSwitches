@@ -107,7 +107,7 @@
 			"to": [10, 1.7, 11],
 			"rotation": {"angle": 0, "axis": "y", "origin": [6, 0.7, 8]},
 			"faces": {
-				"north": {"uv": [6, 6, 10, 7], "texture": "#toggle"},
+				"north": {"uv": [6, 6, 4, 1], "texture": "#toggle"},
 				"south": {"uv": [10, 4, 6, 5], "texture": "#toggle"},
 				"up": {"uv": [10, 7, 6, 4], "texture": "#toggle"}
 			}

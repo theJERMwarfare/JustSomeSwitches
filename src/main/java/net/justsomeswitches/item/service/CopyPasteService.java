@@ -2,7 +2,6 @@ package net.justsomeswitches.item.service;
 
 import net.justsomeswitches.block.ISwitchBlock;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
-import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.util.InventoryHelper;
 import net.justsomeswitches.util.NBTHelper;
 import net.justsomeswitches.util.TextureRotation;
@@ -40,6 +39,8 @@ public class CopyPasteService {
                 settingsTag.putString(WrenchConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable());
                 settingsTag.putString(WrenchConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name());
                 settingsTag.putString(WrenchConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name());
+                settingsTag.putString(WrenchConstants.TOGGLE_TEXTURE_PATH_KEY, blockEntity.getToggleTexturePath());
+                settingsTag.putString(WrenchConstants.BASE_TEXTURE_PATH_KEY, blockEntity.getBaseTexturePath());
                 settingsTag.putString(WrenchConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name());
                 if (!blockEntity.getGuiToggleItem().isEmpty()) {
                     settingsTag.put(WrenchConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem().saveOptional(registries));
@@ -63,9 +64,11 @@ public class CopyPasteService {
         NBTHelper.batchNBTOperations(stack, tag -> {
             if (copyToggleFace) {
                 settingsTag.putString(WrenchConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable());
+                settingsTag.putString(WrenchConstants.TOGGLE_TEXTURE_PATH_KEY, blockEntity.getToggleTexturePath());
             }
             if (copyBaseFace) {
                 settingsTag.putString(WrenchConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable());
+                settingsTag.putString(WrenchConstants.BASE_TEXTURE_PATH_KEY, blockEntity.getBaseTexturePath());
             }
             if (copyToggleRotation) {
                 settingsTag.putString(WrenchConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name());
@@ -210,7 +213,7 @@ public class CopyPasteService {
             if (InventoryHelper.hasAllItems(player, requiredToggleItem)) {
                 InventoryHelper.removeItems(player, requiredToggleItem);
                 blockEntity.setToggleSlotItem(requiredToggleItem);
-                applyTextureAndRotation(settingsTag, blockEntity, requiredToggleItem,
+                applyTextureAndRotation(settingsTag, blockEntity,
                                       WrenchConstants.TOGGLE_FACE_KEY, WrenchConstants.TOGGLE_ROTATION_KEY, true);
             }
         }
@@ -219,7 +222,7 @@ public class CopyPasteService {
             if (InventoryHelper.hasAllItems(player, requiredBaseItem)) {
                 InventoryHelper.removeItems(player, requiredBaseItem);
                 blockEntity.setBaseSlotItem(requiredBaseItem);
-                applyTextureAndRotation(settingsTag, blockEntity, requiredBaseItem,
+                applyTextureAndRotation(settingsTag, blockEntity,
                                       WrenchConstants.BASE_FACE_KEY, WrenchConstants.BASE_ROTATION_KEY, false);
             }
         }
@@ -276,7 +279,7 @@ public class CopyPasteService {
         if (settingsTag.contains(WrenchConstants.TOGGLE_BLOCK_KEY)) {
             ItemStack toggleItem = ItemStack.parseOptional(registries, settingsTag.getCompound(WrenchConstants.TOGGLE_BLOCK_KEY));
             blockEntity.setToggleSlotItem(toggleItem);
-            applyTextureAndRotation(settingsTag, blockEntity, toggleItem,
+            applyTextureAndRotation(settingsTag, blockEntity,
                                   WrenchConstants.TOGGLE_FACE_KEY, WrenchConstants.TOGGLE_ROTATION_KEY, true);
         }
     }
@@ -285,23 +288,24 @@ public class CopyPasteService {
         if (settingsTag.contains(WrenchConstants.BASE_BLOCK_KEY)) {
             ItemStack baseItem = ItemStack.parseOptional(registries, settingsTag.getCompound(WrenchConstants.BASE_BLOCK_KEY));
             blockEntity.setBaseSlotItem(baseItem);
-            applyTextureAndRotation(settingsTag, blockEntity, baseItem,
+            applyTextureAndRotation(settingsTag, blockEntity,
                                   WrenchConstants.BASE_FACE_KEY, WrenchConstants.BASE_ROTATION_KEY, false);
         }
     }
     private static void applyTextureAndRotation(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity,
-                                              @Nonnull ItemStack item, @Nonnull String faceKey, @Nonnull String rotationKey, boolean isToggle) {
+                                              @Nonnull String faceKey, @Nonnull String rotationKey, boolean isToggle) {
         if (settingsTag.contains(faceKey)) {
             String face = settingsTag.getString(faceKey);
-            String texturePath = FaceSelectionData.getTextureForVariable(item, face);
+            String texturePathKey = isToggle ? WrenchConstants.TOGGLE_TEXTURE_PATH_KEY : WrenchConstants.BASE_TEXTURE_PATH_KEY;
+            String texturePath = settingsTag.contains(texturePathKey) ? settingsTag.getString(texturePathKey) : null;
             if (isToggle) {
                 blockEntity.setToggleTextureVariable(face);
-                if (texturePath != null) {
+                if (texturePath != null && !texturePath.isEmpty()) {
                     blockEntity.setToggleTexture(texturePath);
                 }
             } else {
                 blockEntity.setBaseTextureVariable(face);
-                if (texturePath != null) {
+                if (texturePath != null && !texturePath.isEmpty()) {
                     blockEntity.setBaseTexture(texturePath);
                 }
             }

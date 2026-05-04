@@ -12,7 +12,7 @@
 			"name": "switch_base",
 			"from": [5, 0, 3],
 			"to": [11, 2, 13],
-			"rotation": {"angle": 0, "axis": "y", "origin": [9, 0, 3]},
+			"rotation": {"angle": 0, "axis": "y", "origin": [5, 0, 3]},
 			"faces": {
 				"north": {"uv": [5, 13, 11, 15], "texture": "#base"},
 				"east": {"uv": [5, 13, 3, 3], "rotation": 90, "texture": "#base"},
