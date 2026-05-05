@@ -132,6 +132,15 @@ public class SwitchBlockEntity extends BlockEntity {
     @Override
     @Nonnull
     public ModelData getModelData() {
+        // Lazy tint initialization — ensures analysis runs before first render if onLoad timing missed it
+        if (level != null && level.isClientSide) {
+            if (toggleTintDataMap.isEmpty() && !guiToggleItem.isEmpty() && !toggleTexturePath.equals(DEFAULT_TOGGLE_TEXTURE)) {
+                reanalyzeCategory(guiToggleItem, true);
+            }
+            if (baseTintDataMap.isEmpty() && !guiBaseItem.isEmpty() && !baseTexturePath.equals(DEFAULT_BASE_TEXTURE)) {
+                reanalyzeCategory(guiBaseItem, false);
+            }
+        }
         String faceSelection = baseTextureVariable + "," + toggleTextureVariable;
         // Resolve toggle tintIndex independently
         int toggleTintIndex = -1;
