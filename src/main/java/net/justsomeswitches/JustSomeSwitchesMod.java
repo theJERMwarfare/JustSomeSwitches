@@ -41,16 +41,7 @@ public class JustSomeSwitchesMod {
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, SwitchesServerConfig.SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SwitchesCommonConfig.SPEC);
         if (FMLEnvironment.dist == Dist.CLIENT) {
-            registerConfigScreen();
+            net.justsomeswitches.client.ClientConfigHelper.registerConfigScreen();
         }
-    }
-    /** Registers config screen factory. Isolated in a separate method to prevent client class loading on dedicated servers. */
-    private static void registerConfigScreen() {
-        ModLoadingContext.get().registerExtensionPoint(
-            net.neoforged.neoforge.client.ConfigScreenHandler.ConfigScreenFactory.class,
-            () -> new net.neoforged.neoforge.client.ConfigScreenHandler.ConfigScreenFactory(
-                (minecraft, screen) -> new net.justsomeswitches.client.SwitchesConfigScreen(screen)
-            )
-        );
     }
 }
