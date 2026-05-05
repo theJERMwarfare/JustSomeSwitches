@@ -1,6 +1,5 @@
 package net.justsomeswitches;
 
-import net.justsomeswitches.client.SwitchesConfigScreen;
 import net.justsomeswitches.config.SwitchesClientConfig;
 import net.justsomeswitches.config.SwitchesCommonConfig;
 import net.justsomeswitches.config.SwitchesServerConfig;
@@ -13,7 +12,8 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.client.ConfigScreenHandler;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,12 +40,17 @@ public class JustSomeSwitchesMod {
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, SwitchesClientConfig.SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, SwitchesServerConfig.SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SwitchesCommonConfig.SPEC);
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            registerConfigScreen();
+        }
+    }
+    /** Registers config screen factory. Isolated in a separate method to prevent client class loading on dedicated servers. */
+    private static void registerConfigScreen() {
         ModLoadingContext.get().registerExtensionPoint(
-            ConfigScreenHandler.ConfigScreenFactory.class,
-            () -> new ConfigScreenHandler.ConfigScreenFactory(
-                (minecraft, screen) -> new SwitchesConfigScreen(screen)
+            net.neoforged.neoforge.client.ConfigScreenHandler.ConfigScreenFactory.class,
+            () -> new net.neoforged.neoforge.client.ConfigScreenHandler.ConfigScreenFactory(
+                (minecraft, screen) -> new net.justsomeswitches.client.SwitchesConfigScreen(screen)
             )
         );
-
     }
 }
