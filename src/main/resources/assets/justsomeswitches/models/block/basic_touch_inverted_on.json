@@ -1,0 +1,10 @@
+{
+  "parent": "justsomeswitches:custom/switches_touch_inverted_on",
+  "textures": {
+    "particle": "minecraft:block/cobblestone",
+    "base": "minecraft:block/cobblestone",
+    "toggle": "minecraft:block/oak_planks",
+    "indicator": "minecraft:block/redstone_block"
+  },
+  "render_type": "cutout"
+}

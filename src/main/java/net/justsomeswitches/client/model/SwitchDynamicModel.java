@@ -321,6 +321,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     private final int toggleRotationSteps;
     /** Whether this model is a slide variant (enables UV override for powered indicator in None modes). */
     private final boolean isSlideModel;
+    /** Whether this model is a touch variant (enables UV override for indicator swaps in Alt/None modes). */
+    private final boolean isTouchModel;
 
     public SwitchDynamicModel(@Nonnull Map<String, TextureAtlasSprite> textureSprites,
                              @SuppressWarnings("unused") @Nonnull Map<String, Matrix4f> orientationTransforms,
@@ -329,12 +331,14 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                              @Nonnull BakedModel vanillaLeverModel,
                              @Nonnull ItemOverrides itemOverrides,
                              int toggleRotationSteps,
-                             boolean isSlideModel) {
+                             boolean isSlideModel,
+                             boolean isTouchModel) {
         this.textureSprites = new HashMap<>(textureSprites);
         this.vanillaLeverModel = vanillaLeverModel;
         this.itemOverrides = itemOverrides;
         this.toggleRotationSteps = toggleRotationSteps;
         this.isSlideModel = isSlideModel;
+        this.isTouchModel = isTouchModel;
     }
     /**
      * Calculates Z-offset for overlay layer to prevent z-fighting.
@@ -878,7 +882,111 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                 && isNoneIndicatorMode(powerMode)) {
             return replaceQuadTextureWithUVOverride(originalQuad, finalSprite, quadTintIndex);
         }
+        // Touch UV overrides — narrow to only the two specific cases that need correction:
+        //   1) Alt mode + original was unpowered (gray→red swap):
+        //      Force ON UVs [6,4,10,5] rot 0 so redstone_block displays correctly.
+        //   2) None mode + original was powered (red→toggle/base swap):
+        //      Force OFF UVs [6,5,10,6] rot 180 so toggle/base displays at the "unpowered" region.
+        // All other cases (Default mode, Alt+powered, None+unpowered) keep the original geometry's UVs.
+        if (isTouchModel && needsTextureReplacement) {
+            boolean isAltMode = "ALT".equals(powerMode);
+            boolean isNoneMode = "NONE".equals(powerMode) || isNoneIndicatorMode(powerMode);
+            boolean originalWasPowered = isPoweredTexture(originalTextureName);
+            boolean originalWasUnpowered = isUnpoweredTexture(originalTextureName);
+            if (isAltMode && originalWasUnpowered) {
+                // Case 1: Alt unpowered swaps gray→red — force ON UVs
+                return replaceQuadTextureWithTouchUVOverride(
+                        originalQuad, finalSprite, quadTintIndex, false, true);
+            }
+            if (isNoneMode && originalWasPowered) {
+                // Case 2: None mode swaps red→toggle/base on ON geometry — force OFF UVs
+                return replaceQuadTextureWithTouchUVOverride(
+                        originalQuad, finalSprite, quadTintIndex, true, false);
+            }
+        }
         return replaceQuadTexture(originalQuad, finalSprite, rotation, quadTintIndex);
+    }
+
+    /**
+     * Replaces quad texture with Touch-specific UV override.
+     * Touch uses two UV regions on the indicator sprite:
+     *   - "On" region [6,4,10,5] rot 0 — designed for redstone_block
+     *   - "Off" region [6,5,10,6] rot 180 — designed for gray_concrete_powder and other textures
+     * If the target sprite's style (powered vs unpowered) differs from the original,
+     * we need to flip the relative UVs (equivalent to a 180° rotation) to swap between
+     * the two rotation conventions.
+     */
+    @Nonnull
+    private BakedQuad replaceQuadTextureWithTouchUVOverride(@Nonnull BakedQuad originalQuad,
+                                                            @Nonnull TextureAtlasSprite newSprite,
+                                                            int tintIndex,
+                                                            boolean originalWasPowered,
+                                                            boolean targetIsPowered) {
+        TextureAtlasSprite origSprite = originalQuad.getSprite();
+        int[] originalVertices = originalQuad.getVertices();
+        int[] newVertices = originalVertices.clone();
+        // Target UV region depends on whether the new texture should render as "on" or "off" style
+        float targetU0, targetV0, targetU1, targetV1;
+        if (targetIsPowered) {
+            // "On" UVs (matching switches_touch_on.json): [6, 4, 10, 5] rot 0
+            targetU0 = 6.0f / 16.0f;
+            targetV0 = 4.0f / 16.0f;
+            targetU1 = 10.0f / 16.0f;
+            targetV1 = 5.0f / 16.0f;
+        } else {
+            // "Off" UVs (matching switches_touch.json): [6, 5, 10, 6] rot 180
+            targetU0 = 6.0f / 16.0f;
+            targetV0 = 5.0f / 16.0f;
+            targetU1 = 10.0f / 16.0f;
+            targetV1 = 6.0f / 16.0f;
+        }
+        // Need to flip the relative UVs (180° rotation) when the target style differs from the original,
+        // because the original vertex UVs already encode the original geometry's rotation convention.
+        boolean flipRelativeUVs = originalWasPowered != targetIsPowered;
+        // Convert original atlas UVs to model-space UVs and find bounds
+        float origURange = origSprite.getU1() - origSprite.getU0();
+        float origVRange = origSprite.getV1() - origSprite.getV0();
+        float[] modelUs = new float[4];
+        float[] modelVs = new float[4];
+        float minU = Float.MAX_VALUE, maxU = -Float.MAX_VALUE;
+        float minV = Float.MAX_VALUE, maxV = -Float.MAX_VALUE;
+        for (int v = 0; v < 4; v++) {
+            float atlasU = Float.intBitsToFloat(originalVertices[v * 8 + 4]);
+            float atlasV = Float.intBitsToFloat(originalVertices[v * 8 + 5]);
+            modelUs[v] = origURange > 0 ? (atlasU - origSprite.getU0()) / origURange : 0;
+            modelVs[v] = origVRange > 0 ? (atlasV - origSprite.getV0()) / origVRange : 0;
+            minU = Math.min(minU, modelUs[v]);
+            maxU = Math.max(maxU, modelUs[v]);
+            minV = Math.min(minV, modelVs[v]);
+            maxV = Math.max(maxV, modelVs[v]);
+        }
+        float rangeU = maxU - minU;
+        float rangeV = maxV - minV;
+        float newURange = newSprite.getU1() - newSprite.getU0();
+        float newVRange = newSprite.getV1() - newSprite.getV0();
+        for (int v = 0; v < 4; v++) {
+            // Relative position within the quad's original UV bounds (0-1)
+            float relU = rangeU > 0 ? (modelUs[v] - minU) / rangeU : 0.0f;
+            float relV = rangeV > 0 ? (modelVs[v] - minV) / rangeV : 0.0f;
+            // Flip the relative UVs to compensate for rotation convention change
+            if (flipRelativeUVs) {
+                relU = 1.0f - relU;
+                relV = 1.0f - relV;
+            }
+            // Map to target model-space UV region
+            float targetModelU = targetU0 + relU * (targetU1 - targetU0);
+            float targetModelV = targetV0 + relV * (targetV1 - targetV0);
+            // Convert to atlas coordinates on new sprite
+            newVertices[v * 8 + 4] = Float.floatToIntBits(newSprite.getU0() + targetModelU * newURange);
+            newVertices[v * 8 + 5] = Float.floatToIntBits(newSprite.getV0() + targetModelV * newVRange);
+        }
+        return new BakedQuad(
+                newVertices,
+                tintIndex,
+                originalQuad.getDirection(),
+                newSprite,
+                originalQuad.isShade()
+        );
     }
 
     /** Checks if the power mode is one of the slide-specific None indicator modes. */

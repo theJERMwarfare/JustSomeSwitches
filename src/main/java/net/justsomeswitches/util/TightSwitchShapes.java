@@ -19,7 +19,7 @@ import java.util.Map;
 public final class TightSwitchShapes {
 
     /** Model type identifier for shape lookup. */
-    public enum SwitchModelType { LEVER, ROCKER, BUTTONS, SLIDE }
+    public enum SwitchModelType { LEVER, ROCKER, BUTTONS, SLIDE, TOUCH }
 
     private static final Map<Class<? extends Block>, SwitchModelType> MODEL_TYPES = new HashMap<>();
     private static final Map<Class<? extends Block>, Boolean> INVERTED_FLAGS = new HashMap<>();
@@ -33,10 +33,13 @@ public final class TightSwitchShapes {
         MODEL_TYPES.put(BasicButtonsInvertedBlock.class, SwitchModelType.BUTTONS);
         MODEL_TYPES.put(BasicSlideBlock.class, SwitchModelType.SLIDE);
         MODEL_TYPES.put(BasicSlideInvertedBlock.class, SwitchModelType.SLIDE);
+        MODEL_TYPES.put(BasicTouchBlock.class, SwitchModelType.TOUCH);
+        MODEL_TYPES.put(BasicTouchInvertedBlock.class, SwitchModelType.TOUCH);
         MODEL_TYPES.put(SwitchesLeverBlock.class, SwitchModelType.LEVER);
         MODEL_TYPES.put(SwitchesRockerBlock.class, SwitchModelType.ROCKER);
         MODEL_TYPES.put(SwitchesSlideBlock.class, SwitchModelType.SLIDE);
         MODEL_TYPES.put(SwitchesButtonsBlock.class, SwitchModelType.BUTTONS);
+        MODEL_TYPES.put(SwitchesTouchBlock.class, SwitchModelType.TOUCH);
         INVERTED_FLAGS.put(BasicLeverBlock.class, false);
         INVERTED_FLAGS.put(BasicLeverInvertedBlock.class, true);
         INVERTED_FLAGS.put(BasicRockerBlock.class, false);
@@ -45,10 +48,13 @@ public final class TightSwitchShapes {
         INVERTED_FLAGS.put(BasicButtonsInvertedBlock.class, true);
         INVERTED_FLAGS.put(BasicSlideBlock.class, false);
         INVERTED_FLAGS.put(BasicSlideInvertedBlock.class, true);
+        INVERTED_FLAGS.put(BasicTouchBlock.class, false);
+        INVERTED_FLAGS.put(BasicTouchInvertedBlock.class, true);
         INVERTED_FLAGS.put(SwitchesLeverBlock.class, false);
         INVERTED_FLAGS.put(SwitchesRockerBlock.class, false);
         INVERTED_FLAGS.put(SwitchesSlideBlock.class, false);
         INVERTED_FLAGS.put(SwitchesButtonsBlock.class, false);
+        INVERTED_FLAGS.put(SwitchesTouchBlock.class, false);
     }
 
     // ========================================================================
@@ -154,6 +160,25 @@ public final class TightSwitchShapes {
         Block.box(6, 0, 4, 10, 1, 8)
     );
 
+    // --- TOUCH (identical for on/off — no moving parts) ---
+    // Base pad + raised button ring around indicator
+    private static final VoxelShape TOUCH_BASE = Shapes.or(
+        Block.box(5, 0, 3, 11, 2, 13),        // main base pad
+        Block.box(6, 2, 4, 10, 2.2, 10),      // button top (large area)
+        Block.box(9.5, 2, 10, 10, 2.2, 11),   // button right edge
+        Block.box(6, 2, 10, 6.5, 2.2, 11),    // button left edge
+        Block.box(6, 2, 11, 10, 2.2, 12)      // button back edge
+    );
+
+    // --- TOUCH INVERTED (mirrored on Z-axis — indicator on opposite side) ---
+    private static final VoxelShape TOUCH_INVERTED_BASE = Shapes.or(
+        Block.box(5, 0, 3, 11, 2, 13),        // main base pad (symmetric)
+        Block.box(6, 2, 6, 10, 2.2, 12),      // button top (large area, now at back)
+        Block.box(9.5, 2, 5, 10, 2.2, 6),     // button right edge (now front)
+        Block.box(6, 2, 5, 6.5, 2.2, 6),      // button left edge (now front)
+        Block.box(6, 2, 4, 10, 2.2, 5)        // button front edge (was back)
+    );
+
     // ========================================================================
     // Pre-computed rotated shape cache
     // ========================================================================
@@ -161,6 +186,8 @@ public final class TightSwitchShapes {
     private static final Map<SwitchModelType, Map<Boolean, EnumMap<AttachFace, EnumMap<Direction, VoxelShape>>>> SHAPE_CACHE = new HashMap<>();
     private static final Map<SwitchModelType, Map<String, Map<Boolean, EnumMap<Direction, VoxelShape>>>> WALL_ORIENTATION_CACHE = new HashMap<>();
     private static final Map<SwitchModelType, Map<Boolean, EnumMap<Direction, VoxelShape>>> SWITCHES_CEILING_CACHE = new HashMap<>();
+    // Touch has no on/off geometry difference; inverted means physically mirrored, not visual state swap
+    private static final EnumMap<AttachFace, EnumMap<Direction, VoxelShape>> TOUCH_INVERTED_SHAPE_CACHE = new EnumMap<>(AttachFace.class);
 
     static {
         for (SwitchModelType type : SwitchModelType.values()) {
@@ -211,6 +238,16 @@ public final class TightSwitchShapes {
             }
             SWITCHES_CEILING_CACHE.put(type, poweredMap);
         }
+        // Build TOUCH_INVERTED_SHAPE_CACHE from the mirrored TOUCH_INVERTED_BASE
+        for (AttachFace face : AttachFace.values()) {
+            EnumMap<Direction, VoxelShape> dirMap = new EnumMap<>(Direction.class);
+            for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+                int xRot = getBlockstateXRotation(face);
+                int yRot = getBlockstateYRotation(face, dir);
+                dirMap.put(dir, rotateShape(TOUCH_INVERTED_BASE, xRot, yRot));
+            }
+            TOUCH_INVERTED_SHAPE_CACHE.put(face, dirMap);
+        }
     }
 
     private TightSwitchShapes() {
@@ -225,6 +262,10 @@ public final class TightSwitchShapes {
     public static VoxelShape getTightShape(Block block, AttachFace face, Direction dir, boolean powered) {
         SwitchModelType type = MODEL_TYPES.getOrDefault(block.getClass(), SwitchModelType.LEVER);
         boolean inverted = INVERTED_FLAGS.getOrDefault(block.getClass(), false);
+        // Touch has no on/off geometry difference; inverted uses a physically mirrored shape
+        if (type == SwitchModelType.TOUCH && inverted) {
+            return TOUCH_INVERTED_SHAPE_CACHE.get(face).get(dir);
+        }
         boolean effectivePowered = inverted != powered;
         return SHAPE_CACHE.get(type).get(effectivePowered).get(face).get(dir);
     }
@@ -459,6 +500,7 @@ public final class TightSwitchShapes {
             case BUTTONS -> powered ? BUTTONS_ON_BASE : BUTTONS_OFF_BASE;
             case ROCKER -> powered ? ROCKER_ON_BASE : ROCKER_OFF_BASE;
             case SLIDE -> powered ? SLIDE_ON_BASE : SLIDE_OFF_BASE;
+            case TOUCH -> TOUCH_BASE;
         };
     }
 

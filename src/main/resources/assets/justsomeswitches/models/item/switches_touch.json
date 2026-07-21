@@ -1,0 +1,7 @@
+{
+  "parent": "justsomeswitches:custom/switches_touch",
+  "textures": {
+    "particle": "minecraft:block/stone",
+    "base": "minecraft:block/stone"
+  }
+}

@@ -5,6 +5,7 @@ import net.justsomeswitches.block.SwitchesLeverBlock;
 import net.justsomeswitches.block.SwitchesRockerBlock;
 import net.justsomeswitches.block.SwitchesButtonsBlock;
 import net.justsomeswitches.block.SwitchesSlideBlock;
+import net.justsomeswitches.block.SwitchesTouchBlock;
 import net.justsomeswitches.block.BasicLeverBlock;
 import net.justsomeswitches.block.BasicLeverInvertedBlock;
 import net.justsomeswitches.block.BasicRockerBlock;
@@ -13,7 +14,9 @@ import net.justsomeswitches.block.BasicButtonsBlock;
 import net.justsomeswitches.block.BasicButtonsInvertedBlock;
 import net.justsomeswitches.block.BasicSlideBlock;
 import net.justsomeswitches.block.BasicSlideInvertedBlock;
-import net.justsomeswitches.item.SwitchesWrenchItem;
+import net.justsomeswitches.block.BasicTouchBlock;
+import net.justsomeswitches.block.BasicTouchInvertedBlock;
+import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.item.SwitchBlockItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
@@ -67,6 +70,16 @@ public class JustSomeSwitchesModBlocks {
     /** Switches Buttons block - customizable buttons switch with block entity for texture storage. */
     public static final RegistryObject<SwitchesButtonsBlock> SWITCHES_BUTTONS =
             BLOCKS.register("switches_buttons", () -> new SwitchesButtonsBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.STONE)
+                            .strength(0.5F)
+                            .noOcclusion()
+                            .pushReaction(PushReaction.DESTROY)
+                            .noCollission()
+            ));
+    /** Switches Touch block - customizable touch switch with block entity for texture storage. */
+    public static final RegistryObject<SwitchesTouchBlock> SWITCHES_TOUCH =
+            BLOCKS.register("switches_touch", () -> new SwitchesTouchBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -162,6 +175,28 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
 
+    /** Basic Touch block - simple touch switch without customization. */
+    public static final RegistryObject<BasicTouchBlock> BASIC_TOUCH =
+            BLOCKS.register("basic_touch", () -> new BasicTouchBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.STONE)
+                            .strength(0.5F)
+                            .noOcclusion()
+                            .pushReaction(PushReaction.DESTROY)
+                            .noCollission()
+            ));
+
+    /** Basic Touch Inverted block - simple touch switch with inverted physical orientation. */
+    public static final RegistryObject<BasicTouchInvertedBlock> BASIC_TOUCH_INVERTED =
+            BLOCKS.register("basic_touch_inverted", () -> new BasicTouchInvertedBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.STONE)
+                            .strength(0.5F)
+                            .noOcclusion()
+                            .pushReaction(PushReaction.DESTROY)
+                            .noCollission()
+            ));
+
     /** Switches Lever item - uses custom placement behavior. */
     public static final RegistryObject<SwitchBlockItem> SWITCHES_LEVER_ITEM =
             ITEMS.register("switches_lever", () -> new SwitchBlockItem(
@@ -187,9 +222,15 @@ public class JustSomeSwitchesModBlocks {
                     SWITCHES_BUTTONS.get(),
                     new Item.Properties()
             ));
-    /** Switches Wrench - opens texture customization GUI on shift-right-click. */
-    public static final RegistryObject<SwitchesWrenchItem> SWITCHES_WRENCH =
-            ITEMS.register("switches_wrench", () -> new SwitchesWrenchItem(
+    /** Switches Touch item - uses custom placement behavior. */
+    public static final RegistryObject<SwitchBlockItem> SWITCHES_TOUCH_ITEM =
+            ITEMS.register("switches_touch", () -> new SwitchBlockItem(
+                    SWITCHES_TOUCH.get(),
+                    new Item.Properties()
+            ));
+    /** Switch Texture Brush - opens texture customization GUI on shift-right-click. */
+    public static final RegistryObject<SwitchTextureBrushItem> SWITCH_TEXTURE_BRUSH =
+            ITEMS.register("switch_texture_brush", () -> new SwitchTextureBrushItem(
                     new Item.Properties()
                             .stacksTo(1)
             ));
@@ -239,6 +280,18 @@ public class JustSomeSwitchesModBlocks {
     public static final RegistryObject<BlockItem> BASIC_SLIDE_INVERTED_ITEM =
             ITEMS.register("basic_slide_inverted", () -> new BlockItem(
                     BASIC_SLIDE_INVERTED.get(),
+                    new Item.Properties()
+            ));
+
+    public static final RegistryObject<BlockItem> BASIC_TOUCH_ITEM =
+            ITEMS.register("basic_touch", () -> new BlockItem(
+                    BASIC_TOUCH.get(),
+                    new Item.Properties()
+            ));
+
+    public static final RegistryObject<BlockItem> BASIC_TOUCH_INVERTED_ITEM =
+            ITEMS.register("basic_touch_inverted", () -> new BlockItem(
+                    BASIC_TOUCH_INVERTED.get(),
                     new Item.Properties()
             ));
 }

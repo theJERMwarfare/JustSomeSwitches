@@ -1,0 +1,13 @@
+{
+  "parent": "justsomeswitches:custom/switch_texture_brush",
+  "textures": {
+    "1": "justsomeswitches:item/texture_brush",
+    "particle": "justsomeswitches:item/texture_brush"
+  },
+  "overrides": [
+    {
+      "predicate": { "justsomeswitches:has_copied_data": 1.0 },
+      "model": "justsomeswitches:item/switch_texture_brush_active"
+    }
+  ]
+}

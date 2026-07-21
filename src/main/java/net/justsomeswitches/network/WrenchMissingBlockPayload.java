@@ -1,7 +1,7 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
-import net.justsomeswitches.item.SwitchesWrenchItem;
+import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
@@ -73,13 +73,13 @@ public record WrenchMissingBlockPayload(
             // Find the wrench in player's hands
             ItemStack wrenchStack = null;
 
-            if (player.getMainHandItem().getItem() instanceof SwitchesWrenchItem) {
+            if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
                 wrenchStack = player.getMainHandItem();
-            } else if (player.getOffhandItem().getItem() instanceof SwitchesWrenchItem) {
+            } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
                 wrenchStack = player.getOffhandItem();
             }
 
-            if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchesWrenchItem wrench)) {
+            if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
                 return; // No wrench found
             }
 
@@ -102,7 +102,7 @@ public record WrenchMissingBlockPayload(
         ctx.get().setPacketHandled(true);
     }
 
-    private static void handlePartialApply(SwitchesWrenchItem wrench, ItemStack wrenchStack,
+    private static void handlePartialApply(SwitchTextureBrushItem wrench, ItemStack wrenchStack,
                                          SwitchBlockEntity blockEntity, ServerPlayer player) {
         // Apply settings for categories that don't require missing blocks
         CopyPasteService.PasteResult result = wrench.applyPartialSettingsFromWrenchServer(wrenchStack, blockEntity, player);

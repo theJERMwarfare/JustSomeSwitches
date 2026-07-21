@@ -23,11 +23,11 @@ public class WrenchEventHandler {
     @SubscribeEvent
     public static void onLeftClickBlock(@Nonnull PlayerInteractEvent.LeftClickBlock event) {
         Player player = event.getEntity();
-        if (!player.getMainHandItem().is(JustSomeSwitchesModBlocks.SWITCHES_WRENCH.get())) {
+        if (!player.getMainHandItem().is(JustSomeSwitchesModBlocks.SWITCH_TEXTURE_BRUSH.get())) {
             return;
         }
         try {
-            if (SwitchesServerConfig.DISABLE_WRENCH_INSTANT_BREAK.get()) return;
+            if (SwitchesServerConfig.DISABLE_BRUSH_INSTANT_BREAK.get()) return;
         } catch (Exception ignored) { /* Config not loaded yet, allow breaking */ }
         
         Level level = event.getLevel();
