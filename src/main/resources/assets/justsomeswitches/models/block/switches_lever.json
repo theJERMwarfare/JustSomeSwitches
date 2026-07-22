@@ -1,6 +1,6 @@
 {
   "loader": "justsomeswitches:switches_loader",
-  "base_model": "justsomeswitches:custom/switcheslever",
+  "base_model": "justsomeswitches:custom/switches_lever",
   "texture_categories": {
     "base": {
       "default": "minecraft:block/stone",

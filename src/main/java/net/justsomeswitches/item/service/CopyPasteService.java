@@ -6,7 +6,7 @@ import net.justsomeswitches.util.InventoryHelper;
 import net.justsomeswitches.util.NBTHelper;
 import net.justsomeswitches.util.TextureRotation;
 import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
-import net.justsomeswitches.util.WrenchConstants;
+import net.justsomeswitches.util.BrushConstants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -24,34 +24,34 @@ public class CopyPasteService {
     }
     
     /**
-     * Checks if the wrench has copied settings stored
+     * Checks if the brush has copied settings stored
      */
     public static boolean hasCopiedSettings(@Nonnull ItemStack stack) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
-        return cache.getBoolean(WrenchConstants.HAS_COPIED_DATA_KEY);
+        return cache.getBoolean(BrushConstants.HAS_COPIED_DATA_KEY);
     }
     
-    /** Copies settings from block entity to wrench NBT. */
+    /** Copies settings from block entity to brush NBT. */
     @SuppressWarnings("unused") // Available for future use
-    public static void copySettingsToWrench(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity) {
+    public static void copySettingsToBrush(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity) {
         CompoundTag settingsTag = new CompoundTag();
         NBTHelper.batchNBTOperations(stack,
             tag -> {
-                settingsTag.putString(WrenchConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable());
-                settingsTag.putString(WrenchConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable());
-                settingsTag.putString(WrenchConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name());
-                settingsTag.putString(WrenchConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name());
-                settingsTag.putString(WrenchConstants.TOGGLE_TEXTURE_PATH_KEY, blockEntity.getToggleTexturePath());
-                settingsTag.putString(WrenchConstants.BASE_TEXTURE_PATH_KEY, blockEntity.getBaseTexturePath());
-                settingsTag.putString(WrenchConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name());
+                settingsTag.putString(BrushConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable());
+                settingsTag.putString(BrushConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable());
+                settingsTag.putString(BrushConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name());
+                settingsTag.putString(BrushConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name());
+                settingsTag.putString(BrushConstants.TOGGLE_TEXTURE_PATH_KEY, blockEntity.getToggleTexturePath());
+                settingsTag.putString(BrushConstants.BASE_TEXTURE_PATH_KEY, blockEntity.getBaseTexturePath());
+                settingsTag.putString(BrushConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name());
                 if (!blockEntity.getGuiToggleItem().isEmpty()) {
-                    settingsTag.put(WrenchConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem().save(new CompoundTag()));
+                    settingsTag.put(BrushConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem().save(new CompoundTag()));
                 }
                 if (!blockEntity.getGuiBaseItem().isEmpty()) {
-                    settingsTag.put(WrenchConstants.BASE_BLOCK_KEY, blockEntity.getGuiBaseItem().save(new CompoundTag()));
+                    settingsTag.put(BrushConstants.BASE_BLOCK_KEY, blockEntity.getGuiBaseItem().save(new CompoundTag()));
                 }
-                tag.put(WrenchConstants.COPIED_SETTINGS_KEY, settingsTag);
-                tag.putBoolean(WrenchConstants.HAS_COPIED_DATA_KEY, true);
+                tag.put(BrushConstants.COPIED_SETTINGS_KEY, settingsTag);
+                tag.putBoolean(BrushConstants.HAS_COPIED_DATA_KEY, true);
             }
         );
     }
@@ -67,30 +67,30 @@ public class CopyPasteService {
         
         NBTHelper.batchNBTOperations(stack, tag -> {
             if (copyToggleFace) {
-                settingsTag.putString(WrenchConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable());
-                settingsTag.putString(WrenchConstants.TOGGLE_TEXTURE_PATH_KEY, blockEntity.getToggleTexturePath());
+                settingsTag.putString(BrushConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable());
+                settingsTag.putString(BrushConstants.TOGGLE_TEXTURE_PATH_KEY, blockEntity.getToggleTexturePath());
             }
             if (copyBaseFace) {
-                settingsTag.putString(WrenchConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable());
-                settingsTag.putString(WrenchConstants.BASE_TEXTURE_PATH_KEY, blockEntity.getBaseTexturePath());
+                settingsTag.putString(BrushConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable());
+                settingsTag.putString(BrushConstants.BASE_TEXTURE_PATH_KEY, blockEntity.getBaseTexturePath());
             }
             if (copyToggleRotation) {
-                settingsTag.putString(WrenchConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name());
+                settingsTag.putString(BrushConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name());
             }
             if (copyBaseRotation) {
-                settingsTag.putString(WrenchConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name());
+                settingsTag.putString(BrushConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name());
             }
             if (copyIndicators) {
-                settingsTag.putString(WrenchConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name());
+                settingsTag.putString(BrushConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name());
             }
             if (copyToggleBlock && !blockEntity.getGuiToggleItem().isEmpty()) {
-                settingsTag.put(WrenchConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem().save(new CompoundTag()));
+                settingsTag.put(BrushConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem().save(new CompoundTag()));
             }
             if (copyBaseBlock && !blockEntity.getGuiBaseItem().isEmpty()) {
-                settingsTag.put(WrenchConstants.BASE_BLOCK_KEY, blockEntity.getGuiBaseItem().save(new CompoundTag()));
+                settingsTag.put(BrushConstants.BASE_BLOCK_KEY, blockEntity.getGuiBaseItem().save(new CompoundTag()));
             }
-            tag.put(WrenchConstants.COPIED_SETTINGS_KEY, settingsTag);
-            tag.putBoolean(WrenchConstants.HAS_COPIED_DATA_KEY, true);
+            tag.put(BrushConstants.COPIED_SETTINGS_KEY, settingsTag);
+            tag.putBoolean(BrushConstants.HAS_COPIED_DATA_KEY, true);
         });
     }
     
@@ -99,19 +99,19 @@ public class CopyPasteService {
      */
     public static boolean hasIdenticalSettings(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
-        CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
+        CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
             return false;
         }
         
         // Efficient comparison using early return pattern
-        return compareStringSetting(settingsTag, WrenchConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable()) &&
-               compareStringSetting(settingsTag, WrenchConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable()) &&
-               compareStringSetting(settingsTag, WrenchConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name()) &&
-               compareStringSetting(settingsTag, WrenchConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name()) &&
-               compareStringSetting(settingsTag, WrenchConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name()) &&
-               compareItemSetting(settingsTag, WrenchConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem()) &&
-               compareItemSetting(settingsTag, WrenchConstants.BASE_BLOCK_KEY, blockEntity.getGuiBaseItem());
+        return compareStringSetting(settingsTag, BrushConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable()) &&
+               compareStringSetting(settingsTag, BrushConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable()) &&
+               compareStringSetting(settingsTag, BrushConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name()) &&
+               compareStringSetting(settingsTag, BrushConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name()) &&
+               compareStringSetting(settingsTag, BrushConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name()) &&
+               compareItemSetting(settingsTag, BrushConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem()) &&
+               compareItemSetting(settingsTag, BrushConstants.BASE_BLOCK_KEY, blockEntity.getGuiBaseItem());
     }
     
     private static boolean compareStringSetting(@Nonnull CompoundTag settingsTag, @Nonnull String key, @Nonnull String currentValue) {
@@ -133,7 +133,7 @@ public class CopyPasteService {
     @Nonnull
     public static List<String> validateRequiredBlocks(@Nonnull ItemStack stack, @Nonnull Player player) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
-        CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
+        CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
             return new ArrayList<>();
         }
@@ -142,13 +142,13 @@ public class CopyPasteService {
         List<String> categories = new ArrayList<>();
         
         // Collect required items efficiently
-        if (settingsTag.contains(WrenchConstants.TOGGLE_BLOCK_KEY)) {
-            requiredItems.add(ItemStack.of(settingsTag.getCompound(WrenchConstants.TOGGLE_BLOCK_KEY)));
-            categories.add(WrenchConstants.CATEGORY_TOGGLE);
+        if (settingsTag.contains(BrushConstants.TOGGLE_BLOCK_KEY)) {
+            requiredItems.add(ItemStack.of(settingsTag.getCompound(BrushConstants.TOGGLE_BLOCK_KEY)));
+            categories.add(BrushConstants.CATEGORY_TOGGLE);
         }
-        if (settingsTag.contains(WrenchConstants.BASE_BLOCK_KEY)) {
-            requiredItems.add(ItemStack.of(settingsTag.getCompound(WrenchConstants.BASE_BLOCK_KEY)));
-            categories.add(WrenchConstants.CATEGORY_BASE);
+        if (settingsTag.contains(BrushConstants.BASE_BLOCK_KEY)) {
+            requiredItems.add(ItemStack.of(settingsTag.getCompound(BrushConstants.BASE_BLOCK_KEY)));
+            categories.add(BrushConstants.CATEGORY_BASE);
         }
         
         if (requiredItems.isEmpty()) {
@@ -179,12 +179,12 @@ public class CopyPasteService {
     }
     
     /**
-     * Clears all stored settings from the wrench
+     * Clears all stored settings from the brush
      */
     public static void clearAllSettings(@Nonnull ItemStack stack) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
-        cache.remove(WrenchConstants.COPIED_SETTINGS_KEY);
-        cache.remove(WrenchConstants.HAS_COPIED_DATA_KEY);
+        cache.remove(BrushConstants.COPIED_SETTINGS_KEY);
+        cache.remove(BrushConstants.HAS_COPIED_DATA_KEY);
     }
     
     /**
@@ -212,9 +212,9 @@ public class CopyPasteService {
      * Optimized paste operation with efficient inventory management
      */
     @Nonnull
-    public static PasteResult applySettingsFromWrench(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player) {
+    public static PasteResult applySettingsFromBrush(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
-        CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
+        CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
             return new PasteResult(false, "No settings to paste");
         }
@@ -222,14 +222,14 @@ public class CopyPasteService {
         // Efficient validation using new helper
         List<String> missingBlocks = validateRequiredBlocks(stack, player);
         if (!missingBlocks.isEmpty()) {
-            return new PasteResult(false, WrenchConstants.MSG_MISSING_BLOCKS_GUI, missingBlocks);
+            return new PasteResult(false, BrushConstants.MSG_MISSING_BLOCKS_GUI, missingBlocks);
         }
         
         // Apply settings efficiently
         applyAllSettings(settingsTag, blockEntity, player);
         blockEntity.updateTextures();
         
-        return new PasteResult(true, WrenchConstants.MSG_SETTINGS_PASTED);
+        return new PasteResult(true, BrushConstants.MSG_SETTINGS_PASTED);
     }
     
     /**
@@ -237,9 +237,9 @@ public class CopyPasteService {
      * Used when some required blocks are missing from inventory
      */
     @Nonnull
-    public static PasteResult applyPartialSettingsFromWrench(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player) {
+    public static PasteResult applyPartialSettingsFromBrush(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
-        CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
+        CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
             return new PasteResult(false, "No settings to paste");
         }
@@ -248,31 +248,31 @@ public class CopyPasteService {
         applyPowerMode(settingsTag, blockEntity);
         
         // Check and apply toggle settings only if block is available
-        if (settingsTag.contains(WrenchConstants.TOGGLE_BLOCK_KEY)) {
-            ItemStack requiredToggleItem = ItemStack.of(settingsTag.getCompound(WrenchConstants.TOGGLE_BLOCK_KEY));
+        if (settingsTag.contains(BrushConstants.TOGGLE_BLOCK_KEY)) {
+            ItemStack requiredToggleItem = ItemStack.of(settingsTag.getCompound(BrushConstants.TOGGLE_BLOCK_KEY));
             if (InventoryHelper.hasAllItems(player, requiredToggleItem)) {
                 InventoryHelper.removeItems(player, requiredToggleItem);
                 blockEntity.setToggleSlotItem(requiredToggleItem);
                 applyTextureAndRotation(settingsTag, blockEntity,
-                                      WrenchConstants.TOGGLE_FACE_KEY, WrenchConstants.TOGGLE_ROTATION_KEY, true);
+                                      BrushConstants.TOGGLE_FACE_KEY, BrushConstants.TOGGLE_ROTATION_KEY, true);
             }
         }
         
         // Check and apply base settings only if block is available
-        if (settingsTag.contains(WrenchConstants.BASE_BLOCK_KEY)) {
-            ItemStack requiredBaseItem = ItemStack.of(settingsTag.getCompound(WrenchConstants.BASE_BLOCK_KEY));
+        if (settingsTag.contains(BrushConstants.BASE_BLOCK_KEY)) {
+            ItemStack requiredBaseItem = ItemStack.of(settingsTag.getCompound(BrushConstants.BASE_BLOCK_KEY));
             if (InventoryHelper.hasAllItems(player, requiredBaseItem)) {
                 InventoryHelper.removeItems(player, requiredBaseItem);
                 blockEntity.setBaseSlotItem(requiredBaseItem);
                 applyTextureAndRotation(settingsTag, blockEntity,
-                                      WrenchConstants.BASE_FACE_KEY, WrenchConstants.BASE_ROTATION_KEY, false);
+                                      BrushConstants.BASE_FACE_KEY, BrushConstants.BASE_ROTATION_KEY, false);
             }
         }
         
         // Update the in-world model
         blockEntity.updateTextures();
         
-        return new PasteResult(true, WrenchConstants.MSG_SETTINGS_PARTIAL_APPLIED);
+        return new PasteResult(true, BrushConstants.MSG_SETTINGS_PARTIAL_APPLIED);
     }
     
     /**
@@ -284,11 +284,11 @@ public class CopyPasteService {
         
         // Collect all required items for single inventory operation
         List<ItemStack> itemsToRemove = new ArrayList<>();
-        if (settingsTag.contains(WrenchConstants.TOGGLE_BLOCK_KEY)) {
-            itemsToRemove.add(ItemStack.of(settingsTag.getCompound(WrenchConstants.TOGGLE_BLOCK_KEY)));
+        if (settingsTag.contains(BrushConstants.TOGGLE_BLOCK_KEY)) {
+            itemsToRemove.add(ItemStack.of(settingsTag.getCompound(BrushConstants.TOGGLE_BLOCK_KEY)));
         }
-        if (settingsTag.contains(WrenchConstants.BASE_BLOCK_KEY)) {
-            itemsToRemove.add(ItemStack.of(settingsTag.getCompound(WrenchConstants.BASE_BLOCK_KEY)));
+        if (settingsTag.contains(BrushConstants.BASE_BLOCK_KEY)) {
+            itemsToRemove.add(ItemStack.of(settingsTag.getCompound(BrushConstants.BASE_BLOCK_KEY)));
         }
         
         // Single inventory operation
@@ -300,10 +300,10 @@ public class CopyPasteService {
     }
     
     private static void applyPowerMode(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {
-        if (settingsTag.contains(WrenchConstants.POWER_MODE_KEY)) {
+        if (settingsTag.contains(BrushConstants.POWER_MODE_KEY)) {
             try {
                 SwitchBlockEntity.PowerMode powerMode =
-                    SwitchBlockEntity.PowerMode.valueOf(settingsTag.getString(WrenchConstants.POWER_MODE_KEY));
+                    SwitchBlockEntity.PowerMode.valueOf(settingsTag.getString(BrushConstants.POWER_MODE_KEY));
                 powerMode = normalizeForTargetVariant(powerMode, blockEntity);
                 blockEntity.setPowerMode(powerMode);
             } catch (IllegalArgumentException ignored) {
@@ -331,22 +331,22 @@ public class CopyPasteService {
     }
     
     private static void applyToggleSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {
-        if (settingsTag.contains(WrenchConstants.TOGGLE_BLOCK_KEY)) {
-            ItemStack toggleItem = ItemStack.of(settingsTag.getCompound(WrenchConstants.TOGGLE_BLOCK_KEY));
+        if (settingsTag.contains(BrushConstants.TOGGLE_BLOCK_KEY)) {
+            ItemStack toggleItem = ItemStack.of(settingsTag.getCompound(BrushConstants.TOGGLE_BLOCK_KEY));
             blockEntity.setToggleSlotItem(toggleItem);
             
             applyTextureAndRotation(settingsTag, blockEntity,
-                                  WrenchConstants.TOGGLE_FACE_KEY, WrenchConstants.TOGGLE_ROTATION_KEY, true);
+                                  BrushConstants.TOGGLE_FACE_KEY, BrushConstants.TOGGLE_ROTATION_KEY, true);
         }
     }
     
     private static void applyBaseSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity) {
-        if (settingsTag.contains(WrenchConstants.BASE_BLOCK_KEY)) {
-            ItemStack baseItem = ItemStack.of(settingsTag.getCompound(WrenchConstants.BASE_BLOCK_KEY));
+        if (settingsTag.contains(BrushConstants.BASE_BLOCK_KEY)) {
+            ItemStack baseItem = ItemStack.of(settingsTag.getCompound(BrushConstants.BASE_BLOCK_KEY));
             blockEntity.setBaseSlotItem(baseItem);
             
             applyTextureAndRotation(settingsTag, blockEntity,
-                                  WrenchConstants.BASE_FACE_KEY, WrenchConstants.BASE_ROTATION_KEY, false);
+                                  BrushConstants.BASE_FACE_KEY, BrushConstants.BASE_ROTATION_KEY, false);
         }
     }
     
@@ -354,7 +354,7 @@ public class CopyPasteService {
                                               @Nonnull String faceKey, @Nonnull String rotationKey, boolean isToggle) {
         if (settingsTag.contains(faceKey)) {
             String face = settingsTag.getString(faceKey);
-            String texturePathKey = isToggle ? WrenchConstants.TOGGLE_TEXTURE_PATH_KEY : WrenchConstants.BASE_TEXTURE_PATH_KEY;
+            String texturePathKey = isToggle ? BrushConstants.TOGGLE_TEXTURE_PATH_KEY : BrushConstants.BASE_TEXTURE_PATH_KEY;
             String texturePath = settingsTag.contains(texturePathKey) ? settingsTag.getString(texturePathKey) : null;
             if (isToggle) {
                 blockEntity.setToggleTextureVariable(face);

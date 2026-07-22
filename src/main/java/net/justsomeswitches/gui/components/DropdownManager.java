@@ -2,7 +2,7 @@ package net.justsomeswitches.gui.components;
 
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
-import net.justsomeswitches.gui.SwitchesTextureMenu;
+import net.justsomeswitches.gui.CustomizableTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
 import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
 import net.minecraft.client.gui.Font;
@@ -23,7 +23,7 @@ public class DropdownManager {
     private static final int ROTATION_DROPDOWN_HEIGHT = 12;
     private static final int POWER_DROPDOWN_WIDTH = 46;
     private static final int POWER_DROPDOWN_HEIGHT = 12;
-    private final SwitchesTextureMenu menu;
+    private final CustomizableTextureMenu menu;
     private final Font font;
     private boolean showingLeftDropdown = false;
     private boolean showingRightDropdown = false;
@@ -37,7 +37,7 @@ public class DropdownManager {
      * @param menu the texture menu
      * @param font the font renderer
      */
-    public DropdownManager(@Nonnull SwitchesTextureMenu menu, @Nonnull Font font) {
+    public DropdownManager(@Nonnull CustomizableTextureMenu menu, @Nonnull Font font) {
         this.menu = menu;
         this.font = font;
     }

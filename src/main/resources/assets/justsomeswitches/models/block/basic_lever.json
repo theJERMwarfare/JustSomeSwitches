@@ -1,5 +1,5 @@
 {
-  "parent": "justsomeswitches:custom/switcheslever",
+  "parent": "justsomeswitches:custom/switches_lever",
   "textures": {
     "all": "minecraft:block/cobblestone",
     "particle": "minecraft:block/stone",

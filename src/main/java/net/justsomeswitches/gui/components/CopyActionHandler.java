@@ -1,25 +1,25 @@
 package net.justsomeswitches.gui.components;
 
-import net.justsomeswitches.gui.WrenchCopyMenu;
+import net.justsomeswitches.gui.BrushCopyMenu;
 import net.justsomeswitches.network.NetworkHandler;
 import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nonnull;
 
 /**
- * Handles copy action logic for the Wrench Copy GUI.
+ * Handles copy action logic for the Brush Copy GUI.
  */
 public class CopyActionHandler {
     /** Handles Select All button click. */
-    public void handleSelectAll(@Nonnull WrenchCopyMenu menu) {
+    public void handleSelectAll(@Nonnull BrushCopyMenu menu) {
         menu.setAllCopySelections(true);
     }
     /** Handles Clear All button click. */
-    public void handleClearAll(@Nonnull WrenchCopyMenu menu) {
+    public void handleClearAll(@Nonnull BrushCopyMenu menu) {
         menu.setAllCopySelections(false);
     }
     /** Handles Copy Selected button click. */
-    public void handleCopySelected(@Nonnull WrenchCopyMenu menu, @Nonnull Runnable onClose) {
+    public void handleCopySelected(@Nonnull BrushCopyMenu menu, @Nonnull Runnable onClose) {
         boolean hasSelection = menu.getCopyToggleBlock() || menu.getCopyToggleFace() || 
                               menu.getCopyToggleRotation() || menu.getCopyIndicators() ||
                               menu.getCopyBaseBlock() || menu.getCopyBaseFace() || 
@@ -33,7 +33,7 @@ public class CopyActionHandler {
                 onClose.run();
                 return;
             }
-            NetworkHandler.sendWrenchCopySelection(
+            NetworkHandler.sendBrushCopySelection(
                 blockPos,
                 menu.getCopyToggleBlock(),
                 menu.getCopyToggleFace(),

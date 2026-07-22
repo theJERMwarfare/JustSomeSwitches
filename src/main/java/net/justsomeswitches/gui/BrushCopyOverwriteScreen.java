@@ -11,15 +11,15 @@ import net.minecraft.world.entity.player.Inventory;
 
 import javax.annotation.Nonnull;
 
-/** Client-side GUI for wrench copy overwrite confirmation. */
-public class WrenchCopyOverwriteScreen extends AbstractContainerScreen<WrenchCopyOverwriteMenu> {
+/** Client-side GUI for brush copy overwrite confirmation. */
+public class BrushCopyOverwriteScreen extends AbstractContainerScreen<BrushCopyOverwriteMenu> {
     
     private static final ResourceLocation BACKGROUND_TEXTURE = 
-        new ResourceLocation("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
+        new ResourceLocation("justsomeswitches", "textures/gui/brush_message_gui.png");
     private static final int GUI_WIDTH = 200;
     private static final int GUI_HEIGHT = 94;
     
-    public WrenchCopyOverwriteScreen(WrenchCopyOverwriteMenu menu, Inventory playerInventory, Component title) {
+    public BrushCopyOverwriteScreen(BrushCopyOverwriteMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = GUI_WIDTH;
         this.imageHeight = GUI_HEIGHT;
@@ -73,13 +73,13 @@ public class WrenchCopyOverwriteScreen extends AbstractContainerScreen<WrenchCop
     
     private void onOverwriteClicked(Button button) {
         BlockPos blockPos = menu.getBlockPos();
-        NetworkHandler.sendWrenchCopyOverwrite(blockPos, true);
+        NetworkHandler.sendBrushCopyOverwrite(blockPos, true);
         onClose();
     }
     
     private void onCancelClicked(Button button) {
         BlockPos blockPos = menu.getBlockPos();
-        NetworkHandler.sendWrenchCopyOverwrite(blockPos, false);
+        NetworkHandler.sendBrushCopyOverwrite(blockPos, false);
         onClose();
     }
     

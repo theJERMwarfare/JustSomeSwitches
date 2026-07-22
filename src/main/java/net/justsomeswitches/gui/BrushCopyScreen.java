@@ -14,11 +14,11 @@ import net.minecraft.world.entity.player.Inventory;
 import javax.annotation.Nonnull;
 
 /** Copy texture settings GUI with selective copying interface. */
-public class WrenchCopyScreen extends AbstractContainerScreen<WrenchCopyMenu> {
+public class BrushCopyScreen extends AbstractContainerScreen<BrushCopyMenu> {
     
     // UI constants
     private static final ResourceLocation GUI_TEXTURE = 
-        new ResourceLocation("justsomeswitches", "textures/gui/wrench_copy_gui.png");
+        new ResourceLocation("justsomeswitches", "textures/gui/brush_copy_gui.png");
     private static final int GUI_WIDTH = 187;
     private static final int GUI_HEIGHT = 240;
     
@@ -41,7 +41,7 @@ public class WrenchCopyScreen extends AbstractContainerScreen<WrenchCopyMenu> {
     
 
     
-    public WrenchCopyScreen(@Nonnull WrenchCopyMenu menu, @Nonnull Inventory playerInventory, @SuppressWarnings("unused") @Nonnull Component title) {
+    public BrushCopyScreen(@Nonnull BrushCopyMenu menu, @Nonnull Inventory playerInventory, @SuppressWarnings("unused") @Nonnull Component title) {
         super(menu, playerInventory, Component.literal("Copy Texture Settings"));
         
         this.imageWidth = GUI_WIDTH;

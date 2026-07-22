@@ -13,33 +13,33 @@ import net.minecraftforge.network.NetworkEvent;
 import javax.annotation.Nonnull;
 import java.util.function.Supplier;
 
-/** Network payload for wrench copy overwrite confirmation responses. */
-public record WrenchCopyOverwritePayload(
+/** Network payload for brush copy overwrite confirmation responses. */
+public record BrushCopyOverwritePayload(
     BlockPos blockPos,
     boolean overwrite
 ) {
 
-    public static void encode(WrenchCopyOverwritePayload msg, FriendlyByteBuf buf) {
+    public static void encode(BrushCopyOverwritePayload msg, FriendlyByteBuf buf) {
         buf.writeBlockPos(msg.blockPos());
         buf.writeBoolean(msg.overwrite());
     }
 
-    public static WrenchCopyOverwritePayload decode(FriendlyByteBuf buf) {
-        return new WrenchCopyOverwritePayload(
+    public static BrushCopyOverwritePayload decode(FriendlyByteBuf buf) {
+        return new BrushCopyOverwritePayload(
             buf.readBlockPos(),
             buf.readBoolean()
         );
     }
 
     /** Handles the payload on server side. */
-    public static void handle(WrenchCopyOverwritePayload msg, Supplier<NetworkEvent.Context> ctx) {
+    public static void handle(BrushCopyOverwritePayload msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
 
             if (SecurityUtils.isRateLimited(player)) {
                 SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                    "WrenchCopyOverwrite packet rate limit exceeded");
+                    "BrushCopyOverwrite packet rate limit exceeded");
                 return;
             }
 
@@ -58,18 +58,18 @@ public record WrenchCopyOverwritePayload(
                 return;
             }
 
-            SecurityUtils.logSecurityEvent(player, "WRENCH_COPY_OVERWRITE", blockPos,
+            SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_OVERWRITE", blockPos,
                 "Overwrite: " + msg.overwrite());
-            ItemStack wrenchStack = null;
+            ItemStack brushStack = null;
 
             if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = player.getMainHandItem();
+                brushStack = player.getMainHandItem();
             } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = player.getOffhandItem();
+                brushStack = player.getOffhandItem();
             }
 
-            if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
-                return; // No wrench found
+            if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
+                return; // No brush found
             }
 
 
@@ -78,7 +78,7 @@ public record WrenchCopyOverwritePayload(
             }
 
             if (msg.overwrite()) {
-                handleCopyOverwriteConfirmed(wrench, wrenchStack, blockEntity, player, blockPos);
+                handleCopyOverwriteConfirmed(brush, brushStack, blockEntity, player, blockPos);
             } else {
                 handleCopyOverwriteCancelled(player);
             }
@@ -89,9 +89,9 @@ public record WrenchCopyOverwritePayload(
         ctx.get().setPacketHandled(true);
     }
 
-    private static void handleCopyOverwriteConfirmed(SwitchTextureBrushItem wrench, ItemStack wrenchStack,
+    private static void handleCopyOverwriteConfirmed(SwitchTextureBrushItem brush, ItemStack brushStack,
                                                    @SuppressWarnings("unused") SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
-        wrench.clearAllSettingsServer(wrenchStack);
+        brush.clearAllSettingsServer(brushStack);
         NetworkHandler.sendActionBarMessage(player, "Previous Texture Settings Cleared", NetworkHandler.MessageType.SUCCESS);
         openCopyTextureGUI(player, blockPos);
     }
@@ -113,7 +113,7 @@ public record WrenchCopyOverwritePayload(
             @Override
             @javax.annotation.Nonnull
             public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId, @javax.annotation.Nonnull net.minecraft.world.entity.player.Inventory playerInventory, @javax.annotation.Nonnull net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.WrenchCopyMenu(containerId, playerInventory, blockPos);
+                return new net.justsomeswitches.gui.BrushCopyMenu(containerId, playerInventory, blockPos);
             }
         };
 

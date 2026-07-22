@@ -17,25 +17,25 @@
 - Includes normal and inverted variants of each style
 
 
-  ![BasicModels_Normal](src/main/resources/BasicModels_Normal.png)
+  ![BasicModels_Normal](https://i.imgur.com/HkPDYLF.png)
 
 
 
-  ![BasicModels_Inverted](src/main/resources/BasicModels_Inverted.png)
+  ![BasicModels_Inverted](https://i.imgur.com/rtgkFzD.png)
 
 
 ### Customizable Blocks
 
-![CustomizableModels](src/main/resources/CustomizableModels.png)
+![CustomizableModels](https://i.imgur.com/jvKZqnU.png)
 - Can be placed in any orientation on a block face (wall, ceiling, or floor) with a ghost preview showing placement before confirming
 
-  ![GhostPreview](src/main/resources/GhostPreview.gif)
+![GhostPreview](https://i.imgur.com/hvHAB3R.gif)
 - All switch types support waterlogging
 - Use the Switch Texture Brush to open the Texture Customization GUI
 
 ### Texture Customization GUI
 
-![TextureGUI](src/main/resources/TextureGUI.png)
+![TextureGUI](https://i.imgur.com/pvbWvOs.png)
 - Place almost any solid block into the Base or Toggle texture slot
 - Dropdown menu under each texture slot allows the choice of which face of the inserted block to use
 - Dropdown menu next to the round arrow graphic changes the rotation of the texture

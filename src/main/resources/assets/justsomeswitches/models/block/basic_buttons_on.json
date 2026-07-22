@@ -1,5 +1,5 @@
 {
-  "parent": "justsomeswitches:custom/switchesbuttonson",
+  "parent": "justsomeswitches:custom/switches_buttons_on",
   "textures": {
     "all": "minecraft:block/cobblestone",
     "particle": "minecraft:block/stone",

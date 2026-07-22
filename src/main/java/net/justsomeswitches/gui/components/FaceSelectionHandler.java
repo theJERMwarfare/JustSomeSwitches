@@ -2,7 +2,7 @@ package net.justsomeswitches.gui.components;
 
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
-import net.justsomeswitches.gui.SwitchesTextureMenu;
+import net.justsomeswitches.gui.CustomizableTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.world.item.ItemStack;
 
@@ -14,7 +14,7 @@ import java.util.Objects;
  * item change detection, block removal cleanup, and UI state updates.
  */
 public class FaceSelectionHandler {
-    private final SwitchesTextureMenu menu;
+    private final CustomizableTextureMenu menu;
     private final DropdownManager dropdownManager;
     private FaceSelectionData.RawTextureSelection leftTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
     private FaceSelectionData.RawTextureSelection rightTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
@@ -26,7 +26,7 @@ public class FaceSelectionHandler {
     /**
      * Creates a new face selection handler.
      */
-    public FaceSelectionHandler(@Nonnull SwitchesTextureMenu menu, @Nonnull DropdownManager dropdownManager) {
+    public FaceSelectionHandler(@Nonnull CustomizableTextureMenu menu, @Nonnull DropdownManager dropdownManager) {
         this.menu = menu;
         this.dropdownManager = dropdownManager;
     }

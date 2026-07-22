@@ -2,12 +2,12 @@ package net.justsomeswitches.gui.components;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import net.justsomeswitches.gui.WrenchCopyMenu;
+import net.justsomeswitches.gui.BrushCopyMenu;
 
 import javax.annotation.Nonnull;
 
 /**
- * Handles vanilla Minecraft checkbox rendering and interaction for the Wrench Copy GUI.
+ * Handles vanilla Minecraft checkbox rendering and interaction for the Brush Copy GUI.
  */
 public class CheckboxRenderer {
     private static final int CHECKBOX_SIZE = 16;
@@ -43,7 +43,7 @@ public class CheckboxRenderer {
     }
     /** Draws vanilla Minecraft checkbox with current selection state. */
     public void drawVanillaCheckbox(@Nonnull GuiGraphics graphics, int x, int y, int index, 
-                                   int mouseX, int mouseY, @Nonnull WrenchCopyMenu menu) {
+                                   int mouseX, int mouseY, @Nonnull BrushCopyMenu menu) {
         boolean isChecked = getCheckboxState(index, menu);
         boolean isHovered = mouseX >= x && mouseX < x + CHECKBOX_SIZE &&
                            mouseY >= y && mouseY < y + CHECKBOX_SIZE;
@@ -53,7 +53,7 @@ public class CheckboxRenderer {
                 u, v, SPRITE_SIZE, SPRITE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
     }
     /** Gets checkbox state for given index. */
-    public boolean getCheckboxState(int index, @Nonnull WrenchCopyMenu menu) {
+    public boolean getCheckboxState(int index, @Nonnull BrushCopyMenu menu) {
         return switch (index) {
             case 0 -> menu.getCopyToggleBlock();
             case 1 -> menu.getCopyToggleFace();
@@ -66,7 +66,7 @@ public class CheckboxRenderer {
         };
     }
     /** Toggles checkbox state for given index. */
-    public void toggleCheckbox(int index, @Nonnull WrenchCopyMenu menu) {
+    public void toggleCheckbox(int index, @Nonnull BrushCopyMenu menu) {
         switch (index) {
             case 0 -> menu.setCopyToggleBlock(!menu.getCopyToggleBlock());
             case 1 -> menu.setCopyToggleFace(!menu.getCopyToggleFace());
@@ -79,7 +79,7 @@ public class CheckboxRenderer {
     }
     /** Handles mouse click events for checkbox interactions. */
     public boolean handleCheckboxClick(double mouseX, double mouseY, int guiLeft, int guiTop, 
-                                      @Nonnull WrenchCopyMenu menu) {
+                                      @Nonnull BrushCopyMenu menu) {
         for (int i = 0; i < checkboxPositions.length; i++) {
             CheckboxPosition pos = checkboxPositions[i];
             int checkboxX = guiLeft + pos.checkboxX;

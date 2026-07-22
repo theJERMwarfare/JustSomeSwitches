@@ -13,8 +13,8 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-/** Network payload for wrench copy selection operations. */
-public record WrenchCopySelectionPayload(
+/** Network payload for brush copy selection operations. */
+public record BrushCopySelectionPayload(
     BlockPos blockPos,
     boolean copyToggleBlock,
     boolean copyToggleFace,
@@ -25,7 +25,7 @@ public record WrenchCopySelectionPayload(
     boolean copyBaseRotation
 ) {
 
-    public static void encode(WrenchCopySelectionPayload msg, FriendlyByteBuf buf) {
+    public static void encode(BrushCopySelectionPayload msg, FriendlyByteBuf buf) {
         buf.writeBlockPos(msg.blockPos());
         buf.writeBoolean(msg.copyToggleBlock());
         buf.writeBoolean(msg.copyToggleFace());
@@ -36,8 +36,8 @@ public record WrenchCopySelectionPayload(
         buf.writeBoolean(msg.copyBaseRotation());
     }
 
-    public static WrenchCopySelectionPayload decode(FriendlyByteBuf buf) {
-        return new WrenchCopySelectionPayload(
+    public static BrushCopySelectionPayload decode(FriendlyByteBuf buf) {
+        return new BrushCopySelectionPayload(
             buf.readBlockPos(),
             buf.readBoolean(),
             buf.readBoolean(),
@@ -50,7 +50,7 @@ public record WrenchCopySelectionPayload(
     }
 
     /** Handles copy selection on server side. */
-    public static void handle(WrenchCopySelectionPayload msg, Supplier<NetworkEvent.Context> ctx) {
+    public static void handle(BrushCopySelectionPayload msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) {
@@ -58,7 +58,7 @@ public record WrenchCopySelectionPayload(
             }
             if (SecurityUtils.isRateLimited(player)) {
                 SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                    "WrenchCopySelection packet rate limit exceeded");
+                    "BrushCopySelection packet rate limit exceeded");
                 return;
             }
             if (!SecurityUtils.isValidBlockPosition(msg.blockPos())) {
@@ -72,7 +72,7 @@ public record WrenchCopySelectionPayload(
                     "Player cannot interact with block at: " + msg.blockPos());
                 return;
             }
-            SecurityUtils.logSecurityEvent(player, "WRENCH_COPY_SELECTION", msg.blockPos(),
+            SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_SELECTION", msg.blockPos(),
                 String.format("Toggle: %b/%b/%b, Base: %b/%b/%b, Indicators: %b",
                     msg.copyToggleBlock(), msg.copyToggleFace(), msg.copyToggleRotation(),
                     msg.copyBaseBlock(), msg.copyBaseFace(), msg.copyBaseRotation(),
@@ -83,20 +83,20 @@ public record WrenchCopySelectionPayload(
             }
             ItemStack mainHandStack = player.getMainHandItem();
             ItemStack offHandStack = player.getOffhandItem();
-            ItemStack wrenchStack = null;
+            ItemStack brushStack = null;
 
             if (mainHandStack.getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = mainHandStack;
+                brushStack = mainHandStack;
             } else if (offHandStack.getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = offHandStack;
+                brushStack = offHandStack;
             }
-            if (wrenchStack == null) {
+            if (brushStack == null) {
                 return;
             }
-            if (!(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
+            if (!(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
                 return;
             }
-            wrench.copySelectedSettingsToWrench(wrenchStack, switchEntity,
+            brush.copySelectedSettingsToBrush(brushStack, switchEntity,
                 msg.copyToggleBlock(), msg.copyToggleFace(), msg.copyToggleRotation(),
                 msg.copyIndicators(), msg.copyBaseBlock(), msg.copyBaseFace(),
                 msg.copyBaseRotation());

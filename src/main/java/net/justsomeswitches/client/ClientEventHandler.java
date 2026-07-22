@@ -16,11 +16,11 @@ public class ClientEventHandler {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
-            MenuScreens.register(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), SwitchesTextureScreen::new);
-            MenuScreens.register(JustSomeSwitchesMenuTypes.WRENCH_COPY.get(), WrenchCopyScreen::new);
-            MenuScreens.register(JustSomeSwitchesMenuTypes.WRENCH_OVERWRITE.get(), WrenchOverwriteScreen::new);
-            MenuScreens.register(JustSomeSwitchesMenuTypes.WRENCH_COPY_OVERWRITE.get(), WrenchCopyOverwriteScreen::new);
-            MenuScreens.register(JustSomeSwitchesMenuTypes.WRENCH_MISSING_BLOCK.get(), WrenchMissingBlockScreen::new);
+            MenuScreens.register(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), CustomizableTextureScreen::new);
+            MenuScreens.register(JustSomeSwitchesMenuTypes.BRUSH_COPY.get(), BrushCopyScreen::new);
+            MenuScreens.register(JustSomeSwitchesMenuTypes.BRUSH_OVERWRITE.get(), BrushOverwriteScreen::new);
+            MenuScreens.register(JustSomeSwitchesMenuTypes.BRUSH_COPY_OVERWRITE.get(), BrushCopyOverwriteScreen::new);
+            MenuScreens.register(JustSomeSwitchesMenuTypes.BRUSH_MISSING_BLOCK.get(), BrushMissingBlockScreen::new);
         });
     }
 }

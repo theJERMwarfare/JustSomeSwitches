@@ -14,44 +14,44 @@ public class JustSomeSwitchesMenuTypes {
             DeferredRegister.create(Registries.MENU, JustSomeSwitchesMod.MODID);
 
     /** Switch texture menu type with block position support. */
-    public static final RegistryObject<MenuType<SwitchesTextureMenu>> SWITCH_TEXTURE_MENU =
+    public static final RegistryObject<MenuType<CustomizableTextureMenu>> SWITCH_TEXTURE_MENU =
             MENU_TYPES.register("switch_texture_menu", () ->
                     IForgeMenuType.create((containerId, playerInventory, extraData) -> {
                         var blockPos = extraData.readBlockPos();
-                        return new SwitchesTextureMenu(containerId, playerInventory, blockPos);
+                        return new CustomizableTextureMenu(containerId, playerInventory, blockPos);
                     })
             );
     
-    /** Wrench copy menu type for selective texture settings. */
-    public static final RegistryObject<MenuType<WrenchCopyMenu>> WRENCH_COPY =
+    /** Brush copy menu type for selective texture settings. */
+    public static final RegistryObject<MenuType<BrushCopyMenu>> BRUSH_COPY =
             MENU_TYPES.register("wrench_copy_menu", () ->
                     IForgeMenuType.create((containerId, playerInventory, extraData) -> {
                         var blockPos = extraData.readBlockPos();
-                        return new WrenchCopyMenu(containerId, playerInventory, blockPos);
+                        return new BrushCopyMenu(containerId, playerInventory, blockPos);
                     })
             );
     
-    /** Wrench overwrite menu type for paste confirmation. */
-    public static final RegistryObject<MenuType<WrenchOverwriteMenu>> WRENCH_OVERWRITE =
+    /** Brush overwrite menu type for paste confirmation. */
+    public static final RegistryObject<MenuType<BrushOverwriteMenu>> BRUSH_OVERWRITE =
             MENU_TYPES.register("wrench_overwrite_menu", () ->
                     IForgeMenuType.create((containerId, playerInventory, extraData) -> {
                         var blockPos = extraData.readBlockPos();
-                        return new WrenchOverwriteMenu(containerId, playerInventory, blockPos);
+                        return new BrushOverwriteMenu(containerId, playerInventory, blockPos);
                     })
             );
     
-    /** Wrench copy overwrite menu type for copy confirmation. */
-    public static final RegistryObject<MenuType<WrenchCopyOverwriteMenu>> WRENCH_COPY_OVERWRITE =
+    /** Brush copy overwrite menu type for copy confirmation. */
+    public static final RegistryObject<MenuType<BrushCopyOverwriteMenu>> BRUSH_COPY_OVERWRITE =
             MENU_TYPES.register("wrench_copy_overwrite_menu", () ->
                     IForgeMenuType.create((containerId, playerInventory, extraData) -> {
                         var blockPos = extraData.readBlockPos();
-                        return new WrenchCopyOverwriteMenu(containerId, playerInventory, blockPos);
+                        return new BrushCopyOverwriteMenu(containerId, playerInventory, blockPos);
                     })
             );
     
-    /** Wrench missing block menu type for notification dialog. */
-    public static final RegistryObject<MenuType<WrenchMissingBlockMenu>> WRENCH_MISSING_BLOCK =
+    /** Brush missing block menu type for notification dialog. */
+    public static final RegistryObject<MenuType<BrushMissingBlockMenu>> BRUSH_MISSING_BLOCK =
             MENU_TYPES.register("wrench_missing_block_menu", () ->
-                    IForgeMenuType.create(WrenchMissingBlockMenu::new)
+                    IForgeMenuType.create(BrushMissingBlockMenu::new)
             );
 }

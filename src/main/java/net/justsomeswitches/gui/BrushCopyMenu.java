@@ -12,8 +12,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import javax.annotation.Nonnull;
 
-/** Container menu for wrench copy settings GUI with selective copy logic. */
-public class WrenchCopyMenu extends AbstractContainerMenu {
+/** Container menu for brush copy settings GUI with selective copy logic. */
+public class BrushCopyMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     private final ContainerLevelAccess levelAccess;
@@ -29,13 +29,13 @@ public class WrenchCopyMenu extends AbstractContainerMenu {
     
     /** Client-side constructor required by Forge framework. */
     @SuppressWarnings("unused")
-    public WrenchCopyMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
+    public BrushCopyMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
         this(containerId, playerInventory, extraData.readBlockPos());
     }
     
     /** Server-side constructor. */
-    public WrenchCopyMenu(int containerId, Inventory playerInventory, BlockPos blockPos) {
-        super(JustSomeSwitchesMenuTypes.WRENCH_COPY.get(), containerId);
+    public BrushCopyMenu(int containerId, Inventory playerInventory, BlockPos blockPos) {
+        super(JustSomeSwitchesMenuTypes.BRUSH_COPY.get(), containerId);
         
         this.blockPos = blockPos != null ? blockPos : BlockPos.ZERO;
         this.levelAccess = ContainerLevelAccess.create(playerInventory.player.level(), this.blockPos);

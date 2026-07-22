@@ -11,21 +11,21 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 /** Menu for missing block GUI when player lacks blocks for paste operation. */
-public class WrenchMissingBlockMenu extends AbstractContainerMenu {
+public class BrushMissingBlockMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     private final List<String> missingBlocks;
     
     /** Server-side constructor. */
-    public WrenchMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos, List<String> missingBlocks) {
-        super(JustSomeSwitchesMenuTypes.WRENCH_MISSING_BLOCK.get(), containerId);
+    public BrushMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos, List<String> missingBlocks) {
+        super(JustSomeSwitchesMenuTypes.BRUSH_MISSING_BLOCK.get(), containerId);
         this.blockPos = blockPos;
         this.missingBlocks = missingBlocks;
     }
     
     /** Client-side constructor from network data. */
-    public WrenchMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, FriendlyByteBuf extraData) {
-        super(JustSomeSwitchesMenuTypes.WRENCH_MISSING_BLOCK.get(), containerId);
+    public BrushMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, FriendlyByteBuf extraData) {
+        super(JustSomeSwitchesMenuTypes.BRUSH_MISSING_BLOCK.get(), containerId);
         this.blockPos = extraData.readBlockPos();
         
         int count = extraData.readInt();
