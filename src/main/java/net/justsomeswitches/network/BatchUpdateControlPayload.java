@@ -34,26 +34,11 @@ public record BatchUpdateControlPayload(
 
     public static void handle(BatchUpdateControlPayload msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = SecurityUtils.validateAndGetSender(ctx.get(), msg.blockPos(), "BatchUpdateControl");
             if (player == null) {
                 return;
             }
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                    "BatchUpdateControl packet rate limit exceeded");
-                return;
-            }
-            if (!SecurityUtils.isValidBlockPosition(msg.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                    "Invalid block position: " + msg.blockPos());
-                return;
-            }
             Level level = player.level();
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, msg.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                    "Player cannot interact with block at: " + msg.blockPos());
-                return;
-            }
             SecurityUtils.logSecurityEvent(player, "BATCH_UPDATE_CONTROL", msg.blockPos(),
                 "Start batch: " + msg.startBatch());
             BlockEntity blockEntity = level.getBlockEntity(msg.blockPos());

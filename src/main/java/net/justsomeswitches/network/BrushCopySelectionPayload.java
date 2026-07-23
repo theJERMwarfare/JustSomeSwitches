@@ -52,26 +52,11 @@ public record BrushCopySelectionPayload(
     /** Handles copy selection on server side. */
     public static void handle(BrushCopySelectionPayload msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = SecurityUtils.validateAndGetSender(ctx.get(), msg.blockPos(), "BrushCopySelection");
             if (player == null) {
                 return;
             }
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                    "BrushCopySelection packet rate limit exceeded");
-                return;
-            }
-            if (!SecurityUtils.isValidBlockPosition(msg.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                    "Invalid block position: " + msg.blockPos());
-                return;
-            }
             Level level = player.level();
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, msg.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                    "Player cannot interact with block at: " + msg.blockPos());
-                return;
-            }
             SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_SELECTION", msg.blockPos(),
                 String.format("Toggle: %b/%b/%b, Base: %b/%b/%b, Indicators: %b",
                     msg.copyToggleBlock(), msg.copyToggleFace(), msg.copyToggleRotation(),
@@ -81,21 +66,11 @@ public record BrushCopySelectionPayload(
             if (!(blockEntity instanceof SwitchBlockEntity switchEntity)) {
                 return;
             }
-            ItemStack mainHandStack = player.getMainHandItem();
-            ItemStack offHandStack = player.getOffhandItem();
-            ItemStack brushStack = null;
-
-            if (mainHandStack.getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = mainHandStack;
-            } else if (offHandStack.getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = offHandStack;
-            }
+            ItemStack brushStack = SwitchTextureBrushItem.findBrushInHands(player);
             if (brushStack == null) {
                 return;
             }
-            if (!(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
-                return;
-            }
+            SwitchTextureBrushItem brush = (SwitchTextureBrushItem) brushStack.getItem();
             brush.copySelectedSettingsToBrush(brushStack, switchEntity,
                 msg.copyToggleBlock(), msg.copyToggleFace(), msg.copyToggleRotation(),
                 msg.copyIndicators(), msg.copyBaseBlock(), msg.copyBaseFace(),

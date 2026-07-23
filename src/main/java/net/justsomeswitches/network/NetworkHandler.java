@@ -144,6 +144,42 @@ public class NetworkHandler {
             }
         });
     }
+    /** Opens the overwrite-confirmation GUI for the player (target block already has custom settings). */
+    public static void openOverwriteConfirmationGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
+        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
+            @Override
+            @Nonnull
+            public net.minecraft.network.chat.Component getDisplayName() {
+                return net.minecraft.network.chat.Component.literal("Settings Already Stored");
+            }
+            @Override
+            @Nonnull
+            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId,
+                                                                                 @Nonnull net.minecraft.world.entity.player.Inventory playerInventory,
+                                                                                 @Nonnull net.minecraft.world.entity.player.Player player) {
+                return new net.justsomeswitches.gui.BrushOverwriteMenu(containerId, playerInventory, blockPos);
+            }
+        };
+        net.minecraftforge.network.NetworkHooks.openScreen(player, menuProvider, buf -> buf.writeBlockPos(blockPos));
+    }
+    /** Opens the copy-texture-settings GUI for the player. */
+    public static void openCopyTextureGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos) {
+        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
+            @Override
+            @Nonnull
+            public net.minecraft.network.chat.Component getDisplayName() {
+                return net.minecraft.network.chat.Component.literal("Copy Texture Settings");
+            }
+            @Override
+            @Nonnull
+            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId,
+                                                                                 @Nonnull net.minecraft.world.entity.player.Inventory playerInventory,
+                                                                                 @Nonnull net.minecraft.world.entity.player.Player player) {
+                return new net.justsomeswitches.gui.BrushCopyMenu(containerId, playerInventory, blockPos);
+            }
+        };
+        net.minecraftforge.network.NetworkHooks.openScreen(player, menuProvider, buf -> buf.writeBlockPos(blockPos));
+    }
     /** Sends brush overwrite response to server. */
     public static void sendBrushOverwrite(@Nonnull BlockPos blockPos, boolean overwrite) {
         CHANNEL.sendToServer(new BrushOverwritePayload(blockPos, overwrite));

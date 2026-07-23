@@ -26,30 +26,20 @@ public record TextureVariableUpdatePayload(
         buf.writeUtf(msg.texturePath());
     }
     public static TextureVariableUpdatePayload decode(FriendlyByteBuf buf) {
-        return new TextureVariableUpdatePayload(buf.readBlockPos(), buf.readUtf(), buf.readUtf(), buf.readUtf());
+        return new TextureVariableUpdatePayload(
+            buf.readBlockPos(),
+            buf.readUtf(SecurityUtils.getMaxStringLength()),
+            buf.readUtf(SecurityUtils.getMaxStringLength()),
+            buf.readUtf(SecurityUtils.getMaxTexturePathLength())
+        );
     }
     public static void handle(TextureVariableUpdatePayload msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = SecurityUtils.validateAndGetSender(ctx.get(), msg.blockPos(), "TextureVariableUpdate");
             if (player == null) {
                 return;
             }
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                    "TextureVariableUpdate packet rate limit exceeded");
-                return;
-            }
-            if (!SecurityUtils.isValidBlockPosition(msg.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                    "Invalid block position: " + msg.blockPos());
-                return;
-            }
             Level level = player.level();
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, msg.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                    "Player cannot interact with block at: " + msg.blockPos());
-                return;
-            }
             if (!SecurityUtils.isValidCategory(msg.category())) {
                 SecurityUtils.logSecurityViolation(player, "INVALID_CATEGORY",
                     "Invalid category: " + msg.category());

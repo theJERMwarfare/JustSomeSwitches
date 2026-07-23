@@ -35,43 +35,19 @@ public record BrushOverwritePayload(
     /** Handles the payload on server side. */
     public static void handle(BrushOverwritePayload msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+            ServerPlayer player = SecurityUtils.validateAndGetSender(ctx.get(), msg.blockPos(), "BrushOverwrite");
             if (player == null) return;
-
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                    "BrushOverwrite packet rate limit exceeded");
-                return;
-            }
-
-            if (!SecurityUtils.isValidBlockPosition(msg.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                    "Invalid block position: " + msg.blockPos());
-                return;
-            }
 
             Level level = player.level();
             BlockPos blockPos = msg.blockPos();
 
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                    "Player cannot interact with block at: " + blockPos);
-                return;
-            }
-
             SecurityUtils.logSecurityEvent(player, "BRUSH_OVERWRITE", blockPos,
                 "Overwrite: " + msg.overwrite());
-            ItemStack brushStack = null;
-
-            if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = player.getMainHandItem();
-            } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = player.getOffhandItem();
-            }
-
-            if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
+            ItemStack brushStack = SwitchTextureBrushItem.findBrushInHands(player);
+            if (brushStack == null) {
                 return; // No brush found
             }
+            SwitchTextureBrushItem brush = (SwitchTextureBrushItem) brushStack.getItem();
 
 
             if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
@@ -118,7 +94,7 @@ public record BrushOverwritePayload(
         CopyPasteService.PasteResult inventoryCheck = brush.checkInventoryForPasteServer(brushStack, player);
 
         if (!inventoryCheck.success && BrushConstants.MSG_MISSING_BLOCKS_GUI.equals(inventoryCheck.message)) {
-            openMissingBlockGUI(player, blockEntity.getBlockPos(), inventoryCheck.missingBlocks);
+            NetworkHandler.openMissingBlockGUI(player, blockEntity.getBlockPos(), inventoryCheck.missingBlocks);
             return;
         }
 
@@ -136,8 +112,4 @@ public record BrushOverwritePayload(
         NetworkHandler.sendActionBarMessage(player, "New Texture Settings Not Pasted", NetworkHandler.MessageType.INFO);
     }
 
-    /** Opens the missing block GUI for the player. */
-    private static void openMissingBlockGUI(ServerPlayer player, BlockPos blockPos, java.util.List<String> missingBlocks) {
-        NetworkHandler.openMissingBlockGUI(player, blockPos, missingBlocks);
-    }
 }

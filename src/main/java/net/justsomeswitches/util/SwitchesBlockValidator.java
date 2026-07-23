@@ -30,6 +30,12 @@ public class SwitchesBlockValidator {
             return false;
         }
         Block block = blockItem.getBlock();
+        // EntityBlock validity is the only config-dependent case (ALLOW_BLOCK_ENTITIES). It is never
+        // cached, so a runtime config change takes effect without a restart. All other blocks are
+        // config-independent and safely cached.
+        if (block instanceof EntityBlock) {
+            return validateBlock(block);
+        }
         Boolean cachedResult = VALIDATION_CACHE.get(block);
         if (cachedResult != null) {
             return cachedResult;

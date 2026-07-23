@@ -340,13 +340,13 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
             }
         }
         if (tintedFaces > 0) {
-            net.justsomeswitches.JustSomeSwitchesMod.LOGGER.info(
+            net.justsomeswitches.JustSomeSwitchesMod.LOGGER.debug(
                 "Tinting detected: {} [{}] - {} tinted faces",
                 block.getName().getString(), isToggle ? "toggle" : "base", tintedFaces
             );
         }
         if (overlayFaces > 0) {
-            net.justsomeswitches.JustSomeSwitchesMod.LOGGER.info(
+            net.justsomeswitches.JustSomeSwitchesMod.LOGGER.debug(
                 "Overlay detected: {} [{}] - {} faces with multiple layers",
                 block.getName().getString(), isToggle ? "toggle" : "base", overlayFaces
             );
@@ -636,12 +636,6 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
 
 
         return player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) <= 64.0;
-    }
-
-    @Override
-    public void removed(@Nonnull Player player) {
-
-        super.removed(player);
     }
 
     /** Simple texture slot with change callback. */

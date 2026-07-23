@@ -172,18 +172,6 @@ public class CustomizableTextureScreen extends AbstractContainerScreen<Customiza
 
     // Note: drawLive3DPreview moved to TexturePreviewRenderer component
 
-
-
-
-    /**
-     * Handles mouse hover detection - allows normal hover even with dropdowns open.
-     */
-    @Override
-    public boolean isMouseOver(double mouseX, double mouseY) {
-        // Allow normal hover detection
-        return super.isMouseOver(mouseX, mouseY);
-    }
-    
     /**
      * Prevents slot clicking when dropdowns are open.
      */

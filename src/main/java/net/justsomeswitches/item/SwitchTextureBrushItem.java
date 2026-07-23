@@ -40,6 +40,20 @@ public class SwitchTextureBrushItem extends Item {
         super(properties);
     }
 
+    /** Returns the brush ItemStack held in the player's main or off hand, or null if neither holds one. */
+    @Nullable
+    public static ItemStack findBrushInHands(@Nonnull Player player) {
+        ItemStack mainHand = player.getMainHandItem();
+        if (mainHand.getItem() instanceof SwitchTextureBrushItem) {
+            return mainHand;
+        }
+        ItemStack offHand = player.getOffhandItem();
+        if (offHand.getItem() instanceof SwitchTextureBrushItem) {
+            return offHand;
+        }
+        return null;
+    }
+
     @Override
     @Nonnull
     public InteractionResult useOn(@Nonnull UseOnContext context) {
