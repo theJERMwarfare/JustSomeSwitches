@@ -1,0 +1,7 @@
+{
+  "parent": "justsomeswitches:custom/switch_texture_brush_active",
+  "textures": {
+    "0": "justsomeswitches:item/texture_brush_saved",
+    "particle": "justsomeswitches:item/texture_brush_saved"
+  }
+}

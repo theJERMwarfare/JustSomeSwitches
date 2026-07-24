@@ -1,7 +1,7 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
-import net.justsomeswitches.item.SwitchesWrenchItem;
+import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -96,15 +96,15 @@ public record WrenchCopySelectionPayload(
             ItemStack offHandStack = player.getOffhandItem();
             ItemStack wrenchStack = null;
             
-            if (mainHandStack.getItem() instanceof SwitchesWrenchItem) {
+            if (mainHandStack.getItem() instanceof SwitchTextureBrushItem) {
                 wrenchStack = mainHandStack;
-            } else if (offHandStack.getItem() instanceof SwitchesWrenchItem) {
+            } else if (offHandStack.getItem() instanceof SwitchTextureBrushItem) {
                 wrenchStack = offHandStack;
             }
             if (wrenchStack == null) {
                 return;
             }
-            if (!(wrenchStack.getItem() instanceof SwitchesWrenchItem wrench)) {
+            if (!(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
                 return;
             }
             wrench.copySelectedSettingsToWrench(wrenchStack, switchEntity,

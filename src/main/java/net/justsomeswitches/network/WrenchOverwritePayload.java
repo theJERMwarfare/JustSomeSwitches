@@ -1,7 +1,7 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
-import net.justsomeswitches.item.SwitchesWrenchItem;
+import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
@@ -73,13 +73,13 @@ public record WrenchOverwritePayload(
                 "Overwrite: " + payload.overwrite());
             ItemStack wrenchStack = null;
             
-            if (player.getMainHandItem().getItem() instanceof SwitchesWrenchItem) {
+            if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
                 wrenchStack = player.getMainHandItem();
-            } else if (player.getOffhandItem().getItem() instanceof SwitchesWrenchItem) {
+            } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
                 wrenchStack = player.getOffhandItem();
             }
             
-            if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchesWrenchItem wrench)) {
+            if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
                 return; // No wrench found
             }
             
@@ -99,7 +99,7 @@ public record WrenchOverwritePayload(
         });
     }
     
-    private static void handleOverwriteConfirmed(SwitchesWrenchItem wrench, ItemStack wrenchStack,
+    private static void handleOverwriteConfirmed(SwitchTextureBrushItem wrench, ItemStack wrenchStack,
                                                SwitchBlockEntity blockEntity, ServerPlayer player) {
         if (!blockEntity.getGuiToggleItem().isEmpty()) {
             if (!player.addItem(blockEntity.getGuiToggleItem().copy())) {

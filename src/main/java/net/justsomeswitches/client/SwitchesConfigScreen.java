@@ -49,7 +49,7 @@ public class SwitchesConfigScreen extends Screen {
         try {
             initialAllowBlockEntities = SwitchesServerConfig.ALLOW_BLOCK_ENTITIES.get();
             allowBlockEntities = initialAllowBlockEntities;
-            initialDisableWrenchBreak = SwitchesServerConfig.DISABLE_WRENCH_INSTANT_BREAK.get();
+            initialDisableWrenchBreak = SwitchesServerConfig.DISABLE_BRUSH_INSTANT_BREAK.get();
             disableWrenchBreak = initialDisableWrenchBreak;
             serverConfigAvailable = true;
         } catch (Exception e) {
@@ -110,7 +110,7 @@ public class SwitchesConfigScreen extends Screen {
                 }
             )));
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
-                "Prevents instant wrench breaking on servers", 0xAAAAAA));
+                "Prevents instant brush breaking on servers", 0xAAAAAA));
         } else {
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
                 "Server settings are only available when in a world", 0xFFAA00));
@@ -165,9 +165,9 @@ public class SwitchesConfigScreen extends Screen {
 
     private Component getDisableWrenchBreakButtonText() {
         if (disableWrenchBreak == null) {
-            return Component.literal("Disable Wrench Break: UNAVAILABLE");
+            return Component.literal("Disable Brush Break: UNAVAILABLE");
         }
-        return Component.literal("Disable Wrench Break: " + (disableWrenchBreak ? "ON" : "OFF"));
+        return Component.literal("Disable Brush Break: " + (disableWrenchBreak ? "ON" : "OFF"));
     }
 
     private Component getTightHitboxesBasicButtonText() {
@@ -203,7 +203,7 @@ public class SwitchesConfigScreen extends Screen {
             }
             if (disableWrenchBreak != null && initialDisableWrenchBreak != null
                     && !disableWrenchBreak.equals(initialDisableWrenchBreak)) {
-                SwitchesServerConfig.DISABLE_WRENCH_INSTANT_BREAK.set(disableWrenchBreak);
+                SwitchesServerConfig.DISABLE_BRUSH_INSTANT_BREAK.set(disableWrenchBreak);
                 serverChanged = true;
             }
             if (serverChanged) {

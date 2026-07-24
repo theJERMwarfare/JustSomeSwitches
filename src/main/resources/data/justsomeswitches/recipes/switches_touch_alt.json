@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" S ", "TLD", " B "],
+  "key": {
+    "S": {"tag": "forge:rods/wooden"},
+    "T": {"tag": "minecraft:terracotta"},
+    "L": {"tag": "justsomeswitches:basic_touches"},
+    "D": {"tag": "forge:dyes"},
+    "B": {"item": "minecraft:stone"}
+  },
+  "result": {"item": "justsomeswitches:switches_touch", "count": 1}
+}

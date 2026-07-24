@@ -51,6 +51,8 @@ public class SwitchesGeometryLoader implements IGeometryLoader<SwitchesGeometry>
         }
         boolean isSlideModel = jsonObject.has("is_slide_model") &&
                 jsonObject.get("is_slide_model").getAsBoolean();
+        boolean isTouchModel = jsonObject.has("is_touch_model") &&
+                jsonObject.get("is_touch_model").getAsBoolean();
         return new SwitchesGeometry(
                 baseTextures,
                 toggleTextures,
@@ -60,7 +62,8 @@ public class SwitchesGeometryLoader implements IGeometryLoader<SwitchesGeometry>
                 powerModeConfig,
                 baseModelLocation,
                 toggleRotationCompensation,
-                isSlideModel
+                isSlideModel,
+                isTouchModel
         );
     }
 

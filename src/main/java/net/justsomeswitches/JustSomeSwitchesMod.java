@@ -31,6 +31,9 @@ public class JustSomeSwitchesMod {
     public JustSomeSwitchesMod(@Nonnull ModContainer modContainer) {
         @Nonnull IEventBus modEventBus = modContainer.getEventBus();
 
+        // Legacy ID migration must be registered BEFORE the registers attach to the bus
+        RegistryMigrationHandler.registerAliases();
+
         JustSomeSwitchesModBlocks.BLOCKS.register(modEventBus);
         JustSomeSwitchesModBlocks.ITEMS.register(modEventBus);
         JustSomeSwitchesModBlockEntities.BLOCK_ENTITIES.register(modEventBus);

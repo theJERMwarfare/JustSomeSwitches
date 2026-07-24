@@ -21,19 +21,25 @@ public class JustSomeSwitchesModTabs {
                     .icon(() -> new ItemStack(JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get()))
                     .title(Component.translatable("itemGroup.justsomeswitches"))
                     .displayItems((parameters, output) -> {
-                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get());
-                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_ROCKER_ITEM.get());
-                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_SLIDE_ITEM.get());
-                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_BUTTONS_ITEM.get());
-                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_WRENCH.get());
+                        // Tool first
+                        output.accept(JustSomeSwitchesModBlocks.SWITCH_TEXTURE_BRUSH.get());
+                        // Basic tier - grouped by type with Inverted immediately after each
                         output.accept(JustSomeSwitchesModBlocks.BASIC_LEVER_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.BASIC_LEVER_INVERTED_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.BASIC_ROCKER_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.BASIC_ROCKER_INVERTED_ITEM.get());
-                        output.accept(JustSomeSwitchesModBlocks.BASIC_BUTTONS_ITEM.get());
-                        output.accept(JustSomeSwitchesModBlocks.BASIC_BUTTONS_INVERTED_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.BASIC_SLIDE_ITEM.get());
                         output.accept(JustSomeSwitchesModBlocks.BASIC_SLIDE_INVERTED_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_BUTTONS_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_BUTTONS_INVERTED_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_TOUCH_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.BASIC_TOUCH_INVERTED_ITEM.get());
+                        // Customizable tier
+                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_LEVER_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_ROCKER_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_SLIDE_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_BUTTONS_ITEM.get());
+                        output.accept(JustSomeSwitchesModBlocks.SWITCHES_TOUCH_ITEM.get());
                     })
                     .build()
             );

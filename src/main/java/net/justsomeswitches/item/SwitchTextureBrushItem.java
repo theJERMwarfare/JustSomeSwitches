@@ -33,10 +33,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-/** Optimized switches wrench with copy/paste functionality. */
-public class SwitchesWrenchItem extends Item {
+/** Switch Texture Brush with copy/paste functionality and dynamic active/inactive texture. */
+public class SwitchTextureBrushItem extends Item {
 
-    public SwitchesWrenchItem(@Nonnull Properties properties) {
+    public SwitchTextureBrushItem(@Nonnull Properties properties) {
         super(properties);
     }
 
@@ -337,7 +337,7 @@ public class SwitchesWrenchItem extends Item {
         }
         
         tooltip.add(Component.empty());
-        tooltip.add(Component.literal("Note: Only applies to placed Switches blocks")
+        tooltip.add(Component.literal("Note: Only applies to placed Customizable Switch blocks")
                    .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GRAY));
     }
     

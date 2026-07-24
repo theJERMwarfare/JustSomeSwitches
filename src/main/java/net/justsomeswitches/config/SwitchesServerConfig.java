@@ -10,8 +10,8 @@ public class SwitchesServerConfig {
 
     /** Controls whether blocks with BlockEntities can be used for texture customization (default: false). */
     public static final ModConfigSpec.BooleanValue ALLOW_BLOCK_ENTITIES;
-    /** Controls whether the Switches Wrench can instantly break mod blocks (default: false = wrench CAN break). */
-    public static final ModConfigSpec.BooleanValue DISABLE_WRENCH_INSTANT_BREAK;
+    /** Controls whether the Switch Texture Brush can instantly break mod blocks (default: false = brush CAN break). */
+    public static final ModConfigSpec.BooleanValue DISABLE_BRUSH_INSTANT_BREAK;
 
     static {
         BUILDER.push("Block Validation");
@@ -30,18 +30,18 @@ public class SwitchesServerConfig {
                 )
                 .define("allowBlockEntities", false);
         BUILDER.pop();
-        BUILDER.push("Wrench Settings");
-        BUILDER.comment("Settings controlling Switches Wrench behavior");
-        DISABLE_WRENCH_INSTANT_BREAK = BUILDER
+        BUILDER.push("Brush Settings");
+        BUILDER.comment("Settings controlling Switch Texture Brush behavior");
+        DISABLE_BRUSH_INSTANT_BREAK = BUILDER
                 .comment(
-                    "Disable the Switches Wrench instant block breaking feature.",
+                    "Disable the Switch Texture Brush instant block breaking feature.",
                     "",
-                    "When enabled, the wrench will no longer instantly break mod blocks",
+                    "When enabled, the brush will no longer instantly break mod blocks",
                     "on left-click. Useful for multiplayer servers to prevent griefing.",
                     "",
-                    "Default: false (wrench instant break is allowed)"
+                    "Default: false (brush instant break is allowed)"
                 )
-                .define("disableWrenchInstantBreak", false);
+                .define("disableBrushInstantBreak", false);
         BUILDER.pop();
         SPEC = BUILDER.build();
     }
