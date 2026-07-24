@@ -4,6 +4,7 @@ import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
+import net.justsomeswitches.util.BrushConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -16,24 +17,24 @@ import net.neoforged.neoforge.network.handling.PlayPayloadContext;
 
 import javax.annotation.Nonnull;
 
-/** Network payload for Switches Wrench copy/paste operations. */
-public record WrenchActionPayload(
+/** Network payload for Switches Brush copy/paste operations. */
+public record BrushActionPayload(
     BlockPos blockPos,
-    WrenchAction action,
+    BrushAction action,
     InteractionHand hand
 ) implements CustomPacketPayload {
     
     public static final ResourceLocation ID = new ResourceLocation("justsomeswitches", "wrench_action");
     
-    public WrenchActionPayload(FriendlyByteBuf buf) {
+    public BrushActionPayload(FriendlyByteBuf buf) {
         this(
             buf.readBlockPos(),
-            buf.readEnum(WrenchAction.class),
+            buf.readEnum(BrushAction.class),
             buf.readEnum(InteractionHand.class)
         );
     }
     
-    public enum WrenchAction {
+    public enum BrushAction {
         COPY,
         PASTE
     }
@@ -52,13 +53,13 @@ public record WrenchActionPayload(
     }
     
     /** Handles the payload on the server side. */
-    public static void handle(WrenchActionPayload payload, PlayPayloadContext context) {
+    public static void handle(BrushActionPayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) return;
             if (SecurityUtils.isRateLimited(player)) {
                 SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "WrenchAction packet rate limit exceeded");
+                    "BrushAction packet rate limit exceeded");
                 return;
             }
             if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
@@ -73,36 +74,36 @@ public record WrenchActionPayload(
                     "Player cannot interact with block at: " + blockPos);
                 return;
             }
-            SecurityUtils.logSecurityEvent(player, "WRENCH_ACTION", blockPos, 
+            SecurityUtils.logSecurityEvent(player, "BRUSH_ACTION", blockPos, 
                 "Action: " + payload.action() + ", Hand: " + payload.hand());
             ItemStack stack = player.getItemInHand(payload.hand());
-            if (!(stack.getItem() instanceof SwitchTextureBrushItem wrench)) {
+            if (!(stack.getItem() instanceof SwitchTextureBrushItem brush)) {
                 return;
             }
             if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
                 return;
             }
             switch (payload.action()) {
-                case COPY -> handleCopyAction(wrench, stack, blockEntity, player);
-                case PASTE -> handlePasteAction(wrench, stack, blockEntity, player, blockPos);
+                case COPY -> handleCopyAction(brush, stack, blockEntity, player);
+                case PASTE -> handlePasteAction(brush, stack, blockEntity, player, blockPos);
             }
             player.inventoryMenu.broadcastChanges();
         });
     }
     
     @SuppressWarnings("unused") // Parameters kept for API consistency
-    private static void handleCopyAction(SwitchTextureBrushItem wrench, ItemStack stack, 
+    private static void handleCopyAction(SwitchTextureBrushItem brush, ItemStack stack, 
                                        SwitchBlockEntity blockEntity, ServerPlayer player) {
         NetworkHandler.sendActionBarMessage(player, "Use Copy GUI for copying settings", NetworkHandler.MessageType.INFO);
     }
     
-    private static void handlePasteAction(SwitchTextureBrushItem wrench, ItemStack stack,
+    private static void handlePasteAction(SwitchTextureBrushItem brush, ItemStack stack,
                                         SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
-        if (!wrench.hasCopiedSettingsServer(stack)) {
+        if (!brush.hasCopiedSettingsServer(stack)) {
             return;
         }
         // Check if target block has identical settings
-        if (wrench.hasIdenticalSettingsServer(stack, blockEntity)) {
+        if (brush.hasIdenticalSettingsServer(stack, blockEntity)) {
             Level level = player.level();
             net.minecraft.world.level.block.state.BlockState blockState = level.getBlockState(blockPos);
             net.minecraft.world.item.ItemStack blockItem = new net.minecraft.world.item.ItemStack(blockState.getBlock());
@@ -116,9 +117,9 @@ public record WrenchActionPayload(
             return;
         }
         // Apply settings directly
-        CopyPasteService.PasteResult result = wrench.applySettingsFromWrenchServer(stack, blockEntity, player);
+        CopyPasteService.PasteResult result = brush.applySettingsFromBrushServer(stack, blockEntity, player);
         // Check if missing blocks GUI should be shown
-        if (!result.success && "SHOW_MISSING_BLOCK_GUI".equals(result.message)) {
+        if (!result.success && BrushConstants.MSG_MISSING_BLOCKS_GUI.equals(result.message)) {
             openMissingBlockGUI(player, blockPos, result.missingBlocks);
             return;
         }
@@ -149,7 +150,7 @@ public record WrenchActionPayload(
             public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId, 
                                                                                  net.minecraft.world.entity.player.Inventory playerInventory, 
                                                                                  net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.WrenchOverwriteMenu(containerId, playerInventory, blockPos);
+                return new net.justsomeswitches.gui.BrushOverwriteMenu(containerId, playerInventory, blockPos);
             }
         };
 

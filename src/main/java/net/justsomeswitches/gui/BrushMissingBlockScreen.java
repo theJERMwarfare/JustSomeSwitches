@@ -13,16 +13,16 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 /** Client-side GUI for missing block notification. */
-public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMissingBlockMenu> {
+public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissingBlockMenu> {
     
     private static final ResourceLocation BACKGROUND_TEXTURE = 
-        new ResourceLocation("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
+        new ResourceLocation("justsomeswitches", "textures/gui/brush_message_gui.png");
     private static final int GUI_WIDTH = 200;
     private static final int GUI_HEIGHT = 94;
     
     private final List<String> missingBlocks;
     
-    public WrenchMissingBlockScreen(WrenchMissingBlockMenu menu, Inventory playerInventory, Component title) {
+    public BrushMissingBlockScreen(BrushMissingBlockMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = GUI_WIDTH;
         this.imageHeight = GUI_HEIGHT;
@@ -85,7 +85,7 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
             
             int scaledTextWidth = (int)(fullTextWidth * dynamicScale);
             int scaledX = (int)((imageWidth - scaledTextWidth) / 2.0f / dynamicScale);
-            int scaledY = (int)(33 / dynamicScale);
+            int scaledY = (int)(32 / dynamicScale);
             
             graphics.drawString(font, missingText, scaledX + 1, scaledY + 1, shadowColor, false);
             graphics.drawString(font, missingText, scaledX, scaledY, buttonTextColor, false);
@@ -123,7 +123,7 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
         String questionText = "Paste other possible texture settings?";
         int questionTextWidth = (int)(font.width(questionText) * 0.7f);
         int questionScaledX = (int)((imageWidth - questionTextWidth) / 2.0f / 0.7f);
-        int questionScaledY = (int)(51 / 0.7f);
+        int questionScaledY = (int)(48 / 0.7f);
         
         graphics.drawString(font, questionText, questionScaledX + 1, questionScaledY + 1, shadowColor, false);
         graphics.drawString(font, questionText, questionScaledX, questionScaledY, 0xFFFFCC00, false);
@@ -133,13 +133,13 @@ public class WrenchMissingBlockScreen extends AbstractContainerScreen<WrenchMiss
     
     private void onApplyClicked(Button button) {
         BlockPos blockPos = menu.getBlockPos();
-        NetworkHandler.sendWrenchMissingBlock(blockPos, true);
+        NetworkHandler.sendBrushMissingBlock(blockPos, true);
         onClose();
     }
     
     private void onCancelClicked(Button button) {
         BlockPos blockPos = menu.getBlockPos();
-        NetworkHandler.sendWrenchMissingBlock(blockPos, false);
+        NetworkHandler.sendBrushMissingBlock(blockPos, false);
         onClose();
     }
     

@@ -1,6 +1,6 @@
 {
   "loader": "justsomeswitches:switches_loader",
-  "base_model": "justsomeswitches:custom/switchesslide",
+  "base_model": "justsomeswitches:custom/switches_slide",
   "is_slide_model": true,
   "texture_categories": {
     "base": {

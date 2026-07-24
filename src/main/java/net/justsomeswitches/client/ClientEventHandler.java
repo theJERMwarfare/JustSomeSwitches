@@ -14,10 +14,10 @@ public class ClientEventHandler {
     /** Registers menu screens for client-side GUI handling. */
     @SubscribeEvent
     public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
-        event.register(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), SwitchesTextureScreen::new);
-        event.register(JustSomeSwitchesMenuTypes.WRENCH_COPY.get(), WrenchCopyScreen::new);
-        event.register(JustSomeSwitchesMenuTypes.WRENCH_OVERWRITE.get(), WrenchOverwriteScreen::new);
-        event.register(JustSomeSwitchesMenuTypes.WRENCH_COPY_OVERWRITE.get(), WrenchCopyOverwriteScreen::new);
-        event.register(JustSomeSwitchesMenuTypes.WRENCH_MISSING_BLOCK.get(), WrenchMissingBlockScreen::new);
+        event.register(JustSomeSwitchesMenuTypes.SWITCH_TEXTURE_MENU.get(), CustomizableTextureScreen::new);
+        event.register(JustSomeSwitchesMenuTypes.BRUSH_COPY.get(), BrushCopyScreen::new);
+        event.register(JustSomeSwitchesMenuTypes.BRUSH_OVERWRITE.get(), BrushOverwriteScreen::new);
+        event.register(JustSomeSwitchesMenuTypes.BRUSH_COPY_OVERWRITE.get(), BrushCopyOverwriteScreen::new);
+        event.register(JustSomeSwitchesMenuTypes.BRUSH_MISSING_BLOCK.get(), BrushMissingBlockScreen::new);
     }
 }

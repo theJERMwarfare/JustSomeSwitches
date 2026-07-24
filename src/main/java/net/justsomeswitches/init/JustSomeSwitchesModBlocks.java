@@ -1,17 +1,17 @@
 package net.justsomeswitches.init;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
-import net.justsomeswitches.block.SwitchesLeverBlock;
-import net.justsomeswitches.block.SwitchesRockerBlock;
-import net.justsomeswitches.block.SwitchesButtonsBlock;
-import net.justsomeswitches.block.SwitchesSlideBlock;
-import net.justsomeswitches.block.SwitchesTouchBlock;
+import net.justsomeswitches.block.CustomizableLeverBlock;
+import net.justsomeswitches.block.CustomizableRockerBlock;
+import net.justsomeswitches.block.CustomizableButtonBlock;
+import net.justsomeswitches.block.CustomizableSlideBlock;
+import net.justsomeswitches.block.CustomizableTouchBlock;
 import net.justsomeswitches.block.BasicLeverBlock;
 import net.justsomeswitches.block.BasicLeverInvertedBlock;
 import net.justsomeswitches.block.BasicRockerBlock;
 import net.justsomeswitches.block.BasicRockerInvertedBlock;
-import net.justsomeswitches.block.BasicButtonsBlock;
-import net.justsomeswitches.block.BasicButtonsInvertedBlock;
+import net.justsomeswitches.block.BasicButtonBlock;
+import net.justsomeswitches.block.BasicButtonInvertedBlock;
 import net.justsomeswitches.block.BasicSlideBlock;
 import net.justsomeswitches.block.BasicSlideInvertedBlock;
 import net.justsomeswitches.block.BasicTouchBlock;
@@ -37,8 +37,8 @@ public class JustSomeSwitchesModBlocks {
             DeferredRegister.create(Registries.ITEM, JustSomeSwitchesMod.MODID);
 
     /** Switches Lever block - customizable lever with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesLeverBlock> SWITCHES_LEVER =
-            BLOCKS.register("switches_lever", () -> new SwitchesLeverBlock(
+    public static final DeferredHolder<Block, CustomizableLeverBlock> SWITCHES_LEVER =
+            BLOCKS.register("switches_lever", () -> new CustomizableLeverBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -48,8 +48,8 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Switches Rocker block - customizable rocker with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesRockerBlock> SWITCHES_ROCKER =
-            BLOCKS.register("switches_rocker", () -> new SwitchesRockerBlock(
+    public static final DeferredHolder<Block, CustomizableRockerBlock> SWITCHES_ROCKER =
+            BLOCKS.register("switches_rocker", () -> new CustomizableRockerBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -58,8 +58,8 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
     /** Switches Slide block - customizable slide switch with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesSlideBlock> SWITCHES_SLIDE =
-            BLOCKS.register("switches_slide", () -> new SwitchesSlideBlock(
+    public static final DeferredHolder<Block, CustomizableSlideBlock> SWITCHES_SLIDE =
+            BLOCKS.register("switches_slide", () -> new CustomizableSlideBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -68,8 +68,8 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
     /** Switches Buttons block - customizable buttons switch with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesButtonsBlock> SWITCHES_BUTTONS =
-            BLOCKS.register("switches_buttons", () -> new SwitchesButtonsBlock(
+    public static final DeferredHolder<Block, CustomizableButtonBlock> SWITCHES_BUTTONS =
+            BLOCKS.register("switches_buttons", () -> new CustomizableButtonBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -78,8 +78,8 @@ public class JustSomeSwitchesModBlocks {
                             .noCollission()
             ));
     /** Switches Touch block - customizable touch switch with block entity for texture storage. */
-    public static final DeferredHolder<Block, SwitchesTouchBlock> SWITCHES_TOUCH =
-            BLOCKS.register("switches_touch", () -> new SwitchesTouchBlock(
+    public static final DeferredHolder<Block, CustomizableTouchBlock> SWITCHES_TOUCH =
+            BLOCKS.register("switches_touch", () -> new CustomizableTouchBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -132,8 +132,8 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Buttons block - simple button switch without customization. */
-    public static final DeferredHolder<Block, BasicButtonsBlock> BASIC_BUTTONS =
-            BLOCKS.register("basic_buttons", () -> new BasicButtonsBlock(
+    public static final DeferredHolder<Block, BasicButtonBlock> BASIC_BUTTONS =
+            BLOCKS.register("basic_buttons", () -> new BasicButtonBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)
@@ -143,8 +143,8 @@ public class JustSomeSwitchesModBlocks {
             ));
 
     /** Basic Buttons Inverted block - simple button switch with inverted visual appearance. */
-    public static final DeferredHolder<Block, BasicButtonsInvertedBlock> BASIC_BUTTONS_INVERTED =
-            BLOCKS.register("basic_buttons_inverted", () -> new BasicButtonsInvertedBlock(
+    public static final DeferredHolder<Block, BasicButtonInvertedBlock> BASIC_BUTTONS_INVERTED =
+            BLOCKS.register("basic_buttons_inverted", () -> new BasicButtonInvertedBlock(
                     BlockBehaviour.Properties.of()
                             .mapColor(MapColor.STONE)
                             .strength(0.5F)

@@ -19,14 +19,14 @@ import javax.annotation.Nonnull;
  * Network payload for missing block GUI responses
  * Handles client->server communication when user chooses Apply or Cancel for missing blocks
  */
-public record WrenchMissingBlockPayload(
+public record BrushMissingBlockPayload(
     BlockPos blockPos,
     boolean apply
 ) implements CustomPacketPayload {
     
     public static final ResourceLocation ID = new ResourceLocation("justsomeswitches", "wrench_missing_block");
     
-    public WrenchMissingBlockPayload(FriendlyByteBuf buf) {
+    public BrushMissingBlockPayload(FriendlyByteBuf buf) {
         this(
             buf.readBlockPos(),
             buf.readBoolean()
@@ -48,7 +48,7 @@ public record WrenchMissingBlockPayload(
     /**
      * Handles the payload on the server side
      */
-    public static void handle(WrenchMissingBlockPayload payload, PlayPayloadContext context) {
+    public static void handle(BrushMissingBlockPayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) return;
@@ -56,7 +56,7 @@ public record WrenchMissingBlockPayload(
             // Security validation - Rate limiting
             if (SecurityUtils.isRateLimited(player)) {
                 SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "WrenchMissingBlock packet rate limit exceeded");
+                    "BrushMissingBlock packet rate limit exceeded");
                 return;
             }
             
@@ -78,20 +78,20 @@ public record WrenchMissingBlockPayload(
             }
             
             // Log security event for audit
-            SecurityUtils.logSecurityEvent(player, "WRENCH_MISSING_BLOCK", blockPos, 
+            SecurityUtils.logSecurityEvent(player, "BRUSH_MISSING_BLOCK", blockPos, 
                 "Apply: " + payload.apply());
             
-            // Find the wrench in player's hands
-            ItemStack wrenchStack = null;
+            // Find the brush in player's hands
+            ItemStack brushStack = null;
             
             if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = player.getMainHandItem();
+                brushStack = player.getMainHandItem();
             } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = player.getOffhandItem();
+                brushStack = player.getOffhandItem();
             }
             
-            if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
-                return; // No wrench found
+            if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
+                return; // No brush found
             }
             
             // Verify the block is still a switch
@@ -101,7 +101,7 @@ public record WrenchMissingBlockPayload(
             
             if (payload.apply()) {
                 // User chose to apply partial settings
-                handlePartialApply(wrench, wrenchStack, blockEntity, player);
+                handlePartialApply(brush, brushStack, blockEntity, player);
             } else {
                 // User chose to cancel
                 handleCancel(player);
@@ -112,10 +112,10 @@ public record WrenchMissingBlockPayload(
         });
     }
     
-    private static void handlePartialApply(SwitchTextureBrushItem wrench, ItemStack wrenchStack,
+    private static void handlePartialApply(SwitchTextureBrushItem brush, ItemStack brushStack,
                                          SwitchBlockEntity blockEntity, ServerPlayer player) {
         // Apply settings for categories that don't require missing blocks
-        CopyPasteService.PasteResult result = wrench.applyPartialSettingsFromWrenchServer(wrenchStack, blockEntity, player);
+        CopyPasteService.PasteResult result = brush.applyPartialSettingsFromBrushServer(brushStack, blockEntity, player);
         
         if (result.success) {
             NetworkHandler.sendActionBarMessage(player, result.message, NetworkHandler.MessageType.SUCCESS);

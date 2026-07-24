@@ -15,8 +15,8 @@ import net.neoforged.neoforge.network.handling.PlayPayloadContext;
 
 import javax.annotation.Nonnull;
 
-/** Network payload for wrench copy selection operations. */
-public record WrenchCopySelectionPayload(
+/** Network payload for brush copy selection operations. */
+public record BrushCopySelectionPayload(
     BlockPos blockPos,
     boolean copyToggleBlock,
     boolean copyToggleFace,
@@ -29,7 +29,7 @@ public record WrenchCopySelectionPayload(
     
     public static final ResourceLocation ID = new ResourceLocation("justsomeswitches", "wrench_copy_selection");
     
-    public WrenchCopySelectionPayload(FriendlyByteBuf buf) {
+    public BrushCopySelectionPayload(FriendlyByteBuf buf) {
         this(
             buf.readBlockPos(),
             buf.readBoolean(),
@@ -61,7 +61,7 @@ public record WrenchCopySelectionPayload(
     }
     
     /** Handles copy selection on server side. */
-    public static void handle(WrenchCopySelectionPayload payload, PlayPayloadContext context) {
+    public static void handle(BrushCopySelectionPayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) {
@@ -69,7 +69,7 @@ public record WrenchCopySelectionPayload(
             }
             if (SecurityUtils.isRateLimited(player)) {
                 SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "WrenchCopySelection packet rate limit exceeded");
+                    "BrushCopySelection packet rate limit exceeded");
                 return;
             }
             if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
@@ -83,7 +83,7 @@ public record WrenchCopySelectionPayload(
                     "Player cannot interact with block at: " + payload.blockPos());
                 return;
             }
-            SecurityUtils.logSecurityEvent(player, "WRENCH_COPY_SELECTION", payload.blockPos(), 
+            SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_SELECTION", payload.blockPos(), 
                 String.format("Toggle: %b/%b/%b, Base: %b/%b/%b, Indicators: %b", 
                     payload.copyToggleBlock(), payload.copyToggleFace(), payload.copyToggleRotation(),
                     payload.copyBaseBlock(), payload.copyBaseFace(), payload.copyBaseRotation(), 
@@ -94,20 +94,20 @@ public record WrenchCopySelectionPayload(
             }
             ItemStack mainHandStack = player.getMainHandItem();
             ItemStack offHandStack = player.getOffhandItem();
-            ItemStack wrenchStack = null;
+            ItemStack brushStack = null;
             
             if (mainHandStack.getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = mainHandStack;
+                brushStack = mainHandStack;
             } else if (offHandStack.getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = offHandStack;
+                brushStack = offHandStack;
             }
-            if (wrenchStack == null) {
+            if (brushStack == null) {
                 return;
             }
-            if (!(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
+            if (!(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
                 return;
             }
-            wrench.copySelectedSettingsToWrench(wrenchStack, switchEntity,
+            brush.copySelectedSettingsToBrush(brushStack, switchEntity,
                 payload.copyToggleBlock(), payload.copyToggleFace(), payload.copyToggleRotation(),
                 payload.copyIndicators(), payload.copyBaseBlock(), payload.copyBaseFace(),
                 payload.copyBaseRotation());

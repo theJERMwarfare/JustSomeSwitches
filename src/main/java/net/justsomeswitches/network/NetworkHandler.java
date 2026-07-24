@@ -1,7 +1,6 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.JustSomeSwitchesMod;
-import net.justsomeswitches.util.WrenchConstants;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,7 +16,8 @@ import javax.annotation.Nonnull;
 /** Network handler with security validation and packet registration. */
 @Mod.EventBusSubscriber(modid = JustSomeSwitchesMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class NetworkHandler {
-    private static final String PROTOCOL_VERSION = WrenchConstants.NETWORK_PROTOCOL_VERSION;
+    /** Bumping this breaks connection compatibility with un-updated clients/servers. */
+    private static final String PROTOCOL_VERSION = "1";
     
     @SubscribeEvent
     public static void onRegisterPayloadHandler(RegisterPayloadHandlerEvent event) {
@@ -29,29 +29,29 @@ public class NetworkHandler {
             handler -> handler.server(TextureVariableUpdatePayload::handle)
         );
         
-        registrar.play(WrenchActionPayload.ID, 
-            WrenchActionPayload::new,
-            handler -> handler.server(WrenchActionPayload::handle)
+        registrar.play(BrushActionPayload.ID, 
+            BrushActionPayload::new,
+            handler -> handler.server(BrushActionPayload::handle)
         );
         
-        registrar.play(WrenchCopySelectionPayload.ID,
-            WrenchCopySelectionPayload::new,
-            handler -> handler.server(WrenchCopySelectionPayload::handle)
+        registrar.play(BrushCopySelectionPayload.ID,
+            BrushCopySelectionPayload::new,
+            handler -> handler.server(BrushCopySelectionPayload::handle)
         );
         
-        registrar.play(WrenchOverwritePayload.ID,
-            WrenchOverwritePayload::new,
-            handler -> handler.server(WrenchOverwritePayload::handle)
+        registrar.play(BrushOverwritePayload.ID,
+            BrushOverwritePayload::new,
+            handler -> handler.server(BrushOverwritePayload::handle)
         );
         
-        registrar.play(WrenchCopyOverwritePayload.ID,
-            WrenchCopyOverwritePayload::new,
-            handler -> handler.server(WrenchCopyOverwritePayload::handle)
+        registrar.play(BrushCopyOverwritePayload.ID,
+            BrushCopyOverwritePayload::new,
+            handler -> handler.server(BrushCopyOverwritePayload::handle)
         );
         
-        registrar.play(WrenchMissingBlockPayload.ID,
-            WrenchMissingBlockPayload::new,
-            handler -> handler.server(WrenchMissingBlockPayload::handle)
+        registrar.play(BrushMissingBlockPayload.ID,
+            BrushMissingBlockPayload::new,
+            handler -> handler.server(BrushMissingBlockPayload::handle)
         );
         
         registrar.play(BatchUpdateControlPayload.ID,
@@ -98,21 +98,21 @@ public class NetworkHandler {
         PacketDistributor.SERVER.noArg().send(new TextureVariableUpdatePayload(blockPos, category, variable, texturePath));
     }
     
-    /** Sends wrench action packet with security validation. */
-    public static void sendWrenchAction(@Nonnull BlockPos blockPos, 
-                                      @Nonnull WrenchActionPayload.WrenchAction action, 
+    /** Sends brush action packet with security validation. */
+    public static void sendBrushAction(@Nonnull BlockPos blockPos, 
+                                      @Nonnull BrushActionPayload.BrushAction action, 
                                       @Nonnull net.minecraft.world.InteractionHand hand) {
         // Client-side pre-validation
         if (!SecurityUtils.isValidBlockPosition(blockPos)) {
-            JustSomeSwitchesMod.LOGGER.warn("Client attempted to send wrench action with invalid block position: {}", blockPos);
+            JustSomeSwitchesMod.LOGGER.warn("Client attempted to send brush action with invalid block position: {}", blockPos);
             return;
         }
         
-        PacketDistributor.SERVER.noArg().send(new WrenchActionPayload(blockPos, action, hand));
+        PacketDistributor.SERVER.noArg().send(new BrushActionPayload(blockPos, action, hand));
     }
     
-    /** Sends wrench copy selection packet with security validation. */
-    public static void sendWrenchCopySelection(@Nonnull BlockPos blockPos,
+    /** Sends brush copy selection packet with security validation. */
+    public static void sendBrushCopySelection(@Nonnull BlockPos blockPos,
                                              boolean copyToggleBlock,
                                              boolean copyToggleFace,
                                              boolean copyToggleRotation,
@@ -126,7 +126,7 @@ public class NetworkHandler {
             return;
         }
         
-        PacketDistributor.SERVER.noArg().send(new WrenchCopySelectionPayload(
+        PacketDistributor.SERVER.noArg().send(new BrushCopySelectionPayload(
             blockPos, copyToggleBlock, copyToggleFace, copyToggleRotation,
             copyIndicators, copyBaseBlock, copyBaseFace, copyBaseRotation
         ));
@@ -158,7 +158,7 @@ public class NetworkHandler {
         INFO      // Blue text
     }
     
-    /** Opens the missing block GUI for the player. Shared by WrenchActionPayload and WrenchOverwritePayload. */
+    /** Opens the missing block GUI for the player. Shared by BrushActionPayload and BrushOverwritePayload. */
     public static void openMissingBlockGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos, @Nonnull java.util.List<String> missingBlocks) {
         net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
             @Override
@@ -173,7 +173,7 @@ public class NetworkHandler {
             public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId,
                                                                                  net.minecraft.world.entity.player.Inventory playerInventory,
                                                                                  net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.WrenchMissingBlockMenu(containerId, playerInventory, blockPos, missingBlocks);
+                return new net.justsomeswitches.gui.BrushMissingBlockMenu(containerId, playerInventory, blockPos, missingBlocks);
             }
         };
         player.openMenu(menuProvider, buf -> {
@@ -184,19 +184,19 @@ public class NetworkHandler {
             }
         });
     }
-    /** Sends wrench overwrite response to server. */
-    public static void sendWrenchOverwrite(@Nonnull BlockPos blockPos, boolean overwrite) {
-        PacketDistributor.SERVER.noArg().send(new WrenchOverwritePayload(blockPos, overwrite));
+    /** Sends brush overwrite response to server. */
+    public static void sendBrushOverwrite(@Nonnull BlockPos blockPos, boolean overwrite) {
+        PacketDistributor.SERVER.noArg().send(new BrushOverwritePayload(blockPos, overwrite));
     }
     
-    /** Sends wrench copy overwrite response to server. */
-    public static void sendWrenchCopyOverwrite(@Nonnull BlockPos blockPos, boolean overwrite) {
-        PacketDistributor.SERVER.noArg().send(new WrenchCopyOverwritePayload(blockPos, overwrite));
+    /** Sends brush copy overwrite response to server. */
+    public static void sendBrushCopyOverwrite(@Nonnull BlockPos blockPos, boolean overwrite) {
+        PacketDistributor.SERVER.noArg().send(new BrushCopyOverwritePayload(blockPos, overwrite));
     }
     
-    /** Sends wrench missing block response to server. */
-    public static void sendWrenchMissingBlock(@Nonnull BlockPos blockPos, boolean apply) {
-        PacketDistributor.SERVER.noArg().send(new WrenchMissingBlockPayload(blockPos, apply));
+    /** Sends brush missing block response to server. */
+    public static void sendBrushMissingBlock(@Nonnull BlockPos blockPos, boolean apply) {
+        PacketDistributor.SERVER.noArg().send(new BrushMissingBlockPayload(blockPos, apply));
     }
     
     /** Sends batch update control packet to server. */

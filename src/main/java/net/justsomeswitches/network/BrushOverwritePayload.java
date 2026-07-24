@@ -4,6 +4,7 @@ import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
+import net.justsomeswitches.util.BrushConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -15,15 +16,15 @@ import net.neoforged.neoforge.network.handling.PlayPayloadContext;
 
 import javax.annotation.Nonnull;
 
-/** Network payload for wrench overwrite confirmation responses. */
-public record WrenchOverwritePayload(
+/** Network payload for brush overwrite confirmation responses. */
+public record BrushOverwritePayload(
     BlockPos blockPos,
     boolean overwrite
 ) implements CustomPacketPayload {
     
     public static final ResourceLocation ID = new ResourceLocation("justsomeswitches", "wrench_overwrite");
     
-    public WrenchOverwritePayload(FriendlyByteBuf buf) {
+    public BrushOverwritePayload(FriendlyByteBuf buf) {
         this(
             buf.readBlockPos(),
             buf.readBoolean()
@@ -43,14 +44,14 @@ public record WrenchOverwritePayload(
     }
     
     /** Handles the payload on server side. */
-    public static void handle(WrenchOverwritePayload payload, PlayPayloadContext context) {
+    public static void handle(BrushOverwritePayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
             ServerPlayer player = (ServerPlayer) context.player().orElse(null);
             if (player == null) return;
             
             if (SecurityUtils.isRateLimited(player)) {
                 SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "WrenchOverwrite packet rate limit exceeded");
+                    "BrushOverwrite packet rate limit exceeded");
                 return;
             }
             
@@ -69,18 +70,18 @@ public record WrenchOverwritePayload(
                 return;
             }
             
-            SecurityUtils.logSecurityEvent(player, "WRENCH_OVERWRITE", blockPos, 
+            SecurityUtils.logSecurityEvent(player, "BRUSH_OVERWRITE", blockPos, 
                 "Overwrite: " + payload.overwrite());
-            ItemStack wrenchStack = null;
+            ItemStack brushStack = null;
             
             if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = player.getMainHandItem();
+                brushStack = player.getMainHandItem();
             } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-                wrenchStack = player.getOffhandItem();
+                brushStack = player.getOffhandItem();
             }
             
-            if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
-                return; // No wrench found
+            if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
+                return; // No brush found
             }
             
 
@@ -89,7 +90,7 @@ public record WrenchOverwritePayload(
             }
             
             if (payload.overwrite()) {
-                handleOverwriteConfirmed(wrench, wrenchStack, blockEntity, player);
+                handleOverwriteConfirmed(brush, brushStack, blockEntity, player);
             } else {
                 handleOverwriteCancelled(player);
             }
@@ -99,7 +100,7 @@ public record WrenchOverwritePayload(
         });
     }
     
-    private static void handleOverwriteConfirmed(SwitchTextureBrushItem wrench, ItemStack wrenchStack,
+    private static void handleOverwriteConfirmed(SwitchTextureBrushItem brush, ItemStack brushStack,
                                                SwitchBlockEntity blockEntity, ServerPlayer player) {
         if (!blockEntity.getGuiToggleItem().isEmpty()) {
             if (!player.addItem(blockEntity.getGuiToggleItem().copy())) {
@@ -124,14 +125,14 @@ public record WrenchOverwritePayload(
         blockEntity.updateTextures();
         
         NetworkHandler.sendActionBarMessage(player, "Previous Settings Removed Successfully", NetworkHandler.MessageType.SUCCESS);
-        CopyPasteService.PasteResult inventoryCheck = wrench.checkInventoryForPasteServer(wrenchStack, player);
+        CopyPasteService.PasteResult inventoryCheck = brush.checkInventoryForPasteServer(brushStack, player);
         
-        if (!inventoryCheck.success && "SHOW_MISSING_BLOCK_GUI".equals(inventoryCheck.message)) {
+        if (!inventoryCheck.success && BrushConstants.MSG_MISSING_BLOCKS_GUI.equals(inventoryCheck.message)) {
             openMissingBlockGUI(player, blockEntity.getBlockPos(), inventoryCheck.missingBlocks);
             return;
         }
         
-        CopyPasteService.PasteResult result = wrench.applySettingsFromWrenchServer(wrenchStack, blockEntity, player);
+        CopyPasteService.PasteResult result = brush.applySettingsFromBrushServer(brushStack, blockEntity, player);
         
         if (result.success) {
             NetworkHandler.sendActionBarMessage(player, result.message, NetworkHandler.MessageType.SUCCESS);

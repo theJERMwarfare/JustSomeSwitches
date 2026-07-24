@@ -798,7 +798,7 @@ public class SwitchBlockEntity extends BlockEntity {
                 baseSourceBlockState = preservedBaseSource;
             }
             // Re-analyze tint/overlay from current items (client-only BakedModel APIs)
-            // Ensures freshness after wrench paste, world reload, or any server sync
+            // Ensures freshness after brush paste, world reload, or any server sync
             if (level != null && level.isClientSide) {
                 reanalyzeClientData();
             }

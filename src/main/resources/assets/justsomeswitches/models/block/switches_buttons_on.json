@@ -1,6 +1,6 @@
 {
   "loader": "justsomeswitches:switches_loader",
-  "base_model": "justsomeswitches:custom/switchesbuttonson",
+  "base_model": "justsomeswitches:custom/switches_buttons_on",
   "texture_categories": {
     "base": {
       "default": "minecraft:block/stone",

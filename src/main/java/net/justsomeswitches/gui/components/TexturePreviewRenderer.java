@@ -3,7 +3,7 @@ package net.justsomeswitches.gui.components;
 import net.justsomeswitches.block.ISwitchBlock;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
-import net.justsomeswitches.gui.SwitchesTextureMenu;
+import net.justsomeswitches.gui.CustomizableTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -49,7 +49,7 @@ public class TexturePreviewRenderer {
     private static final org.joml.Quaternionf ROTATION_Y_NEG_215 =
         new org.joml.Quaternionf().fromAxisAngleDeg(0, 1, 0, -215f);
 
-    private final SwitchesTextureMenu menu;
+    private final CustomizableTextureMenu menu;
     private Font font;
 
     /** Cached ResourceLocation objects to avoid repeated creation. */
@@ -64,7 +64,7 @@ public class TexturePreviewRenderer {
      * @param menu the texture menu providing data
      * @param font the font for rendering text (may be null if called before Screen.init)
      */
-    public TexturePreviewRenderer(@Nonnull SwitchesTextureMenu menu, @Nullable Font font) {
+    public TexturePreviewRenderer(@Nonnull CustomizableTextureMenu menu, @Nullable Font font) {
         this.menu = menu;
         this.font = font;
     }

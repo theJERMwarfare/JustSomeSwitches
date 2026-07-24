@@ -1,5 +1,5 @@
 {
-  "parent": "justsomeswitches:custom/switchesrockeron",
+  "parent": "justsomeswitches:custom/switches_rocker_on",
   "textures": {
     "all": "minecraft:block/cobblestone",
     "particle": "minecraft:block/stone",

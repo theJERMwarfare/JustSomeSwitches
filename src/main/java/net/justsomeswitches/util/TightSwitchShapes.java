@@ -19,7 +19,7 @@ import java.util.Map;
 public final class TightSwitchShapes {
 
     /** Model type identifier for shape lookup. */
-    public enum SwitchModelType { LEVER, ROCKER, BUTTONS, SLIDE, TOUCH }
+    public enum SwitchModelType { LEVER, ROCKER, BUTTON, SLIDE, TOUCH }
 
     private static final Map<Class<? extends Block>, SwitchModelType> MODEL_TYPES = new HashMap<>();
     private static final Map<Class<? extends Block>, Boolean> INVERTED_FLAGS = new HashMap<>();
@@ -29,32 +29,32 @@ public final class TightSwitchShapes {
         MODEL_TYPES.put(BasicLeverInvertedBlock.class, SwitchModelType.LEVER);
         MODEL_TYPES.put(BasicRockerBlock.class, SwitchModelType.ROCKER);
         MODEL_TYPES.put(BasicRockerInvertedBlock.class, SwitchModelType.ROCKER);
-        MODEL_TYPES.put(BasicButtonsBlock.class, SwitchModelType.BUTTONS);
-        MODEL_TYPES.put(BasicButtonsInvertedBlock.class, SwitchModelType.BUTTONS);
+        MODEL_TYPES.put(BasicButtonBlock.class, SwitchModelType.BUTTON);
+        MODEL_TYPES.put(BasicButtonInvertedBlock.class, SwitchModelType.BUTTON);
         MODEL_TYPES.put(BasicSlideBlock.class, SwitchModelType.SLIDE);
         MODEL_TYPES.put(BasicSlideInvertedBlock.class, SwitchModelType.SLIDE);
         MODEL_TYPES.put(BasicTouchBlock.class, SwitchModelType.TOUCH);
         MODEL_TYPES.put(BasicTouchInvertedBlock.class, SwitchModelType.TOUCH);
-        MODEL_TYPES.put(SwitchesLeverBlock.class, SwitchModelType.LEVER);
-        MODEL_TYPES.put(SwitchesRockerBlock.class, SwitchModelType.ROCKER);
-        MODEL_TYPES.put(SwitchesSlideBlock.class, SwitchModelType.SLIDE);
-        MODEL_TYPES.put(SwitchesButtonsBlock.class, SwitchModelType.BUTTONS);
-        MODEL_TYPES.put(SwitchesTouchBlock.class, SwitchModelType.TOUCH);
+        MODEL_TYPES.put(CustomizableLeverBlock.class, SwitchModelType.LEVER);
+        MODEL_TYPES.put(CustomizableRockerBlock.class, SwitchModelType.ROCKER);
+        MODEL_TYPES.put(CustomizableSlideBlock.class, SwitchModelType.SLIDE);
+        MODEL_TYPES.put(CustomizableButtonBlock.class, SwitchModelType.BUTTON);
+        MODEL_TYPES.put(CustomizableTouchBlock.class, SwitchModelType.TOUCH);
         INVERTED_FLAGS.put(BasicLeverBlock.class, false);
         INVERTED_FLAGS.put(BasicLeverInvertedBlock.class, true);
         INVERTED_FLAGS.put(BasicRockerBlock.class, false);
         INVERTED_FLAGS.put(BasicRockerInvertedBlock.class, true);
-        INVERTED_FLAGS.put(BasicButtonsBlock.class, false);
-        INVERTED_FLAGS.put(BasicButtonsInvertedBlock.class, true);
+        INVERTED_FLAGS.put(BasicButtonBlock.class, false);
+        INVERTED_FLAGS.put(BasicButtonInvertedBlock.class, true);
         INVERTED_FLAGS.put(BasicSlideBlock.class, false);
         INVERTED_FLAGS.put(BasicSlideInvertedBlock.class, true);
         INVERTED_FLAGS.put(BasicTouchBlock.class, false);
         INVERTED_FLAGS.put(BasicTouchInvertedBlock.class, true);
-        INVERTED_FLAGS.put(SwitchesLeverBlock.class, false);
-        INVERTED_FLAGS.put(SwitchesRockerBlock.class, false);
-        INVERTED_FLAGS.put(SwitchesSlideBlock.class, false);
-        INVERTED_FLAGS.put(SwitchesButtonsBlock.class, false);
-        INVERTED_FLAGS.put(SwitchesTouchBlock.class, false);
+        INVERTED_FLAGS.put(CustomizableLeverBlock.class, false);
+        INVERTED_FLAGS.put(CustomizableRockerBlock.class, false);
+        INVERTED_FLAGS.put(CustomizableSlideBlock.class, false);
+        INVERTED_FLAGS.put(CustomizableButtonBlock.class, false);
+        INVERTED_FLAGS.put(CustomizableTouchBlock.class, false);
     }
 
     // ========================================================================
@@ -90,8 +90,8 @@ public final class TightSwitchShapes {
         Block.box(7, 2, 8, 9, 2.2, 10)
     );
 
-    // --- BUTTONS OFF ---
-    private static final VoxelShape BUTTONS_OFF_BASE = Shapes.or(
+    // --- BUTTON OFF ---
+    private static final VoxelShape BUTTON_OFF_BASE = Shapes.or(
         Block.box(5, 0, 3, 11, 2, 13),
         Block.box(6.5, 1.2, 4.5, 9.5, 2.2, 7.5),
         Block.box(6.5, 1.2, 8.5, 9.5, 2.2, 11.5),
@@ -99,8 +99,8 @@ public final class TightSwitchShapes {
         Block.box(7, 1.3, 5, 9, 2.3, 7)
     );
 
-    // --- BUTTONS ON ---
-    private static final VoxelShape BUTTONS_ON_BASE = Shapes.or(
+    // --- BUTTON ON ---
+    private static final VoxelShape BUTTON_ON_BASE = Shapes.or(
         Block.box(5, 0, 3, 11, 2, 13),
         Block.box(6.5, 1.2, 4.5, 9.5, 2.2, 7.5),
         Block.box(6.5, 1.2, 8.5, 9.5, 2.2, 11.5),
@@ -497,7 +497,7 @@ public final class TightSwitchShapes {
     private static VoxelShape getBaseShape(SwitchModelType type, boolean powered) {
         return switch (type) {
             case LEVER -> powered ? LEVER_ON_BASE : LEVER_OFF_BASE;
-            case BUTTONS -> powered ? BUTTONS_ON_BASE : BUTTONS_OFF_BASE;
+            case BUTTON -> powered ? BUTTON_ON_BASE : BUTTON_OFF_BASE;
             case ROCKER -> powered ? ROCKER_ON_BASE : ROCKER_OFF_BASE;
             case SLIDE -> powered ? SLIDE_ON_BASE : SLIDE_OFF_BASE;
             case TOUCH -> TOUCH_BASE;

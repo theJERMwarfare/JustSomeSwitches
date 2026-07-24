@@ -3,9 +3,9 @@ package net.justsomeswitches.util;
 /**
  * Constants for the copy/paste functionality
  */
-public final class WrenchConstants {
+public final class BrushConstants {
     
-    private WrenchConstants() {
+    private BrushConstants() {
         // Utility class
     }
     
@@ -36,6 +36,4 @@ public final class WrenchConstants {
     
     public static final String CATEGORY_TOGGLE = "Toggle";
     public static final String CATEGORY_BASE = "Base";
-    
-    public static final String NETWORK_PROTOCOL_VERSION = "1";
 }

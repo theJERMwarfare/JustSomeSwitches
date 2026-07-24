@@ -205,7 +205,6 @@ public class GhostWorldRenderer {
                 return true;
             }
             if (textureName.contains("redstone_block") ||
-                textureName.contains("switches_lever_powered") ||
                 textureName.contains("lever_on") ||
                 (textureName.contains("lever") && textureName.contains("on"))) {
                 return true;

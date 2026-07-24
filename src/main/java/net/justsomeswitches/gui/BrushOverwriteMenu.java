@@ -9,18 +9,18 @@ import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nonnull;
 
-/** Container menu for wrench overwrite confirmation GUI. */
-public class WrenchOverwriteMenu extends AbstractContainerMenu {
+/** Container menu for brush overwrite confirmation GUI. */
+public class BrushOverwriteMenu extends AbstractContainerMenu {
     
     private final BlockPos blockPos;
     
-    public WrenchOverwriteMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos) {
-        super(JustSomeSwitchesMenuTypes.WRENCH_OVERWRITE.get(), containerId);
+    public BrushOverwriteMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos) {
+        super(JustSomeSwitchesMenuTypes.BRUSH_OVERWRITE.get(), containerId);
         this.blockPos = blockPos;
     }
     
     @SuppressWarnings("unused") // Required for network registration
-    public WrenchOverwriteMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+    public BrushOverwriteMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory, buf.readBlockPos());
     }
     

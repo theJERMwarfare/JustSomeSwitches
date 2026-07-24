@@ -17,13 +17,13 @@ public class SwitchesConfigScreen extends Screen {
     /** Initial config values for change detection. */
     private boolean initialGhostPreview;
     private Boolean initialAllowBlockEntities;
-    private Boolean initialDisableWrenchBreak;
+    private Boolean initialDisableBrushBreak;
     private boolean initialTightHitboxesBasic;
     private boolean initialTightHitboxesSwitches;
     /** Current config values (nullable when server config unavailable). */
     private boolean ghostPreview;
     private Boolean allowBlockEntities;
-    private Boolean disableWrenchBreak;
+    private Boolean disableBrushBreak;
     private boolean tightHitboxesBasic;
     private boolean tightHitboxesSwitches;
     /** Tracks if server config is available (requires world loaded). */
@@ -49,14 +49,14 @@ public class SwitchesConfigScreen extends Screen {
         try {
             initialAllowBlockEntities = SwitchesServerConfig.ALLOW_BLOCK_ENTITIES.get();
             allowBlockEntities = initialAllowBlockEntities;
-            initialDisableWrenchBreak = SwitchesServerConfig.DISABLE_BRUSH_INSTANT_BREAK.get();
-            disableWrenchBreak = initialDisableWrenchBreak;
+            initialDisableBrushBreak = SwitchesServerConfig.DISABLE_BRUSH_INSTANT_BREAK.get();
+            disableBrushBreak = initialDisableBrushBreak;
             serverConfigAvailable = true;
         } catch (Exception e) {
             initialAllowBlockEntities = null;
             allowBlockEntities = null;
-            initialDisableWrenchBreak = null;
-            disableWrenchBreak = null;
+            initialDisableBrushBreak = null;
+            disableBrushBreak = null;
             serverConfigAvailable = false;
         }
         // Common config (always available)
@@ -103,14 +103,14 @@ public class SwitchesConfigScreen extends Screen {
                 "WARNING: May crash with some modded blocks!", 0xFF5555));
             optionsList.addEntry(new ConfigOptionsList.ButtonEntry(new ExtendedButton(
                 0, 0, 200, 20,
-                getDisableWrenchBreakButtonText(),
+                getBrushInstantBreakButtonText(),
                 button -> {
-                    disableWrenchBreak = !disableWrenchBreak;
-                    button.setMessage(getDisableWrenchBreakButtonText());
+                    disableBrushBreak = !disableBrushBreak;
+                    button.setMessage(getBrushInstantBreakButtonText());
                 }
             )));
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
-                "Prevents instant brush breaking on servers", 0xAAAAAA));
+                "Turn OFF to prevent instant breaking on servers", 0xAAAAAA));
         } else {
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
                 "Server settings are only available when in a world", 0xFFAA00));
@@ -163,11 +163,12 @@ public class SwitchesConfigScreen extends Screen {
         return Component.literal("Allow BlockEntities: " + (allowBlockEntities ? "ON" : "OFF"));
     }
 
-    private Component getDisableWrenchBreakButtonText() {
-        if (disableWrenchBreak == null) {
-            return Component.literal("Disable Brush Break: UNAVAILABLE");
+    /** Label shows the resulting behavior, not the raw config flag, which is negative. */
+    private Component getBrushInstantBreakButtonText() {
+        if (disableBrushBreak == null) {
+            return Component.literal("Brush Instant Break: UNAVAILABLE");
         }
-        return Component.literal("Disable Brush Break: " + (disableWrenchBreak ? "ON" : "OFF"));
+        return Component.literal("Brush Instant Break: " + (disableBrushBreak ? "OFF" : "ON"));
     }
 
     private Component getTightHitboxesBasicButtonText() {
@@ -201,9 +202,9 @@ public class SwitchesConfigScreen extends Screen {
                 SwitchesServerConfig.ALLOW_BLOCK_ENTITIES.set(allowBlockEntities);
                 serverChanged = true;
             }
-            if (disableWrenchBreak != null && initialDisableWrenchBreak != null
-                    && !disableWrenchBreak.equals(initialDisableWrenchBreak)) {
-                SwitchesServerConfig.DISABLE_BRUSH_INSTANT_BREAK.set(disableWrenchBreak);
+            if (disableBrushBreak != null && initialDisableBrushBreak != null
+                    && !disableBrushBreak.equals(initialDisableBrushBreak)) {
+                SwitchesServerConfig.DISABLE_BRUSH_INSTANT_BREAK.set(disableBrushBreak);
                 serverChanged = true;
             }
             if (serverChanged) {

@@ -1,5 +1,5 @@
 {
-  "parent": "justsomeswitches:custom/switchesleverinverted",
+  "parent": "justsomeswitches:custom/switches_lever_inverted",
   "textures": {
     "all": "minecraft:block/cobblestone",
     "particle": "minecraft:block/stone",
