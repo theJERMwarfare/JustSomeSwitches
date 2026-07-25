@@ -2,7 +2,6 @@ package net.justsomeswitches.client.model;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -25,6 +24,9 @@ import java.util.List;
 /** World rendering system for ghost block previews during translucent stage. */
 @Mod.EventBusSubscriber(modid = "justsomeswitches", bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class GhostWorldRenderer {
+
+    /** Reusable RNG for ghost quad generation - reseeded per block; ghost rendering is render-thread only. */
+    private static final RandomSource GHOST_RANDOM = RandomSource.create();
 
     /** Renders a quad with manual alpha transparency using white color with ghost alpha. */
     private static void renderQuadWithAlpha(@Nonnull VertexConsumer buffer,
@@ -89,7 +91,6 @@ public class GhostWorldRenderer {
         renderGhostBlock(
             ghostPos,
             ghostState,
-            detector.getCurrentWallOrientation(),
             poseStack,
             bufferSource,
             blockRenderer,
@@ -101,7 +102,6 @@ public class GhostWorldRenderer {
     /** Renders a single ghost block at the specified position. */
     private static void renderGhostBlock(@Nonnull BlockPos pos,
                                         @Nonnull BlockState state,
-                                        @Nonnull String wallOrientation,
                                         @Nonnull PoseStack poseStack,
                                         @Nonnull MultiBufferSource bufferSource,
                                         @Nonnull BlockRenderDispatcher blockRenderer,
@@ -127,7 +127,7 @@ public class GhostWorldRenderer {
             com.mojang.blaze3d.systems.RenderSystem.depthMask(false);
             ModelData ghostModelData = GhostModelDataProvider.getInstance().getGhostModelData(pos);
             if (ghostModelData == null) {
-                ghostModelData = createGhostModelData(state, wallOrientation);
+                return;
             }
             RenderType renderType = RenderType.translucent();
             BakedModel model = blockRenderer.getBlockModel(state);
@@ -170,7 +170,7 @@ public class GhostWorldRenderer {
                                               @Nonnull PoseStack poseStack,
                                               @Nonnull MultiBufferSource bufferSource) {
         var buffer = bufferSource.getBuffer(renderType);
-        RandomSource random = RandomSource.create();
+        RandomSource random = GHOST_RANDOM;
         random.setSeed(state.getSeed(pos));
         int packedLight = calculateGhostLightLevel(pos);
         int packedOverlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
@@ -205,7 +205,6 @@ public class GhostWorldRenderer {
                 return true;
             }
             if (textureName.contains("redstone_block") ||
-                textureName.contains("lever_on") ||
                 (textureName.contains("lever") && textureName.contains("on"))) {
                 return true;
             }
@@ -235,7 +234,7 @@ public class GhostWorldRenderer {
                                                @Nonnull PoseStack poseStack,
                                                @Nonnull MultiBufferSource bufferSource) {
         var buffer = bufferSource.getBuffer(renderType);
-        RandomSource random = RandomSource.create();
+        RandomSource random = GHOST_RANDOM;
         random.setSeed(state.getSeed(pos));
         int packedLight = calculateGhostLightLevel(pos);
         int packedOverlay = net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY;
@@ -254,16 +253,5 @@ public class GhostWorldRenderer {
                 renderQuadWithAlpha(buffer, poseStack, quad, alpha, packedLight, packedOverlay);
             }
         }
-    }
-
-    /** Creates ghost ModelData for rendering. */
-    @Nonnull
-    private static ModelData createGhostModelData(@Nonnull BlockState state, @Nonnull String wallOrientation) {
-        return ModelData.builder()
-                .with(SwitchBlockEntity.GHOST_MODE, true)
-                .with(SwitchBlockEntity.GHOST_ALPHA, 0.75f)
-                .with(SwitchBlockEntity.GHOST_STATE, state)
-                .with(SwitchBlockEntity.WALL_ORIENTATION, wallOrientation)
-                .build();
     }
 }

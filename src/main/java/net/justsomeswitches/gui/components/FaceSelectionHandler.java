@@ -1,13 +1,11 @@
 package net.justsomeswitches.gui.components;
 
-import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.FaceSelectionData;
 import net.justsomeswitches.gui.CustomizableTextureMenu;
 import net.justsomeswitches.util.TextureRotation;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nonnull;
-import java.util.Objects;
 
 /**
  * Handles face selection state management including state tracking,
@@ -20,9 +18,6 @@ public class FaceSelectionHandler {
     private FaceSelectionData.RawTextureSelection rightTextureSelection = FaceSelectionData.RawTextureSelection.createDisabled();
     private ItemStack previousLeftItem = ItemStack.EMPTY;
     private ItemStack previousRightItem = ItemStack.EMPTY;
-    private String previousBaseTexture = null;
-    private String previousToggleTexture = null;
-    private SwitchBlockEntity.PowerMode previousPowerMode = null;
     /**
      * Creates a new face selection handler.
      */
@@ -32,8 +27,8 @@ public class FaceSelectionHandler {
     }
     /**
      * Updates face selection state with change detection.
-    * Detects block changes, updates selection state, triggers cleanup, and tracks texture changes.
-    */
+     * Detects block changes, updates selection state, and triggers cleanup on removal.
+     */
     public void updateUIState() {
         FaceSelectionData.RawTextureSelection newLeftSelection = menu.getToggleTextureSelection();
         FaceSelectionData.RawTextureSelection newRightSelection = menu.getBaseTextureSelection();
@@ -53,15 +48,6 @@ public class FaceSelectionHandler {
         }
         leftTextureSelection = newLeftSelection;
         rightTextureSelection = newRightSelection;
-        if (!Objects.equals(previousBaseTexture, rightTextureSelection.previewTexture())) {
-            previousBaseTexture = rightTextureSelection.previewTexture();
-        }
-        if (!Objects.equals(previousToggleTexture, leftTextureSelection.previewTexture())) {
-            previousToggleTexture = leftTextureSelection.previewTexture();
-        }
-        if (previousPowerMode != menu.getPowerMode()) {
-            previousPowerMode = menu.getPowerMode();
-        }
     }
     /**
      * Handles cleanup when texture block is removed (closes dropdowns, resets selection).

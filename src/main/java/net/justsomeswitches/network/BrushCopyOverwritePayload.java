@@ -44,43 +44,19 @@ public record BrushCopyOverwritePayload(
     /** Handles the payload on server side. */
     public static void handle(BrushCopyOverwritePayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
-            ServerPlayer player = (ServerPlayer) context.player().orElse(null);
+            ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "BrushCopyOverwrite");
             if (player == null) return;
-            
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "BrushCopyOverwrite packet rate limit exceeded");
-                return;
-            }
-            
-            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
-                    "Invalid block position: " + payload.blockPos());
-                return;
-            }
-            
+
             Level level = player.level();
             BlockPos blockPos = payload.blockPos();
-            
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
-                    "Player cannot interact with block at: " + blockPos);
-                return;
-            }
-            
-            SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_OVERWRITE", blockPos, 
+
+            SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_OVERWRITE", blockPos,
                 "Overwrite: " + payload.overwrite());
-            ItemStack brushStack = null;
-            
-            if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = player.getMainHandItem();
-            } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = player.getOffhandItem();
-            }
-            
-            if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
+            ItemStack brushStack = SwitchTextureBrushItem.findBrushInHands(player);
+            if (brushStack == null) {
                 return; // No brush found
             }
+            SwitchTextureBrushItem brush = (SwitchTextureBrushItem) brushStack.getItem();
             
 
             if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
@@ -102,31 +78,11 @@ public record BrushCopyOverwritePayload(
                                                    @SuppressWarnings("unused") SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
         brush.clearAllSettingsServer(brushStack);
         NetworkHandler.sendActionBarMessage(player, "Previous Texture Settings Cleared", NetworkHandler.MessageType.SUCCESS);
-        openCopyTextureGUI(player, blockPos);
+        NetworkHandler.openCopyTextureGUI(player, blockPos);
     }
     
     private static void handleCopyOverwriteCancelled(ServerPlayer player) {
 
         NetworkHandler.sendActionBarMessage(player, "New Texture Settings Not Copied, Previous Texture Settings Retained", NetworkHandler.MessageType.INFO);
-    }
-    
-    /** Opens the copy texture settings GUI. */
-    private static void openCopyTextureGUI(ServerPlayer player, BlockPos blockPos) {
-        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
-            @Override
-            @Nonnull
-            public net.minecraft.network.chat.Component getDisplayName() {
-                return net.minecraft.network.chat.Component.literal("Copy Texture Settings");
-            }
-
-            @Override
-            @javax.annotation.Nonnull
-            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId, @javax.annotation.Nonnull net.minecraft.world.entity.player.Inventory playerInventory, @javax.annotation.Nonnull net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.BrushCopyMenu(containerId, playerInventory, blockPos);
-            }
-        };
-
-
-        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
 }

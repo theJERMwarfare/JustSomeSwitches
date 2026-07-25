@@ -50,49 +50,22 @@ public record BrushMissingBlockPayload(
      */
     public static void handle(BrushMissingBlockPayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
-            ServerPlayer player = (ServerPlayer) context.player().orElse(null);
+            ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "BrushMissingBlock");
             if (player == null) return;
-            
-            // Security validation - Rate limiting
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "BrushMissingBlock packet rate limit exceeded");
-                return;
-            }
-            
-            // Security validation - Block position bounds
-            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
-                    "Invalid block position: " + payload.blockPos());
-                return;
-            }
-            
+
             Level level = player.level();
             BlockPos blockPos = payload.blockPos();
-            
-            // Security validation - Player permissions
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
-                    "Player cannot interact with block at: " + blockPos);
-                return;
-            }
-            
+
             // Log security event for audit
             SecurityUtils.logSecurityEvent(player, "BRUSH_MISSING_BLOCK", blockPos, 
                 "Apply: " + payload.apply());
             
             // Find the brush in player's hands
-            ItemStack brushStack = null;
-            
-            if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = player.getMainHandItem();
-            } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-                brushStack = player.getOffhandItem();
-            }
-            
-            if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
+            ItemStack brushStack = SwitchTextureBrushItem.findBrushInHands(player);
+            if (brushStack == null) {
                 return; // No brush found
             }
+            SwitchTextureBrushItem brush = (SwitchTextureBrushItem) brushStack.getItem();
             
             // Verify the block is still a switch
             if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {

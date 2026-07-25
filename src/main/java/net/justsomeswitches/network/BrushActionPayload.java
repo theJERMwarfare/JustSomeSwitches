@@ -55,26 +55,11 @@ public record BrushActionPayload(
     /** Handles the payload on the server side. */
     public static void handle(BrushActionPayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
-            ServerPlayer player = (ServerPlayer) context.player().orElse(null);
+            ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "BrushAction");
             if (player == null) return;
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "BrushAction packet rate limit exceeded");
-                return;
-            }
-            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
-                    "Invalid block position: " + payload.blockPos());
-                return;
-            }
             Level level = player.level();
             BlockPos blockPos = payload.blockPos();
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
-                    "Player cannot interact with block at: " + blockPos);
-                return;
-            }
-            SecurityUtils.logSecurityEvent(player, "BRUSH_ACTION", blockPos, 
+            SecurityUtils.logSecurityEvent(player, "BRUSH_ACTION", blockPos,
                 "Action: " + payload.action() + ", Hand: " + payload.hand());
             ItemStack stack = player.getItemInHand(payload.hand());
             if (!(stack.getItem() instanceof SwitchTextureBrushItem brush)) {
@@ -113,14 +98,14 @@ public record BrushActionPayload(
         }
         // Check if target block already has custom settings
         if (blockEntity.hasCustomTextures()) {
-            openOverwriteConfirmationGUI(player, blockEntity.getBlockPos());
+            NetworkHandler.openOverwriteConfirmationGUI(player, blockEntity.getBlockPos());
             return;
         }
         // Apply settings directly
         CopyPasteService.PasteResult result = brush.applySettingsFromBrushServer(stack, blockEntity, player);
         // Check if missing blocks GUI should be shown
         if (!result.success && BrushConstants.MSG_MISSING_BLOCKS_GUI.equals(result.message)) {
-            openMissingBlockGUI(player, blockPos, result.missingBlocks);
+            NetworkHandler.openMissingBlockGUI(player, blockPos, result.missingBlocks);
             return;
         }
         if (result.success) {
@@ -130,32 +115,4 @@ public record BrushActionPayload(
         }
     }
     
-    /** Opens the missing block GUI for the player. */
-    private static void openMissingBlockGUI(ServerPlayer player, BlockPos blockPos, java.util.List<String> missingBlocks) {
-        NetworkHandler.openMissingBlockGUI(player, blockPos, missingBlocks);
-    }
-    
-    /** Opens the overwrite confirmation GUI for the player. */
-    private static void openOverwriteConfirmationGUI(ServerPlayer player, BlockPos blockPos) {
-        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
-            @Override
-            @javax.annotation.Nonnull
-            public net.minecraft.network.chat.Component getDisplayName() {
-                return net.minecraft.network.chat.Component.literal("Settings Already Stored");
-            }
-
-            @Override
-            @SuppressWarnings("NullableProblems") // MenuProvider interface contract
-            @javax.annotation.Nullable
-            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId, 
-                                                                                 net.minecraft.world.entity.player.Inventory playerInventory, 
-                                                                                 net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.BrushOverwriteMenu(containerId, playerInventory, blockPos);
-            }
-        };
-
-        // Open the menu with block position data
-        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
-    }
-
 }

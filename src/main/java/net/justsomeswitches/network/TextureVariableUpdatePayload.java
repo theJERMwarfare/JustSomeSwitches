@@ -34,9 +34,9 @@ public record TextureVariableUpdatePayload(
     public TextureVariableUpdatePayload(FriendlyByteBuf buf) {
         this(
             buf.readBlockPos(),
-            buf.readUtf(),
-            buf.readUtf(),
-            buf.readUtf()
+            buf.readUtf(SecurityUtils.getMaxStringLength()),
+            buf.readUtf(SecurityUtils.getMaxStringLength()),
+            buf.readUtf(SecurityUtils.getMaxTexturePathLength())
         );
     }
     
@@ -56,27 +56,11 @@ public record TextureVariableUpdatePayload(
     
     public static void handle(TextureVariableUpdatePayload payload, PlayPayloadContext context) {
         context.workHandler().submitAsync(() -> {
-            ServerPlayer player = (ServerPlayer) context.player().orElse(null);
+            ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "TextureVariableUpdate");
             if (player == null) {
                 return;
             }
-            
-            if (SecurityUtils.isRateLimited(player)) {
-                SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED", 
-                    "TextureVariableUpdate packet rate limit exceeded");
-                return;
-            }
-            if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES", 
-                    "Invalid block position: " + payload.blockPos());
-                return;
-            }
             Level level = player.level();
-            if (!SecurityUtils.canPlayerInteractWithBlock(player, level, payload.blockPos())) {
-                SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS", 
-                    "Player cannot interact with block at: " + payload.blockPos());
-                return;
-            }
             if (!SecurityUtils.isValidCategory(payload.category())) {
                 SecurityUtils.logSecurityViolation(player, "INVALID_CATEGORY", 
                     "Invalid category: " + payload.category());

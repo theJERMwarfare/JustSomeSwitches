@@ -240,6 +240,8 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     private final Map<TextureAtlasSprite, String> spriteNameCache = new ConcurrentHashMap<>();
     /** Cached ResourceLocation objects to reduce allocations. Thread-safe for concurrent rendering. */
     private final Map<String, ResourceLocation> resourceLocationCache = new ConcurrentHashMap<>();
+    /** Cached path->sprite resolutions to avoid repeated linear scans. Thread-safe for concurrent rendering. */
+    private final Map<String, TextureAtlasSprite> textureSpriteCache = new ConcurrentHashMap<>();
 
     // Cache performance tracking
     private static final java.util.concurrent.atomic.AtomicInteger cacheOperations = 
@@ -435,19 +437,13 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
 
 
     private void cacheGeneratedQuads(@Nonnull ModelCacheKey key, @Nonnull List<BakedQuad> quads) {
-        if (isCommonConfiguration(key)) {
-            // Check cache size before adding
-            if (GLOBAL_CACHE.size() >= MAX_CACHE_SIZE) {
-                performLRUEviction();
-            }
-            GLOBAL_CACHE.put(key, new CacheEntry(quads));
+        // Cache every configuration - the ModelCacheKey already distinguishes textures/orientation/rotation/
+        // etc., and the MAX_CACHE_SIZE LRU bounds memory. (Previously wall-mounted custom switches with a
+        // non-center orientation were excluded and regenerated on every chunk rebuild.)
+        if (GLOBAL_CACHE.size() >= MAX_CACHE_SIZE) {
+            performLRUEviction();
         }
-    }
-
-
-    private boolean isCommonConfiguration(@Nonnull ModelCacheKey key) {
-
-        return key.isDefaultTextures() || "center".equals(key.getWallOrientation());
+        GLOBAL_CACHE.put(key, new CacheEntry(quads));
     }
 
     /**
@@ -1303,14 +1299,30 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
     }
     
     /**
-     * Gets texture sprite from path string.
+     * Gets texture sprite from path string, caching resolved sprites per path.
      */
-    @SuppressWarnings("resource") // SpriteContents owned by atlas, not our responsibility to close
     @Nullable
     private TextureAtlasSprite getTextureSprite(@Nullable String texturePath) {
         if (texturePath == null || texturePath.isEmpty()) {
             return null;
         }
+        TextureAtlasSprite cached = textureSpriteCache.get(texturePath);
+        if (cached != null) {
+            return cached;
+        }
+        TextureAtlasSprite resolved = resolveTextureSprite(texturePath);
+        if (resolved != null) {
+            textureSpriteCache.put(texturePath, resolved);
+        }
+        return resolved;
+    }
+
+    /**
+     * Resolves a texture sprite from a path string (model sprites first, then atlas).
+     */
+    @SuppressWarnings("resource") // SpriteContents owned by atlas, not our responsibility to close
+    @Nullable
+    private TextureAtlasSprite resolveTextureSprite(@Nonnull String texturePath) {
         try {
             ResourceLocation textureLocation = getCachedResourceLocation(texturePath);
             // Check model's own texture sprites first (fast path)
@@ -1654,24 +1666,6 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         
         private boolean isGhostMode() {
             return ((stateFlags >> GHOST_MODE_SHIFT) & 1) == 1;
-        }
-
-        public boolean isDefaultTextures() {
-            // Check if using default texture IDs (0 = null/default)
-            boolean defaultTextures = (toggleTextureId == 0 || toggleTextureId == getTextureId(SwitchBlockEntity.DEFAULT_TOGGLE_TEXTURE)) &&
-                                     (baseTextureId == 0 || baseTextureId == getTextureId(SwitchBlockEntity.DEFAULT_BASE_TEXTURE));
-            
-            // Check if using default flags (all 0 = defaults)
-            int powerMode = (stateFlags >> POWER_MODE_SHIFT) & 0b111;
-            int baseRotation = (stateFlags >> BASE_ROTATION_SHIFT) & 0b111;
-            int toggleRotation = (stateFlags >> TOGGLE_ROTATION_SHIFT) & 0b111;
-
-            return defaultTextures && powerMode == 0 && baseRotation == 0 && toggleRotation == 0;
-        }
-
-        @Nullable
-        public String getWallOrientation() {
-            return decodeWallOrientation();
         }
 
         @Override
