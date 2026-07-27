@@ -19,7 +19,7 @@ import java.util.Map;
 /**
  * Validates blocks for switch texture customization using hybrid tag + property system.
  * Priority: blocked tag → allowed tag → standard building tags → property checks.
- * Emissive blocks (Sea Lantern, Glowstone) allowed — texture applied at switch brightness only.
+ * Emissive blocks (Sea Lantern, Glowstone) allowed - texture applied at switch brightness only.
  */
 public class SwitchesBlockValidator {
     private static final Map<Block, Boolean> VALIDATION_CACHE = new HashMap<>();

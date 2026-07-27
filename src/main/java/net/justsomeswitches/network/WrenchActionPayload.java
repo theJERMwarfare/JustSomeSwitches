@@ -1,7 +1,7 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
-import net.justsomeswitches.item.SwitchesWrenchItem;
+import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
@@ -71,7 +71,7 @@ public record WrenchActionPayload(
         SecurityUtils.logSecurityEvent(player, "WRENCH_ACTION", blockPos,
             "Action: " + payload.action() + ", Hand: " + payload.hand());
         ItemStack stack = player.getItemInHand(payload.hand());
-        if (!(stack.getItem() instanceof SwitchesWrenchItem wrench)) {
+        if (!(stack.getItem() instanceof SwitchTextureBrushItem wrench)) {
             return;
         }
         if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
@@ -84,12 +84,12 @@ public record WrenchActionPayload(
         player.inventoryMenu.broadcastChanges();
     }
     @SuppressWarnings("unused") // Parameters kept for API consistency
-    private static void handleCopyAction(SwitchesWrenchItem wrench, ItemStack stack,
+    private static void handleCopyAction(SwitchTextureBrushItem wrench, ItemStack stack,
                                        SwitchBlockEntity blockEntity, ServerPlayer player) {
         NetworkHandler.sendActionBarMessage(player, "Use Copy GUI for copying settings", NetworkHandler.MessageType.INFO);
     }
     @SuppressWarnings("resource") // Level lifecycle managed by Minecraft
-    private static void handlePasteAction(SwitchesWrenchItem wrench, ItemStack stack,
+    private static void handlePasteAction(SwitchTextureBrushItem wrench, ItemStack stack,
                                         SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
         if (!wrench.hasCopiedSettingsServer(stack)) {
             return;

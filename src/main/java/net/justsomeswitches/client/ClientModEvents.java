@@ -24,7 +24,8 @@ public class ClientModEvents {
             JustSomeSwitchesModBlocks.SWITCHES_LEVER.get(),
             JustSomeSwitchesModBlocks.SWITCHES_ROCKER.get(),
             JustSomeSwitchesModBlocks.SWITCHES_SLIDE.get(),
-            JustSomeSwitchesModBlocks.SWITCHES_BUTTONS.get()
+            JustSomeSwitchesModBlocks.SWITCHES_BUTTONS.get(),
+            JustSomeSwitchesModBlocks.SWITCHES_TOUCH.get()
         );
         
         JustSomeSwitchesMod.LOGGER.info("Block color handlers registered for switches");

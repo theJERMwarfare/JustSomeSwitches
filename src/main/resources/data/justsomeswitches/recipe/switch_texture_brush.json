@@ -1,23 +1,23 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
+    "F  ",
     " I ",
-    "IS ",
-    "  D"
+    "  R"
   ],
   "key": {
+    "F": {
+      "tag": "c:feathers"
+    },
     "I": {
       "item": "minecraft:iron_ingot"
     },
-    "S": {
+    "R": {
       "tag": "c:rods/wooden"
-    },
-    "D": {
-      "tag": "c:dyes"
     }
   },
   "result": {
     "count": 1,
-    "id": "justsomeswitches:switches_wrench"
+    "id": "justsomeswitches:switch_texture_brush"
   }
 }

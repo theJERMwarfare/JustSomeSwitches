@@ -1,7 +1,0 @@
-{
-  "parent": "justsomeswitches:custom/switcheswrench",
-  "textures": {
-    "wrench": "justsomeswitches:item/switches_wrench",
-    "particle": "justsomeswitches:item/switches_wrench"
-  }
-}

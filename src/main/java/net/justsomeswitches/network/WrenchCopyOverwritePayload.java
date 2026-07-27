@@ -1,7 +1,7 @@
 package net.justsomeswitches.network;
 
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
-import net.justsomeswitches.item.SwitchesWrenchItem;
+import net.justsomeswitches.item.SwitchTextureBrushItem;
 import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -58,12 +58,12 @@ public record WrenchCopyOverwritePayload(
         SecurityUtils.logSecurityEvent(player, "WRENCH_COPY_OVERWRITE", blockPos,
             "Overwrite: " + payload.overwrite());
         ItemStack wrenchStack = null;
-        if (player.getMainHandItem().getItem() instanceof SwitchesWrenchItem) {
+        if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
             wrenchStack = player.getMainHandItem();
-        } else if (player.getOffhandItem().getItem() instanceof SwitchesWrenchItem) {
+        } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
             wrenchStack = player.getOffhandItem();
         }
-        if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchesWrenchItem wrench)) {
+        if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
             return; // No wrench found
         }
         if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
@@ -76,7 +76,7 @@ public record WrenchCopyOverwritePayload(
         }
         player.inventoryMenu.broadcastChanges();
     }
-    private static void handleCopyOverwriteConfirmed(SwitchesWrenchItem wrench, ItemStack wrenchStack,
+    private static void handleCopyOverwriteConfirmed(SwitchTextureBrushItem wrench, ItemStack wrenchStack,
                                                    @SuppressWarnings("unused") SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
         wrench.clearAllSettingsServer(wrenchStack);
         NetworkHandler.sendActionBarMessage(player, "Previous Texture Settings Cleared", NetworkHandler.MessageType.SUCCESS);

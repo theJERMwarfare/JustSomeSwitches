@@ -54,7 +54,7 @@ public class WrenchCopyOverwriteScreen extends AbstractContainerScreen<WrenchCop
         
         graphics.pose().pushPose();
         graphics.pose().scale(0.7f, 0.7f, 1.0f);
-        Component questionText = Component.literal("Copy new texture settings to wrench?");
+        Component questionText = Component.literal("Copy new texture settings to brush?");
         int questionWidth = font.width(questionText);
         int questionX = (int)((imageWidth - questionWidth * 0.7f) / 2 / 0.7f);
         graphics.drawString(font, questionText, questionX + 1, (int)((32 + 1) / 0.7f), 0xFF555555, false);

@@ -35,6 +35,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
     private final String baseModelLocation;
     private final int toggleRotationCompensation;
     private final boolean isSlideModel;
+    private final boolean isTouchModel;
 
     public SwitchesGeometry(@Nonnull Map<String, String> baseTextures,
                          @Nonnull Map<String, String> toggleTextures,
@@ -44,7 +45,8 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
                          @Nonnull SwitchesGeometryLoader.PowerModeConfig powerModeConfig,
                          @Nonnull String baseModelLocation,
                          int toggleRotationCompensation,
-                         boolean isSlideModel) {
+                         boolean isSlideModel,
+                         boolean isTouchModel) {
         this.baseTextures = new HashMap<>(baseTextures);
         this.toggleTextures = new HashMap<>(toggleTextures);
         this.powerTextures = new HashMap<>(powerTextures);
@@ -54,6 +56,7 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
         this.baseModelLocation = baseModelLocation;
         this.toggleRotationCompensation = toggleRotationCompensation;
         this.isSlideModel = isSlideModel;
+        this.isTouchModel = isTouchModel;
     }
 
     @Override
@@ -74,7 +77,8 @@ public class SwitchesGeometry implements IUnbakedGeometry<SwitchesGeometry> {
                 baseCustomModel,
                 overrides,
                 toggleRotationCompensation,
-                isSlideModel
+                isSlideModel,
+                isTouchModel
         );
     }
 
