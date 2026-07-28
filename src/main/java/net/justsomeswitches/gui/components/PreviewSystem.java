@@ -7,13 +7,13 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
-import net.justsomeswitches.gui.WrenchCopyMenu;
+import net.justsomeswitches.gui.BrushCopyMenu;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Handles all preview rendering for the Wrench Copy GUI.
+ * Handles all preview rendering for the Brush Copy GUI.
  */
 public class PreviewSystem {
     private static final int PREVIEW_SIZE = 20;
@@ -21,7 +21,7 @@ public class PreviewSystem {
     /** Draws preview for the setting (matching texture customization GUI). */
     @SuppressWarnings("SameParameterValue") // Index used for different preview types
     public void drawPreview(@Nonnull GuiGraphics graphics, int x, int y, int index, 
-                           @Nonnull WrenchCopyMenu menu, @Nonnull Font font) {
+                           @Nonnull BrushCopyMenu menu, @Nonnull Font font) {
         switch (index) {
             case 0: // Toggle Block
                 drawBlockItemPreview(graphics, x, y, menu.getToggleBlockItemStack(), font);
@@ -68,7 +68,7 @@ public class PreviewSystem {
     }
     /** Draws face texture preview (matching SwitchTextureScreen style). */
     private void drawFaceTexturePreview(@Nonnull GuiGraphics graphics, int x, int y, boolean isToggle, 
-                                       @Nonnull WrenchCopyMenu menu, @Nonnull Font font) {
+                                       @Nonnull BrushCopyMenu menu, @Nonnull Font font) {
         final int size = 18;
         try {
             String texturePath = isToggle ? menu.getToggleTexturePathForPreview() : menu.getBaseTexturePathForPreview();
@@ -125,12 +125,12 @@ public class PreviewSystem {
     }
     /** Draws rotation preview (text-based). */
     private void drawRotationPreview(@Nonnull GuiGraphics graphics, int x, int y, int index, 
-                                    @Nonnull WrenchCopyMenu menu, @Nonnull Font font) {
+                                    @Nonnull BrushCopyMenu menu, @Nonnull Font font) {
         String previewText = getPreviewText(index, menu);
         drawCenteredTextInBox(graphics, previewText, x, y, 20, 20, font);
     }
     /** Draws indicators preview (same as SwitchTextureScreen power previews). */
-    private void drawIndicatorsPreview(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull WrenchCopyMenu menu) {
+    private void drawIndicatorsPreview(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull BrushCopyMenu menu) {
         String unpoweredTexture = getUnpoweredTexturePreview(menu);
         String poweredTexture = getPoweredTexturePreview(menu);
         if (!unpoweredTexture.isEmpty()) {
@@ -177,7 +177,7 @@ public class PreviewSystem {
         }
     }
     /** Gets unpowered texture preview path. */
-    private String getUnpoweredTexturePreview(@Nonnull WrenchCopyMenu menu) {
+    private String getUnpoweredTexturePreview(@Nonnull BrushCopyMenu menu) {
         try {
             return menu.getUnpoweredTexture();
         } catch (Exception e) {
@@ -185,7 +185,7 @@ public class PreviewSystem {
         }
     }
     /** Gets powered texture preview path. */
-    private String getPoweredTexturePreview(@Nonnull WrenchCopyMenu menu) {
+    private String getPoweredTexturePreview(@Nonnull BrushCopyMenu menu) {
         try {
             return menu.getPoweredTexture();
         } catch (Exception e) {
@@ -258,7 +258,7 @@ public class PreviewSystem {
     }
     /** Gets preview text for given index. */
     @Nonnull
-    private String getPreviewText(int index, @Nonnull WrenchCopyMenu menu) {
+    private String getPreviewText(int index, @Nonnull BrushCopyMenu menu) {
         try {
             String result = switch (index) {
                 case 0 -> menu.getToggleBlockDisplay();

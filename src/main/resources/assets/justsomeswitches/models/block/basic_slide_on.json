@@ -1,5 +1,5 @@
 {
-  "parent": "justsomeswitches:custom/switchesslideon",
+  "parent": "justsomeswitches:custom/switches_slide_on",
   "textures": {
     "all": "minecraft:block/cobblestone",
     "particle": "minecraft:block/stone",

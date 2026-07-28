@@ -1,13 +1,13 @@
 package net.justsomeswitches.item;
 
-import net.justsomeswitches.gui.SwitchesTextureMenu;
+import net.justsomeswitches.gui.CustomizableTextureMenu;
 import net.justsomeswitches.block.ISwitchBlock;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.item.service.CopyPasteService;
 import net.justsomeswitches.network.NetworkHandler;
-import net.justsomeswitches.network.WrenchActionPayload;
+import net.justsomeswitches.network.BrushActionPayload;
 import net.justsomeswitches.util.NBTHelper;
-import net.justsomeswitches.util.WrenchConstants;
+import net.justsomeswitches.util.BrushConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -68,7 +68,7 @@ public class SwitchTextureBrushItem extends Item {
         
         if (player.isShiftKeyDown() && CopyPasteService.hasCopiedSettings(stack)) {
             CopyPasteService.clearAllSettings(stack);
-            showActionBarMessage(player, WrenchConstants.MSG_SETTINGS_CLEARED, ActionBarMessageType.SUCCESS);
+            showActionBarMessage(player, BrushConstants.MSG_SETTINGS_CLEARED, ActionBarMessageType.SUCCESS);
             return net.minecraft.world.InteractionResultHolder.success(stack);
         }
         
@@ -129,13 +129,13 @@ public class SwitchTextureBrushItem extends Item {
         }
         
         if (!blockEntity.hasCustomTextures()) {
-            showActionBarMessage(player, WrenchConstants.MSG_NO_SETTINGS_TO_COPY, ActionBarMessageType.ERROR);
+            showActionBarMessage(player, BrushConstants.MSG_NO_SETTINGS_TO_COPY, ActionBarMessageType.ERROR);
             return InteractionResult.SUCCESS;
         }
         
         if (CopyPasteService.hasCopiedSettings(stack)) {
             if (CopyPasteService.hasIdenticalSettings(stack, blockEntity)) {
-                showActionBarMessage(player, WrenchConstants.MSG_SETTINGS_ALREADY_COPIED, ActionBarMessageType.INFO);
+                showActionBarMessage(player, BrushConstants.MSG_SETTINGS_ALREADY_COPIED, ActionBarMessageType.INFO);
                 return InteractionResult.SUCCESS;
             }
             
@@ -150,7 +150,7 @@ public class SwitchTextureBrushItem extends Item {
         if (player == null) return InteractionResult.FAIL;
         ItemStack stack = context.getItemInHand();
         if (!CopyPasteService.hasCopiedSettings(stack)) {
-            showActionBarMessage(player, WrenchConstants.MSG_SETTINGS_NOT_COPIED, ActionBarMessageType.INFO);
+            showActionBarMessage(player, BrushConstants.MSG_SETTINGS_NOT_COPIED, ActionBarMessageType.INFO);
             return InteractionResult.SUCCESS;
         }
 
@@ -161,8 +161,8 @@ public class SwitchTextureBrushItem extends Item {
         }
 
         if (level.isClientSide) {
-            NetworkHandler.sendWrenchAction(blockPos,
-                WrenchActionPayload.WrenchAction.PASTE,
+            NetworkHandler.sendBrushAction(blockPos,
+                BrushActionPayload.BrushAction.PASTE,
                 player.getUsedItemHand());
         }
         
@@ -214,7 +214,7 @@ public class SwitchTextureBrushItem extends Item {
             @Override
             @Nonnull
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
-                return new SwitchesTextureMenu(containerId, playerInventory, blockPos);
+                return new CustomizableTextureMenu(containerId, playerInventory, blockPos);
             }
         };
 
@@ -226,13 +226,13 @@ public class SwitchTextureBrushItem extends Item {
             @Override
             @Nonnull
             public Component getDisplayName() {
-                return Component.literal(WrenchConstants.GUI_COPY_TEXTURE_TITLE);
+                return Component.literal(BrushConstants.GUI_COPY_TEXTURE_TITLE);
             }
 
             @Override
             @Nonnull
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
-                return new net.justsomeswitches.gui.WrenchCopyMenu(containerId, playerInventory, blockPos);
+                return new net.justsomeswitches.gui.BrushCopyMenu(containerId, playerInventory, blockPos);
             }
         };
 
@@ -244,13 +244,13 @@ public class SwitchTextureBrushItem extends Item {
             @Override
             @Nonnull
             public Component getDisplayName() {
-                return Component.literal(WrenchConstants.GUI_DIFFERENT_SETTINGS_FOUND);
+                return Component.literal(BrushConstants.GUI_DIFFERENT_SETTINGS_FOUND);
             }
 
             @Override
             @Nonnull
             public AbstractContainerMenu createMenu(int containerId, @Nonnull Inventory playerInventory, @Nonnull Player player) {
-                return new net.justsomeswitches.gui.WrenchCopyOverwriteMenu(containerId, playerInventory, blockPos);
+                return new net.justsomeswitches.gui.BrushCopyOverwriteMenu(containerId, playerInventory, blockPos);
             }
         };
 
@@ -259,19 +259,19 @@ public class SwitchTextureBrushItem extends Item {
     
     /** Server-side paste operation - delegated to service. */
     @SuppressWarnings("unused") // Called from network handlers
-    public CopyPasteService.PasteResult applySettingsFromWrenchServer(ItemStack stack, SwitchBlockEntity blockEntity, Player player) {
-        return CopyPasteService.applySettingsFromWrench(stack, blockEntity, player);
+    public CopyPasteService.PasteResult applySettingsFromBrushServer(ItemStack stack, SwitchBlockEntity blockEntity, Player player) {
+        return CopyPasteService.applySettingsFromBrush(stack, blockEntity, player);
     }
     
     /** Server-side partial paste operation - delegated to service. */
     @SuppressWarnings("unused") // Called from network handlers
-    public CopyPasteService.PasteResult applyPartialSettingsFromWrenchServer(ItemStack stack, SwitchBlockEntity blockEntity, Player player) {
-        return CopyPasteService.applyPartialSettingsFromWrench(stack, blockEntity, player);
+    public CopyPasteService.PasteResult applyPartialSettingsFromBrushServer(ItemStack stack, SwitchBlockEntity blockEntity, Player player) {
+        return CopyPasteService.applyPartialSettingsFromBrush(stack, blockEntity, player);
     }
     
     /** Server-side copy operation - delegated to service. */
     @SuppressWarnings("unused") // Called from network handlers
-    public void copySelectedSettingsToWrench(ItemStack stack, SwitchBlockEntity blockEntity,
+    public void copySelectedSettingsToBrush(ItemStack stack, SwitchBlockEntity blockEntity,
                                             boolean copyToggleBlock, boolean copyToggleFace, boolean copyToggleRotation,
                                             boolean copyIndicators, boolean copyBaseBlock, boolean copyBaseFace,
                                             boolean copyBaseRotation) {
@@ -294,7 +294,7 @@ public class SwitchTextureBrushItem extends Item {
     public CopyPasteService.PasteResult checkInventoryForPasteServer(ItemStack stack, Player player) {
         List<String> missingBlocks = CopyPasteService.validateRequiredBlocks(stack, player);
         if (!missingBlocks.isEmpty()) {
-            return new CopyPasteService.PasteResult(false, WrenchConstants.MSG_MISSING_BLOCKS_GUI, missingBlocks);
+            return new CopyPasteService.PasteResult(false, BrushConstants.MSG_MISSING_BLOCKS_GUI, missingBlocks);
         }
         return new CopyPasteService.PasteResult(true, "All blocks available");
     }
@@ -320,17 +320,17 @@ public class SwitchTextureBrushItem extends Item {
         tooltip.add(Component.empty());
 
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
-        CompoundTag settingsTag = cache.getCompound(WrenchConstants.COPIED_SETTINGS_KEY);
+        CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag != null) {
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_BLOCK_KEY, "Toggle Block: ", true, context);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_FACE_KEY, "Toggle Face: ", false, context);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_BLOCK_KEY, "Base Block: ", true, context);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_FACE_KEY, "Base Face: ", false, context);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.TOGGLE_ROTATION_KEY, "Toggle Rotation: ", false, context);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.BASE_ROTATION_KEY, "Base Rotation: ", false, context);
-            addSettingIfPresent(tooltip, settingsTag, WrenchConstants.POWER_MODE_KEY, "Indicators: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.TOGGLE_BLOCK_KEY, "Toggle Block: ", true, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.TOGGLE_FACE_KEY, "Toggle Face: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.BASE_BLOCK_KEY, "Base Block: ", true, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.BASE_FACE_KEY, "Base Face: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.TOGGLE_ROTATION_KEY, "Toggle Rotation: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.BASE_ROTATION_KEY, "Base Rotation: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.POWER_MODE_KEY, "Indicators: ", false, context);
             
-            if (tooltip.size() > WrenchConstants.TOOLTIP_MAX_LINES) {
+            if (tooltip.size() > BrushConstants.TOOLTIP_MAX_LINES) {
                 tooltip.add(Component.literal("...").withStyle(ChatFormatting.GRAY));
             }
         }
@@ -359,7 +359,7 @@ public class SwitchTextureBrushItem extends Item {
     @Nonnull
     private String formatSettingValue(@Nonnull String key, @Nonnull String rawValue) {
         // Format rotation values to show degrees
-        if (key.equals(WrenchConstants.TOGGLE_ROTATION_KEY) || key.equals(WrenchConstants.BASE_ROTATION_KEY)) {
+        if (key.equals(BrushConstants.TOGGLE_ROTATION_KEY) || key.equals(BrushConstants.BASE_ROTATION_KEY)) {
             try {
                 net.justsomeswitches.util.TextureRotation rotation = 
                     net.justsomeswitches.util.TextureRotation.valueOf(rawValue);
@@ -370,7 +370,7 @@ public class SwitchTextureBrushItem extends Item {
         }
         
         // Format power mode values with proper capitalization
-        if (key.equals(WrenchConstants.POWER_MODE_KEY)) {
+        if (key.equals(BrushConstants.POWER_MODE_KEY)) {
             return switch (rawValue.toUpperCase()) {
                 case "DEFAULT" -> "Default";
                 case "ALT" -> "Alt";

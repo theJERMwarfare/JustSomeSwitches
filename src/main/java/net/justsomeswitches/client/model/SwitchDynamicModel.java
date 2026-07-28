@@ -1287,14 +1287,12 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
 
     private boolean isPoweredTexture(@Nonnull String textureName) {
         return textureName.contains("redstone_block") ||
-               textureName.contains("switches_lever_powered") ||
                textureName.contains("powered") ||
                (textureName.contains("lever") && textureName.contains("on"));
     }
 
     private boolean isUnpoweredTexture(@Nonnull String textureName) {
         return textureName.contains("gray_concrete_powder") ||
-               textureName.contains("switches_lever_unpowered") ||
                textureName.contains("unpowered") ||
                (textureName.contains("lever") && textureName.contains("off"));
     }

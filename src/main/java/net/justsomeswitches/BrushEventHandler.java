@@ -14,11 +14,9 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import javax.annotation.Nonnull;
 
-/**
- * Event handler for Switches Wrench instant block breaking
- */
+/** Event handler for Switch Texture Brush instant block breaking. */
 @EventBusSubscriber(modid = JustSomeSwitchesMod.MODID)
-public class WrenchEventHandler {
+public class BrushEventHandler {
     
     @SubscribeEvent
     public static void onLeftClickBlock(@Nonnull PlayerInteractEvent.LeftClickBlock event) {

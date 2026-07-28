@@ -5,8 +5,8 @@ package net.justsomeswitches.block;
  * Uses dual-button 3D model distinct from lever/rocker/slide variants.
  * No block entity overhead for better performance.
  */
-public class BasicButtonsBlock extends BasicSwitchBlock {
-    public BasicButtonsBlock(Properties properties) {
+public class BasicButtonBlock extends BasicSwitchBlock {
+    public BasicButtonBlock(Properties properties) {
         super(properties);
     }
 }

@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
  * Coordinates TexturePreviewRenderer, DropdownManager, and FaceSelectionHandler components
  * to provide real-time 2D/3D previews and interactive texture selection.
  */
-public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextureMenu> {
+public class CustomizableTextureScreen extends AbstractContainerScreen<CustomizableTextureMenu> {
 
     private static final int GUI_WIDTH = 176;
     private static final int GUI_HEIGHT = 176;
@@ -86,7 +86,7 @@ public class SwitchesTextureScreen extends AbstractContainerScreen<SwitchesTextu
     private SwitchBlockEntity.PowerMode[] powerModes;
 
     /** Creates a new switch texture customization screen. */
-    public SwitchesTextureScreen(@Nonnull SwitchesTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
+    public CustomizableTextureScreen(@Nonnull CustomizableTextureMenu menu, @Nonnull Inventory playerInventory, @Nonnull Component title) {
         super(menu, playerInventory, title);
 
         this.imageWidth = GUI_WIDTH;

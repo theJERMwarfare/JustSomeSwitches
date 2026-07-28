@@ -16,8 +16,8 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import javax.annotation.Nonnull;
 
-/** Network payload for wrench copy selection operations. */
-public record WrenchCopySelectionPayload(
+/** Network payload for brush copy selection operations. */
+public record BrushCopySelectionPayload(
     BlockPos blockPos,
     boolean copyToggleBlock,
     boolean copyToggleFace,
@@ -28,9 +28,9 @@ public record WrenchCopySelectionPayload(
     boolean copyBaseRotation
 ) implements CustomPacketPayload {
 
-    public static final Type<WrenchCopySelectionPayload> TYPE =
+    public static final Type<BrushCopySelectionPayload> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath("justsomeswitches", "wrench_copy_selection"));
-    public static final StreamCodec<FriendlyByteBuf, WrenchCopySelectionPayload> STREAM_CODEC =
+    public static final StreamCodec<FriendlyByteBuf, BrushCopySelectionPayload> STREAM_CODEC =
         StreamCodec.of(
             (buf, payload) -> {
                 buf.writeBlockPos(payload.blockPos());
@@ -42,7 +42,7 @@ public record WrenchCopySelectionPayload(
                 buf.writeBoolean(payload.copyBaseFace());
                 buf.writeBoolean(payload.copyBaseRotation());
             },
-            buf -> new WrenchCopySelectionPayload(
+            buf -> new BrushCopySelectionPayload(
                 buf.readBlockPos(),
                 buf.readBoolean(),
                 buf.readBoolean(),
@@ -55,15 +55,15 @@ public record WrenchCopySelectionPayload(
         );
     @Override
     @Nonnull
-    public Type<WrenchCopySelectionPayload> type() {
+    public Type<BrushCopySelectionPayload> type() {
         return TYPE;
     }
     /** Handles copy selection on server side. */
-    public static void handle(WrenchCopySelectionPayload payload, IPayloadContext context) {
+    public static void handle(BrushCopySelectionPayload payload, IPayloadContext context) {
         ServerPlayer player = (ServerPlayer) context.player();
         if (SecurityUtils.isRateLimited(player)) {
             SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                "WrenchCopySelection packet rate limit exceeded");
+                "BrushCopySelection packet rate limit exceeded");
             return;
         }
         if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
@@ -77,7 +77,7 @@ public record WrenchCopySelectionPayload(
                 "Player cannot interact with block at: " + payload.blockPos());
             return;
         }
-        SecurityUtils.logSecurityEvent(player, "WRENCH_COPY_SELECTION", payload.blockPos(),
+        SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_SELECTION", payload.blockPos(),
             String.format("Toggle: %b/%b/%b, Base: %b/%b/%b, Indicators: %b",
                 payload.copyToggleBlock(), payload.copyToggleFace(), payload.copyToggleRotation(),
                 payload.copyBaseBlock(), payload.copyBaseFace(), payload.copyBaseRotation(),
@@ -88,16 +88,16 @@ public record WrenchCopySelectionPayload(
         }
         ItemStack mainHandStack = player.getMainHandItem();
         ItemStack offHandStack = player.getOffhandItem();
-        ItemStack wrenchStack;
+        ItemStack brushStack;
         if (mainHandStack.getItem() instanceof SwitchTextureBrushItem) {
-            wrenchStack = mainHandStack;
+            brushStack = mainHandStack;
         } else if (offHandStack.getItem() instanceof SwitchTextureBrushItem) {
-            wrenchStack = offHandStack;
+            brushStack = offHandStack;
         } else {
             return;
         }
-        SwitchTextureBrushItem wrench = (SwitchTextureBrushItem) wrenchStack.getItem();
-        wrench.copySelectedSettingsToWrench(wrenchStack, switchEntity,
+        SwitchTextureBrushItem brush = (SwitchTextureBrushItem) brushStack.getItem();
+        brush.copySelectedSettingsToBrush(brushStack, switchEntity,
             payload.copyToggleBlock(), payload.copyToggleFace(), payload.copyToggleRotation(),
             payload.copyIndicators(), payload.copyBaseBlock(), payload.copyBaseFace(),
             payload.copyBaseRotation());

@@ -11,15 +11,15 @@ import net.minecraft.world.entity.player.Inventory;
 
 import javax.annotation.Nonnull;
 
-/** Client-side GUI for wrench paste overwrite confirmation. */
-public class WrenchOverwriteScreen extends AbstractContainerScreen<WrenchOverwriteMenu> {
+/** Client-side GUI for brush copy overwrite confirmation. */
+public class BrushCopyOverwriteScreen extends AbstractContainerScreen<BrushCopyOverwriteMenu> {
     
     private static final ResourceLocation BACKGROUND_TEXTURE = 
-        ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/switches_wrench_message_gui.png");
+        ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/brush_message_gui.png");
     private static final int GUI_WIDTH = 200;
     private static final int GUI_HEIGHT = 94;
     
-    public WrenchOverwriteScreen(WrenchOverwriteMenu menu, Inventory playerInventory, Component title) {
+    public BrushCopyOverwriteScreen(BrushCopyOverwriteMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = GUI_WIDTH;
         this.imageHeight = GUI_HEIGHT;
@@ -32,12 +32,12 @@ public class WrenchOverwriteScreen extends AbstractContainerScreen<WrenchOverwri
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
         
-        addRenderableWidget(Button.builder(Component.literal("Paste New"), this::onOverwriteClicked)
-                .bounds(leftPos + 20, topPos + 58, 70, 20)
+        addRenderableWidget(Button.builder(Component.literal("Copy New"), this::onOverwriteClicked)
+                .bounds(leftPos + 20, topPos + 61, 70, 20)
                 .build());
         
         addRenderableWidget(Button.builder(Component.literal("Cancel"), this::onCancelClicked)
-                .bounds(leftPos + 111, topPos + 58, 70, 20)
+                .bounds(leftPos + 111, topPos + 61, 70, 20)
                 .build());
     }
     
@@ -48,13 +48,13 @@ public class WrenchOverwriteScreen extends AbstractContainerScreen<WrenchOverwri
     
     @Override
     protected void renderLabels(@Nonnull GuiGraphics graphics, int mouseX, int mouseY) {
-        Component titleText = Component.literal("Switch Has Texture Settings");
+        Component titleText = Component.literal("Texture Settings Already Copied");
         int titleWidth = font.width(titleText);
         graphics.drawString(font, titleText, (imageWidth - titleWidth) / 2, 12, 0x404040, false);
         
         graphics.pose().pushPose();
         graphics.pose().scale(0.7f, 0.7f, 1.0f);
-        Component questionText = Component.literal("Paste new texture settings?");
+        Component questionText = Component.literal("Copy new texture settings to brush?");
         int questionWidth = font.width(questionText);
         int questionX = (int)((imageWidth - questionWidth * 0.7f) / 2 / 0.7f);
         graphics.drawString(font, questionText, questionX + 1, (int)((32 + 1) / 0.7f), 0xFF555555, false);
@@ -63,7 +63,7 @@ public class WrenchOverwriteScreen extends AbstractContainerScreen<WrenchOverwri
         
         graphics.pose().pushPose();
         graphics.pose().scale(0.7f, 0.7f, 1.0f);
-        Component warningText = Component.literal("(Existing blocks will be returned)");
+        Component warningText = Component.literal("(Previous texture settings will be cleared)");
         int warningWidth = font.width(warningText);
         int warningX = (int)((imageWidth - warningWidth * 0.7f) / 2 / 0.7f);
         graphics.drawString(font, warningText, warningX + 1, (int)((48 + 1) / 0.7f), 0xFF555555, false);
@@ -73,14 +73,15 @@ public class WrenchOverwriteScreen extends AbstractContainerScreen<WrenchOverwri
     
     private void onOverwriteClicked(Button button) {
         BlockPos blockPos = menu.getBlockPos();
-        NetworkHandler.sendWrenchOverwrite(blockPos, true);
+        NetworkHandler.sendBrushCopyOverwrite(blockPos, true);
         onClose();
     }
     
     private void onCancelClicked(Button button) {
         BlockPos blockPos = menu.getBlockPos();
-        NetworkHandler.sendWrenchOverwrite(blockPos, false);
+        NetworkHandler.sendBrushCopyOverwrite(blockPos, false);
         onClose();
     }
     
+
 }

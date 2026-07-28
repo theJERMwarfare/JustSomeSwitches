@@ -21,30 +21,30 @@ import javax.annotation.Nonnull;
  * Network payload for missing block GUI responses
  * Handles client->server communication when user chooses Apply or Cancel for missing blocks
  */
-public record WrenchMissingBlockPayload(
+public record BrushMissingBlockPayload(
     BlockPos blockPos,
     boolean apply
 ) implements CustomPacketPayload {
 
-    public static final Type<WrenchMissingBlockPayload> TYPE =
+    public static final Type<BrushMissingBlockPayload> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath("justsomeswitches", "wrench_missing_block"));
-    public static final StreamCodec<FriendlyByteBuf, WrenchMissingBlockPayload> STREAM_CODEC =
+    public static final StreamCodec<FriendlyByteBuf, BrushMissingBlockPayload> STREAM_CODEC =
         StreamCodec.composite(
-            BlockPos.STREAM_CODEC, WrenchMissingBlockPayload::blockPos,
-            ByteBufCodecs.BOOL, WrenchMissingBlockPayload::apply,
-            WrenchMissingBlockPayload::new
+            BlockPos.STREAM_CODEC, BrushMissingBlockPayload::blockPos,
+            ByteBufCodecs.BOOL, BrushMissingBlockPayload::apply,
+            BrushMissingBlockPayload::new
         );
     @Override
     @Nonnull
-    public Type<WrenchMissingBlockPayload> type() {
+    public Type<BrushMissingBlockPayload> type() {
         return TYPE;
     }
     /** Handles the payload on the server side. */
-    public static void handle(WrenchMissingBlockPayload payload, IPayloadContext context) {
+    public static void handle(BrushMissingBlockPayload payload, IPayloadContext context) {
         ServerPlayer player = (ServerPlayer) context.player();
         if (SecurityUtils.isRateLimited(player)) {
             SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                "WrenchMissingBlock packet rate limit exceeded");
+                "BrushMissingBlock packet rate limit exceeded");
             return;
         }
         if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
@@ -59,30 +59,30 @@ public record WrenchMissingBlockPayload(
                 "Player cannot interact with block at: " + blockPos);
             return;
         }
-        SecurityUtils.logSecurityEvent(player, "WRENCH_MISSING_BLOCK", blockPos,
+        SecurityUtils.logSecurityEvent(player, "BRUSH_MISSING_BLOCK", blockPos,
             "Apply: " + payload.apply());
-        ItemStack wrenchStack = null;
+        ItemStack brushStack = null;
         if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-            wrenchStack = player.getMainHandItem();
+            brushStack = player.getMainHandItem();
         } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-            wrenchStack = player.getOffhandItem();
+            brushStack = player.getOffhandItem();
         }
-        if (wrenchStack == null || !(wrenchStack.getItem() instanceof SwitchTextureBrushItem wrench)) {
-            return; // No wrench found
+        if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
+            return; // No brush found
         }
         if (!(level.getBlockEntity(blockPos) instanceof SwitchBlockEntity blockEntity)) {
             return;
         }
         if (payload.apply()) {
-            handlePartialApply(wrench, wrenchStack, blockEntity, player);
+            handlePartialApply(brush, brushStack, blockEntity, player);
         } else {
             handleCancel(player);
         }
         player.inventoryMenu.broadcastChanges();
     }
-    private static void handlePartialApply(SwitchTextureBrushItem wrench, ItemStack wrenchStack,
+    private static void handlePartialApply(SwitchTextureBrushItem brush, ItemStack brushStack,
                                          SwitchBlockEntity blockEntity, ServerPlayer player) {
-        CopyPasteService.PasteResult result = wrench.applyPartialSettingsFromWrenchServer(wrenchStack, blockEntity, player);
+        CopyPasteService.PasteResult result = brush.applyPartialSettingsFromBrushServer(brushStack, blockEntity, player);
         if (result.success) {
             NetworkHandler.sendActionBarMessage(player, result.message, NetworkHandler.MessageType.SUCCESS);
         } else {

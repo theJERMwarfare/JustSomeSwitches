@@ -3,9 +3,9 @@ package net.justsomeswitches.util;
 /**
  * Constants for the copy/paste functionality
  */
-public final class WrenchConstants {
+public final class BrushConstants {
     
-    private WrenchConstants() {
+    private BrushConstants() {
         // Utility class
     }
     

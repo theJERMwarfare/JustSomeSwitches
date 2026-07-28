@@ -5,8 +5,8 @@ package net.justsomeswitches.block;
  * Redstone behavior remains standard - emits signal strength 15 when powered.
  * Visual inversion handled purely by model files.
  */
-public class BasicButtonsInvertedBlock extends BasicSwitchBlock {
-    public BasicButtonsInvertedBlock(Properties properties) {
+public class BasicButtonInvertedBlock extends BasicSwitchBlock {
+    public BasicButtonInvertedBlock(Properties properties) {
         super(properties);
     }
 }
