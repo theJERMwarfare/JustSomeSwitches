@@ -30,6 +30,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 /** Switch Texture Brush with copy/paste functionality and dynamic active/inactive texture. */
@@ -108,6 +109,20 @@ public class SwitchTextureBrushItem extends Item {
     
     private boolean isSwitchBlock(@Nonnull Block block) {
         return block instanceof ISwitchBlock;
+    }
+
+    /** Returns the brush ItemStack held in the player's main or off hand, or null if neither holds one. */
+    @Nullable
+    public static ItemStack findBrushInHands(@Nonnull Player player) {
+        ItemStack mainHand = player.getMainHandItem();
+        if (mainHand.getItem() instanceof SwitchTextureBrushItem) {
+            return mainHand;
+        }
+        ItemStack offHand = player.getOffhandItem();
+        if (offHand.getItem() instanceof SwitchTextureBrushItem) {
+            return offHand;
+        }
+        return null;
     }
     
     private InteractionResult handleStandardGUI(@Nonnull UseOnContext context) {

@@ -16,9 +16,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -27,9 +25,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Renders all texture previews in the GUI including 3D switch preview,
@@ -52,11 +48,8 @@ public class TexturePreviewRenderer {
     private final CustomizableTextureMenu menu;
     private Font font;
 
-    /** Cached ResourceLocation objects to avoid repeated creation. */
-    private final Map<String, ResourceLocation> resourceLocationCache = new HashMap<>();
-
-    /** Cached sprite names to avoid repeated contents() calls. */
-    private final Map<TextureAtlasSprite, String> spriteNameCache = new HashMap<>();
+    /** Shared cached path->sprite resolution (also gives PreviewSystem the same caching). */
+    private final TextureSpriteHelper spriteHelper = new TextureSpriteHelper();
 
     /**
      * Creates a new TexturePreviewRenderer.
@@ -79,8 +72,7 @@ public class TexturePreviewRenderer {
      * Caches automatically repopulate on next use.
      */
     public void clearCaches() {
-        resourceLocationCache.clear();
-        spriteNameCache.clear();
+        spriteHelper.clear();
     }
 
     /**
@@ -348,74 +340,18 @@ public class TexturePreviewRenderer {
         graphics.pose().popPose();
     }
     /**
-     * Returns cached ResourceLocation, creating if needed.
-     */
-    @Nonnull
-    private ResourceLocation getCachedResourceLocation(@Nonnull String path) {
-        return resourceLocationCache.computeIfAbsent(path, ResourceLocation::parse);
-    }
-    /**
-     * Returns cached sprite name, caching if needed.
-     */
-    @Nonnull
-    private String getCachedSpriteName(@Nonnull TextureAtlasSprite sprite) {
-        return spriteNameCache.computeIfAbsent(sprite, this::computeSpriteName);
-    }
-    /**
-     * Computes sprite name by accessing sprite contents.
-     * CRITICAL: Never close sprite contents - sprites manage their own lifecycle.
-     */
-    @Nonnull
-    @SuppressWarnings("resource") // Sprite contents must NOT be closed - managed by Minecraft
-    private String computeSpriteName(@Nonnull TextureAtlasSprite sprite) {
-        try {
-            var contents = sprite.contents();
-            return contents.name().toString();
-        } catch (Exception e) {
-            return "missingno";
-        }
-    }
-    /**
-     * Gets texture sprite for 2D preview rendering.
+     * Gets texture sprite for 2D preview rendering (cached, shared with PreviewSystem).
      */
     @Nullable
     private TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
-        try {
-            ResourceLocation textureLocation = getCachedResourceLocation(texturePath);
-            TextureAtlasSprite sprite = Minecraft.getInstance()
-                    .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                    .apply(textureLocation);
-            if (sprite != null) {
-                String spriteName = getCachedSpriteName(sprite);
-                if (!spriteName.contains("missingno")) {
-                    return sprite;
-                }
-            }
-            // Try fallback patterns for face-specific textures
-            if (texturePath.contains("_top") || texturePath.contains("_side") || texturePath.contains("_front")) {
-                String basePath = texturePath.replaceAll("_(top|side|front)$", "");
-                ResourceLocation fallbackLocation = getCachedResourceLocation(basePath);
-                TextureAtlasSprite fallbackSprite = Minecraft.getInstance()
-                        .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                        .apply(fallbackLocation);
-                if (fallbackSprite != null) {
-                    String fallbackSpriteName = getCachedSpriteName(fallbackSprite);
-                    if (!fallbackSpriteName.contains("missingno")) {
-                        return fallbackSprite;
-                    }
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
+        return spriteHelper.getTextureSprite(texturePath);
     }
     /**
-     * Safely retrieves sprite name using cache.
+     * Safely retrieves sprite name (cached).
      */
     @Nonnull
     private String getSafeSpriteName(@Nonnull TextureAtlasSprite sprite) {
-        return getCachedSpriteName(sprite);
+        return spriteHelper.getSafeSpriteName(sprite);
     }
     /**
      * Draws a small 6x6 texture preview showing the specific 2x2 UV area rendered on the model.
@@ -424,7 +360,7 @@ public class TexturePreviewRenderer {
         try {
             TextureAtlasSprite sprite = getTextureSprite(texturePath);
             if (sprite != null) {
-                String spriteName = getCachedSpriteName(sprite);
+                String spriteName = getSafeSpriteName(sprite);
                 if (!spriteName.contains("missingno")) {
                     graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFFFFFFF);
                     renderUVSpecificPreview(graphics, x, y, sprite);

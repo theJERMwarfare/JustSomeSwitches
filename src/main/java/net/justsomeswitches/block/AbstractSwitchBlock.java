@@ -5,6 +5,7 @@ import net.justsomeswitches.config.SwitchesCommonConfig;
 import net.justsomeswitches.init.JustSomeSwitchesModBlockEntities;
 import net.justsomeswitches.util.TightSwitchShapes;
 import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
+import net.justsomeswitches.util.SwitchesVoxelShapes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
@@ -45,14 +46,20 @@ import javax.annotation.Nullable;
 public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBlock, ISwitchBlock, SimpleWaterloggedBlock {
     private final SwitchModelType switchModelType;
     private static final ThreadLocal<String> PENDING_WALL_ORIENTATION = new ThreadLocal<>();
-    private static final VoxelShape FLOOR_NORTH_SOUTH = Block.box(5.0, 0.0, 3.0, 11.0, 6.0, 13.0);
-    private static final VoxelShape FLOOR_EAST_WEST = Block.box(3.0, 0.0, 5.0, 13.0, 6.0, 11.0);
-    private static final VoxelShape CEILING_NORTH_SOUTH = Block.box(5.0, 10.0, 3.0, 11.0, 16.0, 13.0);
-    private static final VoxelShape CEILING_EAST_WEST = Block.box(3.0, 10.0, 5.0, 13.0, 16.0, 11.0);
-    private static final VoxelShape WALL_NORTH = Block.box(5.0, 3.0, 10.0, 11.0, 13.0, 16.0);
-    private static final VoxelShape WALL_SOUTH = Block.box(5.0, 3.0, 0.0, 11.0, 13.0, 6.0);
-    private static final VoxelShape WALL_WEST = Block.box(10.0, 3.0, 5.0, 16.0, 13.0, 11.0);
-    private static final VoxelShape WALL_EAST = Block.box(0.0, 3.0, 5.0, 6.0, 13.0, 11.0);
+    // Loose-tier shapes shared with BasicSwitchBlock via SwitchesVoxelShapes (single source, no drift).
+    private static final VoxelShape FLOOR_NORTH_SOUTH = SwitchesVoxelShapes.FLOOR_NORTH_SOUTH;
+    private static final VoxelShape FLOOR_EAST_WEST = SwitchesVoxelShapes.FLOOR_EAST_WEST;
+    private static final VoxelShape CEILING_NORTH_SOUTH = SwitchesVoxelShapes.CEILING_NORTH_SOUTH;
+    private static final VoxelShape CEILING_EAST_WEST = SwitchesVoxelShapes.CEILING_EAST_WEST;
+    private static final VoxelShape WALL_NORTH = SwitchesVoxelShapes.WALL_NORTH;
+    private static final VoxelShape WALL_SOUTH = SwitchesVoxelShapes.WALL_SOUTH;
+    private static final VoxelShape WALL_WEST = SwitchesVoxelShapes.WALL_WEST;
+    private static final VoxelShape WALL_EAST = SwitchesVoxelShapes.WALL_EAST;
+    // Wider wall hitboxes used for the "left"/"right" wall orientations (loose-tier only).
+    private static final VoxelShape WALL_WIDE_NORTH = Block.box(3.0, 5.0, 10.0, 13.0, 11.0, 16.0);
+    private static final VoxelShape WALL_WIDE_SOUTH = Block.box(3.0, 5.0, 0.0, 13.0, 11.0, 6.0);
+    private static final VoxelShape WALL_WIDE_WEST = Block.box(10.0, 5.0, 3.0, 16.0, 11.0, 13.0);
+    private static final VoxelShape WALL_WIDE_EAST = Block.box(0.0, 5.0, 3.0, 6.0, 11.0, 13.0);
 
     protected AbstractSwitchBlock(Properties properties, SwitchModelType switchModelType) {
         super(properties);
@@ -73,34 +80,24 @@ public abstract class AbstractSwitchBlock extends LeverBlock implements EntityBl
      * Returns wall shape adjusted for switch orientation.
      */
     private VoxelShape getRotatedWallShape(Direction wallFace, String wallOrientation) {
-        VoxelShape baseShape = switch (wallFace) {
+        // "left"/"right" use the wider hitbox; every other orientation ("top"/"bottom"/"center") uses the
+        // base wall shape - the old "top" branch built boxes byte-identical to WALL_*, so it was dead.
+        if ("left".equals(wallOrientation) || "right".equals(wallOrientation)) {
+            return switch (wallFace) {
+                case NORTH -> WALL_WIDE_NORTH;
+                case SOUTH -> WALL_WIDE_SOUTH;
+                case WEST -> WALL_WIDE_WEST;
+                case EAST -> WALL_WIDE_EAST;
+                default -> WALL_NORTH;
+            };
+        }
+        return switch (wallFace) {
             case NORTH -> WALL_NORTH;
             case SOUTH -> WALL_SOUTH;
             case WEST -> WALL_WEST;
             case EAST -> WALL_EAST;
             default -> WALL_NORTH;
         };
-        
-        if ("left".equals(wallOrientation) || "right".equals(wallOrientation)) {
-            return switch (wallFace) {
-                case NORTH -> Block.box(3.0, 5.0, 10.0, 13.0, 11.0, 16.0);
-                case SOUTH -> Block.box(3.0, 5.0, 0.0, 13.0, 11.0, 6.0);
-                case WEST -> Block.box(10.0, 5.0, 3.0, 16.0, 11.0, 13.0);
-                case EAST -> Block.box(0.0, 5.0, 3.0, 6.0, 11.0, 13.0);
-                default -> baseShape;
-            };
-        }
-        
-        if ("top".equals(wallOrientation)) {
-            return switch (wallFace) {
-                case NORTH -> Block.box(5.0, 3.0, 10.0, 11.0, 13.0, 16.0);
-                case SOUTH -> Block.box(5.0, 3.0, 0.0, 11.0, 13.0, 6.0);
-                case WEST -> Block.box(10.0, 3.0, 5.0, 16.0, 13.0, 11.0);
-                case EAST -> Block.box(0.0, 3.0, 5.0, 6.0, 13.0, 11.0);
-                default -> baseShape;
-            };
-        }
-        return baseShape;
     }
     @Override
     @Nullable

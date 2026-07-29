@@ -27,6 +27,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Base class for all basic (non-customizable) switch variants.
@@ -44,6 +45,7 @@ public abstract class BasicSwitchBlock extends LeverBlock implements SimpleWater
         builder.add(BlockStateProperties.WATERLOGGED);
     }
     @Override
+    @Nullable
     public BlockState getStateForPlacement(@Nonnull BlockPlaceContext context) {
         BlockState state = super.getStateForPlacement(context);
         if (state != null) {
@@ -77,7 +79,7 @@ public abstract class BasicSwitchBlock extends LeverBlock implements SimpleWater
         level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS,
                 0.3F, currentlyPowered ? 0.5F : 0.6F);
         level.updateNeighborsAt(pos, this);
-        Direction attachedDirection = getAttachedDirection(state);
+        Direction attachedDirection = getAttachedDirection(newState);
         level.updateNeighborsAt(pos.relative(attachedDirection), this);
         return InteractionResult.CONSUME;
     }

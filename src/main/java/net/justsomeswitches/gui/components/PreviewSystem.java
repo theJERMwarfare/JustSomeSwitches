@@ -1,11 +1,8 @@
 package net.justsomeswitches.gui.components;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.justsomeswitches.gui.BrushCopyMenu;
 
@@ -18,6 +15,7 @@ import javax.annotation.Nullable;
 public class PreviewSystem {
     private static final int PREVIEW_SIZE = 20;
     private static final int SMALL_PREVIEW_SIZE = 6;
+    private final TextureSpriteHelper spriteHelper = new TextureSpriteHelper();
     /** Draws preview for the setting (matching texture customization GUI). */
     @SuppressWarnings("SameParameterValue") // Index used for different preview types
     public void drawPreview(@Nonnull GuiGraphics graphics, int x, int y, int index, 
@@ -212,49 +210,15 @@ public class PreviewSystem {
         graphics.drawString(font, text, centeredX, centeredY, 0xFFFFFF, true);
         graphics.pose().popPose();
     }
-    /** Gets texture sprite (same as SwitchTextureScreen). */
+    /** Gets texture sprite (cached, shared with TexturePreviewRenderer). */
+    @Nullable
     private TextureAtlasSprite getTextureSprite(@Nonnull String texturePath) {
-        try {
-            ResourceLocation textureLocation = ResourceLocation.parse(texturePath);
-            TextureAtlasSprite sprite = Minecraft.getInstance()
-                    .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                    .apply(textureLocation);
-
-            if (sprite != null) {
-                String spriteName = getSafeSpriteName(sprite);
-                if (!spriteName.contains("missingno")) {
-                    return sprite;
-                }
-            }
-            if (texturePath.contains("_top") || texturePath.contains("_side") || texturePath.contains("_front")) {
-                String basePath = texturePath.replaceAll("_(top|side|front)$", "");
-                ResourceLocation fallbackLocation = ResourceLocation.parse(basePath);
-                TextureAtlasSprite fallbackSprite = Minecraft.getInstance()
-                        .getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
-                        .apply(fallbackLocation);
-
-                if (fallbackSprite != null) {
-                    String fallbackSpriteName = getSafeSpriteName(fallbackSprite);
-                    if (!fallbackSpriteName.contains("missingno")) {
-                        return fallbackSprite;
-                    }
-                }
-            }
-
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
+        return spriteHelper.getTextureSprite(texturePath);
     }
-    /** Safely retrieves sprite name without closing the sprite contents. */
+    /** Safely retrieves sprite name (cached). */
     @Nonnull
-    @SuppressWarnings("resource") // Sprite contents managed by Minecraft, must NOT be closed
     private String getSafeSpriteName(@Nonnull TextureAtlasSprite sprite) {
-        try {
-            return sprite.contents().name().toString();
-        } catch (Exception e) {
-            return "missingno";
-        }
+        return spriteHelper.getSafeSpriteName(sprite);
     }
     /** Gets preview text for given index. */
     @Nonnull

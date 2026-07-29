@@ -41,32 +41,15 @@ public record BrushMissingBlockPayload(
     }
     /** Handles the payload on the server side. */
     public static void handle(BrushMissingBlockPayload payload, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        if (SecurityUtils.isRateLimited(player)) {
-            SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                "BrushMissingBlock packet rate limit exceeded");
-            return;
-        }
-        if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-            SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                "Invalid block position: " + payload.blockPos());
+        ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "BrushMissingBlock");
+        if (player == null) {
             return;
         }
         Level level = player.level();
         BlockPos blockPos = payload.blockPos();
-        if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
-            SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                "Player cannot interact with block at: " + blockPos);
-            return;
-        }
         SecurityUtils.logSecurityEvent(player, "BRUSH_MISSING_BLOCK", blockPos,
             "Apply: " + payload.apply());
-        ItemStack brushStack = null;
-        if (player.getMainHandItem().getItem() instanceof SwitchTextureBrushItem) {
-            brushStack = player.getMainHandItem();
-        } else if (player.getOffhandItem().getItem() instanceof SwitchTextureBrushItem) {
-            brushStack = player.getOffhandItem();
-        }
+        ItemStack brushStack = SwitchTextureBrushItem.findBrushInHands(player);
         if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
             return; // No brush found
         }

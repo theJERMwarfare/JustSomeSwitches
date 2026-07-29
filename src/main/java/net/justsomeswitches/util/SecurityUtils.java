@@ -5,10 +5,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -85,6 +87,9 @@ public class SecurityUtils {
     
     /** Validates player permission to interact with block. */
     public static boolean canPlayerInteractWithBlock(@Nonnull ServerPlayer player, @Nonnull Level level, @Nonnull BlockPos blockPos) {
+        if (player.isSpectator()) {
+            return false;
+        }
         if (!level.isLoaded(blockPos)) {
             LOGGER.warn("Player {} attempted to interact with unloaded chunk at {}",
                 player.getName().getString(), blockPos);
@@ -108,6 +113,36 @@ public class SecurityUtils {
         return true;
     }
     
+    /**
+     * Shared packet-handler security preamble, applied in the exact order every server handler used:
+     * sender null-check, rate limit, block-position bounds, then interaction permission. Logs the
+     * matching violation itself and returns {@code null} if any check fails; otherwise returns the
+     * validated sender. {@code packetName} is used verbatim in the rate-limit violation message.
+     */
+    @Nullable
+    public static ServerPlayer validateAndGetSender(@Nonnull IPayloadContext context,
+                                                    @Nonnull BlockPos blockPos, @Nonnull String packetName) {
+        if (!(context.player() instanceof ServerPlayer player)) {
+            return null;
+        }
+        if (isRateLimited(player)) {
+            logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
+                packetName + " packet rate limit exceeded");
+            return null;
+        }
+        if (!isValidBlockPosition(blockPos)) {
+            logSecurityViolation(player, "INVALID_COORDINATES",
+                "Invalid block position: " + blockPos);
+            return null;
+        }
+        if (!canPlayerInteractWithBlock(player, player.level(), blockPos)) {
+            logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
+                "Player cannot interact with block at: " + blockPos);
+            return null;
+        }
+        return player;
+    }
+
     /** Validates texture path for security (prevents directory traversal). */
     public static boolean isValidTexturePath(@Nonnull String texturePath) {
         if (texturePath.isEmpty()) {
@@ -202,6 +237,10 @@ public class SecurityUtils {
     /** Returns maximum allowed string length in characters. */
     public static int getMaxStringLength() {
         return MAX_STRING_LENGTH;
+    }
+    /** Returns maximum allowed texture path length in characters. */
+    public static int getMaxTexturePathLength() {
+        return MAX_TEXTURE_PATH_LENGTH;
     }
     
     /** Validates packet size to prevent memory exhaustion attacks. */

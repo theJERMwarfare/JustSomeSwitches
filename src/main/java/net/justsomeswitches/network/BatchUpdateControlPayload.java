@@ -39,23 +39,11 @@ public record BatchUpdateControlPayload(
         return TYPE;
     }
     public static void handle(BatchUpdateControlPayload payload, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        if (SecurityUtils.isRateLimited(player)) {
-            SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                "BatchUpdateControl packet rate limit exceeded");
-            return;
-        }
-        if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-            SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                "Invalid block position: " + payload.blockPos());
+        ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "BatchUpdateControl");
+        if (player == null) {
             return;
         }
         Level level = player.level();
-        if (!SecurityUtils.canPlayerInteractWithBlock(player, level, payload.blockPos())) {
-            SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                "Player cannot interact with block at: " + payload.blockPos());
-            return;
-        }
         SecurityUtils.logSecurityEvent(player, "BATCH_UPDATE_CONTROL", payload.blockPos(),
             "Start batch: " + payload.startBatch());
         BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());

@@ -10,12 +10,15 @@ import net.justsomeswitches.util.BrushConstants;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Service class for handling copy/paste operations. */
 public class CopyPasteService {
@@ -26,32 +29,6 @@ public class CopyPasteService {
     public static boolean hasCopiedSettings(@Nonnull ItemStack stack) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         return cache.getBoolean(BrushConstants.HAS_COPIED_DATA_KEY);
-    }
-    /** Copies settings from block entity to brush NBT. */
-    @SuppressWarnings("unused") // Available for future use
-    public static void copySettingsToBrush(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity) {
-        if (blockEntity.getLevel() == null) return;
-        HolderLookup.Provider registries = blockEntity.getLevel().registryAccess();
-        CompoundTag settingsTag = new CompoundTag();
-        NBTHelper.batchNBTOperations(stack,
-            tag -> {
-                settingsTag.putString(BrushConstants.TOGGLE_FACE_KEY, blockEntity.getToggleTextureVariable());
-                settingsTag.putString(BrushConstants.BASE_FACE_KEY, blockEntity.getBaseTextureVariable());
-                settingsTag.putString(BrushConstants.TOGGLE_ROTATION_KEY, blockEntity.getToggleTextureRotation().name());
-                settingsTag.putString(BrushConstants.BASE_ROTATION_KEY, blockEntity.getBaseTextureRotation().name());
-                settingsTag.putString(BrushConstants.TOGGLE_TEXTURE_PATH_KEY, blockEntity.getToggleTexturePath());
-                settingsTag.putString(BrushConstants.BASE_TEXTURE_PATH_KEY, blockEntity.getBaseTexturePath());
-                settingsTag.putString(BrushConstants.POWER_MODE_KEY, blockEntity.getPowerMode().name());
-                if (!blockEntity.getGuiToggleItem().isEmpty()) {
-                    settingsTag.put(BrushConstants.TOGGLE_BLOCK_KEY, blockEntity.getGuiToggleItem().saveOptional(registries));
-                }
-                if (!blockEntity.getGuiBaseItem().isEmpty()) {
-                    settingsTag.put(BrushConstants.BASE_BLOCK_KEY, blockEntity.getGuiBaseItem().saveOptional(registries));
-                }
-                tag.put(BrushConstants.COPIED_SETTINGS_KEY, settingsTag);
-                tag.putBoolean(BrushConstants.HAS_COPIED_DATA_KEY, true);
-            }
-        );
     }
     /** Selective copying with performance optimizations. */
     public static void copySelectedSettings(@Nonnull ItemStack stack, @Nonnull SwitchBlockEntity blockEntity,
@@ -140,14 +117,31 @@ public class CopyPasteService {
         if (requiredItems.isEmpty()) {
             return new ArrayList<>();
         }
-        ItemStack[] itemsArray = requiredItems.toArray(new ItemStack[0]);
-        if (InventoryHelper.hasAllItems(player, itemsArray)) {
+        // Creative players are never charged, so nothing is ever missing.
+        if (player.getAbilities().instabuild) {
             return new ArrayList<>();
+        }
+        // Tally inventory by item type, then charge each required category in order. This makes two
+        // same-type requirements (e.g. the same block in toggle + base) correctly need TWO of that
+        // block instead of one satisfying both categories - the fix for the paste duplication bug.
+        Map<Item, Integer> available = new HashMap<>();
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack slot = player.getInventory().getItem(i);
+            if (!slot.isEmpty()) {
+                available.merge(slot.getItem(), slot.getCount(), Integer::sum);
+            }
         }
         List<String> missingBlocks = new ArrayList<>();
         for (int i = 0; i < requiredItems.size(); i++) {
-            if (!InventoryHelper.hasAllItems(player, requiredItems.get(i))) {
-                String blockName = capitalizeFirst(requiredItems.get(i).getDisplayName().getString());
+            ItemStack required = requiredItems.get(i);
+            if (required.isEmpty()) {
+                continue;
+            }
+            int have = available.getOrDefault(required.getItem(), 0);
+            if (have >= 1) {
+                available.put(required.getItem(), have - 1);
+            } else {
+                String blockName = capitalizeFirst(required.getDisplayName().getString());
                 missingBlocks.add("Missing " + blockName + " for " + categories.get(i));
             }
         }

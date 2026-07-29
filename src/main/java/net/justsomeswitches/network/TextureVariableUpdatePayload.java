@@ -33,9 +33,9 @@ public record TextureVariableUpdatePayload(
     public static final StreamCodec<FriendlyByteBuf, TextureVariableUpdatePayload> STREAM_CODEC =
         StreamCodec.composite(
             BlockPos.STREAM_CODEC, TextureVariableUpdatePayload::blockPos,
-            ByteBufCodecs.STRING_UTF8, TextureVariableUpdatePayload::category,
-            ByteBufCodecs.STRING_UTF8, TextureVariableUpdatePayload::variable,
-            ByteBufCodecs.STRING_UTF8, TextureVariableUpdatePayload::texturePath,
+            ByteBufCodecs.stringUtf8(SecurityUtils.getMaxStringLength()), TextureVariableUpdatePayload::category,
+            ByteBufCodecs.stringUtf8(SecurityUtils.getMaxStringLength()), TextureVariableUpdatePayload::variable,
+            ByteBufCodecs.stringUtf8(SecurityUtils.getMaxTexturePathLength()), TextureVariableUpdatePayload::texturePath,
             TextureVariableUpdatePayload::new
         );
     @Override
@@ -44,23 +44,11 @@ public record TextureVariableUpdatePayload(
         return TYPE;
     }
     public static void handle(TextureVariableUpdatePayload payload, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        if (SecurityUtils.isRateLimited(player)) {
-            SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                "TextureVariableUpdate packet rate limit exceeded");
-            return;
-        }
-        if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-            SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                "Invalid block position: " + payload.blockPos());
+        ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "TextureVariableUpdate");
+        if (player == null) {
             return;
         }
         Level level = player.level();
-        if (!SecurityUtils.canPlayerInteractWithBlock(player, level, payload.blockPos())) {
-            SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                "Player cannot interact with block at: " + payload.blockPos());
-            return;
-        }
         if (!SecurityUtils.isValidCategory(payload.category())) {
             SecurityUtils.logSecurityViolation(player, "INVALID_CATEGORY",
                 "Invalid category: " + payload.category());

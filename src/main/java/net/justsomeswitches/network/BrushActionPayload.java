@@ -51,24 +51,12 @@ public record BrushActionPayload(
     }
     /** Handles the payload on the server side. */
     public static void handle(BrushActionPayload payload, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        if (SecurityUtils.isRateLimited(player)) {
-            SecurityUtils.logSecurityViolation(player, "RATE_LIMIT_EXCEEDED",
-                "BrushAction packet rate limit exceeded");
-            return;
-        }
-        if (!SecurityUtils.isValidBlockPosition(payload.blockPos())) {
-            SecurityUtils.logSecurityViolation(player, "INVALID_COORDINATES",
-                "Invalid block position: " + payload.blockPos());
+        ServerPlayer player = SecurityUtils.validateAndGetSender(context, payload.blockPos(), "BrushAction");
+        if (player == null) {
             return;
         }
         Level level = player.level();
         BlockPos blockPos = payload.blockPos();
-        if (!SecurityUtils.canPlayerInteractWithBlock(player, level, blockPos)) {
-            SecurityUtils.logSecurityViolation(player, "UNAUTHORIZED_ACCESS",
-                "Player cannot interact with block at: " + blockPos);
-            return;
-        }
         SecurityUtils.logSecurityEvent(player, "BRUSH_ACTION", blockPos,
             "Action: " + payload.action() + ", Hand: " + payload.hand());
         ItemStack stack = player.getItemInHand(payload.hand());
@@ -104,12 +92,12 @@ public record BrushActionPayload(
             return;
         }
         if (blockEntity.hasCustomTextures()) {
-            openOverwriteConfirmationGUI(player, blockEntity.getBlockPos());
+            NetworkHandler.openOverwriteConfirmationGUI(player, blockEntity.getBlockPos());
             return;
         }
         CopyPasteService.PasteResult result = brush.applySettingsFromBrushServer(stack, blockEntity, player);
         if (!result.success && BrushConstants.MSG_MISSING_BLOCKS_GUI.equals(result.message)) {
-            openMissingBlockGUI(player, blockPos, result.missingBlocks);
+            NetworkHandler.openMissingBlockGUI(player, blockPos, result.missingBlocks);
             return;
         }
         if (result.success) {
@@ -117,27 +105,5 @@ public record BrushActionPayload(
         } else {
             NetworkHandler.sendActionBarMessage(player, result.message, NetworkHandler.MessageType.ERROR);
         }
-    }
-    /** Opens the missing block GUI for the player. */
-    private static void openMissingBlockGUI(ServerPlayer player, BlockPos blockPos, java.util.List<String> missingBlocks) {
-        NetworkHandler.openMissingBlockGUI(player, blockPos, missingBlocks);
-    }
-    /** Opens the overwrite confirmation GUI for the player. */
-    private static void openOverwriteConfirmationGUI(ServerPlayer player, BlockPos blockPos) {
-        net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
-            @Override
-            @javax.annotation.Nonnull
-            public net.minecraft.network.chat.Component getDisplayName() {
-                return net.minecraft.network.chat.Component.literal("Settings Already Stored");
-            }
-            @Override
-            @javax.annotation.Nonnull
-            public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int containerId,
-                                                                                 @javax.annotation.Nonnull net.minecraft.world.entity.player.Inventory playerInventory,
-                                                                                 @javax.annotation.Nonnull net.minecraft.world.entity.player.Player player) {
-                return new net.justsomeswitches.gui.BrushOverwriteMenu(containerId, playerInventory, blockPos);
-            }
-        };
-        player.openMenu(menuProvider, buf -> buf.writeBlockPos(blockPos));
     }
 }
