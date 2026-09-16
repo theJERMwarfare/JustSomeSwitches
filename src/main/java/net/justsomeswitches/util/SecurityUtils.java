@@ -2,7 +2,10 @@ package net.justsomeswitches.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.justsomeswitches.config.SwitchesServerConfig;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -81,10 +84,25 @@ public class SecurityUtils {
     /** Validates block coordinates are within reasonable bounds. */
     public static boolean isValidBlockPosition(@Nonnull BlockPos blockPos) {
         return blockPos.getX() >= MIN_COORDINATE && blockPos.getX() <= MAX_COORDINATE &&
-               blockPos.getY() >= -64 && blockPos.getY() <= 320 &&
+               blockPos.getY() >= DimensionType.MIN_Y && blockPos.getY() <= DimensionType.MAX_Y &&
                blockPos.getZ() >= MIN_COORDINATE && blockPos.getZ() <= MAX_COORDINATE;
     }
     
+    /**
+     * Returns true when block protection is enabled and the position is off limits. Covers vanilla
+     * spawn protection and the world border; land-claim mods are handled by the right-click event
+     * that opens the GUI in the first place.
+     */
+    public static boolean isBlockProtected(@Nonnull Player player, @Nonnull Level level, @Nonnull BlockPos blockPos) {
+        try {
+            if (!SwitchesServerConfig.RESPECT_BLOCK_PROTECTION.get()) {
+                return false;
+            }
+        } catch (Exception ignored) {
+            return false; // Config not loaded yet, allow the action
+        }
+        return !level.mayInteract(player, blockPos);
+    }
     /** Validates player permission to interact with block. */
     public static boolean canPlayerInteractWithBlock(@Nonnull ServerPlayer player, @Nonnull Level level, @Nonnull BlockPos blockPos) {
         if (player.isSpectator()) {
@@ -92,6 +110,11 @@ public class SecurityUtils {
         }
         if (!level.isLoaded(blockPos)) {
             LOGGER.warn("Player {} attempted to interact with unloaded chunk at {}",
+                player.getName().getString(), blockPos);
+            return false;
+        }
+        if (isBlockProtected(player, level, blockPos)) {
+            LOGGER.warn("Player {} attempted to modify a protected block at {}",
                 player.getName().getString(), blockPos);
             return false;
         }
@@ -175,7 +198,12 @@ public class SecurityUtils {
     
     /** Validates string input length and content. */
     public static boolean isValidString(@Nonnull String input, int maxLength) {
-        
+
+        if (input.isEmpty()) {
+            LOGGER.warn("Empty string input rejected");
+            return false;
+        }
+
         if (input.length() > maxLength) {
             LOGGER.warn("String too long: {} characters (max: {})", input.length(), maxLength);
             return false;
@@ -198,14 +226,6 @@ public class SecurityUtils {
                 yield false;
             }
         };
-    }
-    
-    /** Logs security events - disabled in production (only errors are logged). */
-    public static void logSecurityEvent(@SuppressWarnings("unused") @Nonnull ServerPlayer player, 
-                                      @SuppressWarnings("unused") @Nonnull String action, 
-                                      @SuppressWarnings("unused") @Nonnull BlockPos blockPos, 
-                                      @SuppressWarnings("unused") @Nonnull String details) {
-        // Debug logging disabled - only actual errors/violations are logged
     }
     
     /** Logs security violations at WARN level for monitoring. */

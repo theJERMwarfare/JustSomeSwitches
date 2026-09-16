@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
+import net.justsomeswitches.gui.components.FittedButton;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -36,13 +37,11 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
         
-        addRenderableWidget(Button.builder(Component.literal("Paste"), this::onApplyClicked)
-                .bounds(leftPos + 20, topPos + 61, 70, 20)
-                .build());
+        addRenderableWidget(new FittedButton(leftPos + 12, topPos + 61, 84, 20,
+                Component.literal("Paste Available"), this::onApplyClicked));
         
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), this::onCancelClicked)
-                .bounds(leftPos + 111, topPos + 61, 70, 20)
-                .build());
+        addRenderableWidget(new FittedButton(leftPos + 104, topPos + 61, 84, 20,
+                Component.literal("Cancel"), this::onCancelClicked));
     }
     
     @Override
@@ -117,13 +116,15 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
             }
         }
         
-        graphics.pose().pushPose();
-        graphics.pose().scale(0.7f, 0.7f, 1.0f);
+        String questionText = "Paste available settings? Others stay unchanged.";
+        float questionScale = Math.min(0.7f, (float)maxTextWidth / font.width(questionText));
         
-        String questionText = "Paste other possible texture settings?";
-        int questionTextWidth = (int)(font.width(questionText) * 0.7f);
-        int questionScaledX = (int)((imageWidth - questionTextWidth) / 2.0f / 0.7f);
-        int questionScaledY = (int)(48 / 0.7f);
+        graphics.pose().pushPose();
+        graphics.pose().scale(questionScale, questionScale, 1.0f);
+        
+        int questionTextWidth = (int)(font.width(questionText) * questionScale);
+        int questionScaledX = (int)((imageWidth - questionTextWidth) / 2.0f / questionScale);
+        int questionScaledY = (int)(48 / questionScale);
         
         graphics.drawString(font, questionText, questionScaledX + 1, questionScaledY + 1, shadowColor, false);
         graphics.drawString(font, questionText, questionScaledX, questionScaledY, 0xFFFFCC00, false);

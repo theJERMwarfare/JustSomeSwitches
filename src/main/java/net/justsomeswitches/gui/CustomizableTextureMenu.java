@@ -25,6 +25,7 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Locale;
 
 /**
  * Texture customization menu for switches.
@@ -83,7 +84,13 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
                     blockEntity.setChanged();
                 }
             }
-            
+
+            @Override
+            public int getSlotLimit(int slot) {
+                // Vanilla shift-click reads the handler limit, not the slot's getMaxStackSize()
+                return 1;
+            }
+
             @Override
             public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
                 if (!isInitializing && !isLoadingSlots) {
@@ -358,7 +365,7 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
         if (blockEntity == null) return;
         
         this.powerMode = mode;
-        sendOrApplyUpdate("power", mode.name().toLowerCase(), "",
+        sendOrApplyUpdate("power", mode.name().toLowerCase(Locale.ROOT), "",
                 () -> {
                     blockEntity.setPowerMode(mode);
                     blockEntity.updateTextures();
@@ -379,7 +386,7 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
         if (blockEntity == null) return;
         
         this.baseTextureRotation = rotation;
-        sendOrApplyUpdate("base_rotation", rotation.name().toLowerCase(), "",
+        sendOrApplyUpdate("base_rotation", rotation.name().toLowerCase(Locale.ROOT), "",
                 () -> {
                     blockEntity.setBaseTextureRotation(rotation);
                     blockEntity.updateTextures();
@@ -400,7 +407,7 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
         if (blockEntity == null) return;
         
         this.toggleTextureRotation = rotation;
-        sendOrApplyUpdate("toggle_rotation", rotation.name().toLowerCase(), "",
+        sendOrApplyUpdate("toggle_rotation", rotation.name().toLowerCase(Locale.ROOT), "",
                 () -> {
                     blockEntity.setToggleTextureRotation(rotation);
                     blockEntity.updateTextures();
@@ -540,6 +547,7 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
     public ItemStack quickMoveStack(@Nonnull Player player, int index) {
         ItemStack itemStack = ItemStack.EMPTY;
         Slot slot = slots.get(index);
+        boolean filledTextureSlot = false;
 
         if (slot.hasItem()) {
             ItemStack currentStack = slot.getItem();
@@ -553,22 +561,27 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
                 }
             }
 
+            else if (isValidTextureItem(currentStack)) {
+                // Vanilla furnace routing: a valid item only ever tries the texture slots
+                if (!moveItemStackTo(currentStack, 0, TEXTURE_SLOT_COUNT, false)) {
+                    return ItemStack.EMPTY;
+                }
+                filledTextureSlot = true;
+            }
+
             else {
 
-                if (!moveItemStackTo(currentStack, 0, TEXTURE_SLOT_COUNT, false)) {
+                int playerInventoryStart = TEXTURE_SLOT_COUNT;
+                int playerInventoryEnd = playerInventoryStart + 27;
+                int hotbarEnd = playerInventoryEnd + 9;
 
-                    int playerInventoryStart = TEXTURE_SLOT_COUNT;
-                    int playerInventoryEnd = playerInventoryStart + 27;
-                    int hotbarEnd = playerInventoryEnd + 9;
-
-                    if (index < playerInventoryEnd) {
-                        if (!moveItemStackTo(currentStack, playerInventoryEnd, hotbarEnd, false)) {
-                            return ItemStack.EMPTY;
-                        }
-                    } else {
-                        if (!moveItemStackTo(currentStack, playerInventoryStart, playerInventoryEnd, false)) {
-                            return ItemStack.EMPTY;
-                        }
+                if (index < playerInventoryEnd) {
+                    if (!moveItemStackTo(currentStack, playerInventoryEnd, hotbarEnd, false)) {
+                        return ItemStack.EMPTY;
+                    }
+                } else {
+                    if (!moveItemStackTo(currentStack, playerInventoryStart, playerInventoryEnd, false)) {
+                        return ItemStack.EMPTY;
                     }
                 }
             }
@@ -584,6 +597,10 @@ public class CustomizableTextureMenu extends AbstractContainerMenu {
             }
 
             slot.onTake(player, currentStack);
+            // One shift-click fills one texture slot: EMPTY stops vanilla's repeat loop
+            if (filledTextureSlot) {
+                return ItemStack.EMPTY;
+            }
         }
 
         return itemStack;

@@ -18,7 +18,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
+import net.minecraft.core.Direction;
 import javax.annotation.Nonnull;
+import java.util.Locale;
 import java.util.List;
 
 /** World rendering system for ghost block previews during translucent stage. */
@@ -28,6 +30,14 @@ public class GhostWorldRenderer {
     /** Reusable RNG for ghost quad generation - reseeded per block; ghost rendering is render-thread only. */
     private static final RandomSource GHOST_RANDOM = RandomSource.create();
 
+    /** Per-face shade factor vanilla applies to block quads (UP 1.0, DOWN 0.5, N/S 0.8, E/W 0.6). */
+    private static float getFaceShade(@Nonnull BakedQuad quad) {
+        var level = Minecraft.getInstance().level;
+        if (level == null) {
+            return 1.0f;
+        }
+        return level.getShade(quad.getDirection(), quad.isShade());
+    }
     /** Renders a quad with manual alpha transparency using white color with ghost alpha. */
     private static void renderQuadWithAlpha(@Nonnull VertexConsumer buffer,
                                            @Nonnull PoseStack poseStack,
@@ -37,6 +47,12 @@ public class GhostWorldRenderer {
                                            int packedOverlay) {
         int[] vertices = quad.getVertices();
         int ghostAlpha = (int)(alpha * 255);
+        // Baked quads never populate the packed-normal element, so derive the normal from the face
+        // direction. Block shaders ignore it, but it keeps the vertex data honest.
+        Direction normal = quad.getDirection();
+        // Block shading comes from the vertex colour, not the normal. ModelBlockRenderer multiplies by
+        // level.getShade(); this renderer writes vertices by hand, so apply the same factor here.
+        int shaded = (int)(255 * getFaceShade(quad));
         for (int vertexIndex = 0; vertexIndex < 4; vertexIndex++) {
             int baseIndex = vertexIndex * 8;
             float x = Float.intBitsToFloat(vertices[baseIndex]);
@@ -44,16 +60,13 @@ public class GhostWorldRenderer {
             float z = Float.intBitsToFloat(vertices[baseIndex + 2]);
             float u = Float.intBitsToFloat(vertices[baseIndex + 4]);
             float v = Float.intBitsToFloat(vertices[baseIndex + 5]);
-            int normalData = vertices[baseIndex + 6];
             buffer.addVertex(poseStack.last(), x, y, z)
-                  .setColor(255, 255, 255, ghostAlpha)
+                  .setColor(shaded, shaded, shaded, ghostAlpha)
                   .setUv(u, v)
                   .setOverlay(packedOverlay)
                   .setLight(packedLight)
                   .setNormal(poseStack.last(),
-                         (normalData & 0xFF) / 127.0f - 1.0f,
-                         ((normalData >> 8) & 0xFF) / 127.0f - 1.0f,
-                         ((normalData >> 16) & 0xFF) / 127.0f - 1.0f);
+                         normal.getStepX(), normal.getStepY(), normal.getStepZ());
         }
     }
 
@@ -218,7 +231,7 @@ public class GhostWorldRenderer {
     @SuppressWarnings("resource") // Sprite contents managed by Minecraft, must NOT be closed
     private static String getTextureName(@Nonnull TextureAtlasSprite sprite) {
         try {
-            return sprite.contents().name().toString().toLowerCase();
+            return sprite.contents().name().toString().toLowerCase(Locale.ROOT);
         } catch (Exception e) {
             return "unknown";
         }

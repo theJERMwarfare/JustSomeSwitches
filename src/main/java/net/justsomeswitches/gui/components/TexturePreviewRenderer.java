@@ -385,8 +385,11 @@ public class TexturePreviewRenderer {
             int textureX = x - offsetX;
             int textureY = y - offsetY;
             graphics.enableScissor(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE);
-            graphics.blit(textureX, textureY, 0, 48, 48, sprite);
-            graphics.disableScissor();
+            try {
+                graphics.blit(textureX, textureY, 0, 48, 48, sprite);
+            } finally {
+                graphics.disableScissor();
+            }
         } catch (Exception e) {
             graphics.fill(x, y, x + POWER_PREVIEW_SIZE, y + POWER_PREVIEW_SIZE, 0xFFCCCCCC);
         }

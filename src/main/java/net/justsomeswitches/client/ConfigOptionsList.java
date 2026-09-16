@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.gui.widget.ExtendedButton;
@@ -12,6 +13,7 @@ import net.neoforged.neoforge.client.gui.widget.ExtendedButton;
 import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.IntConsumer;
 
 /** Scrollable list widget for the mod config screen. */
 public class ConfigOptionsList extends ContainerObjectSelectionList<ConfigOptionsList.Entry> {
@@ -74,11 +76,52 @@ public class ConfigOptionsList extends ContainerObjectSelectionList<ConfigOption
         public List<? extends NarratableEntry> narratables() { return ImmutableList.of(button); }
     }
 
+    /** Centered integer slider with a live label. */
+    public static class SliderEntry extends Entry {
+        private final IntSlider slider;
+        public SliderEntry(String labelKey, int min, int max, int initial, IntConsumer onChange) {
+            this.slider = new IntSlider(labelKey, min, max, initial, onChange);
+        }
+        @Override
+        public void render(@Nonnull GuiGraphics graphics, int index, int top, int left, int width,
+                           int height, int mouseX, int mouseY, boolean hovering, float partialTick) {
+            slider.setX(left + width / 2 - 100);
+            slider.setY(top);
+            slider.render(graphics, mouseX, mouseY, partialTick);
+        }
+        @Override @Nonnull
+        public List<? extends GuiEventListener> children() { return ImmutableList.of(slider); }
+        @Override @Nonnull
+        public List<? extends NarratableEntry> narratables() { return ImmutableList.of(slider); }
+
+        /** Maps the slider's 0..1 position onto an inclusive integer range. */
+        private static final class IntSlider extends AbstractSliderButton {
+            private final String labelKey;
+            private final int min;
+            private final int max;
+            private final IntConsumer onChange;
+            IntSlider(String labelKey, int min, int max, int initial, IntConsumer onChange) {
+                super(0, 0, 200, 20, Component.empty(), (double)(initial - min) / (double)(max - min));
+                this.labelKey = labelKey;
+                this.min = min;
+                this.max = max;
+                this.onChange = onChange;
+                updateMessage();
+            }
+            private int intValue() { return min + (int)Math.round(value * (max - min)); }
+            @Override
+            protected void updateMessage() { setMessage(Component.translatable(labelKey, intValue())); }
+            @Override
+            protected void applyValue() { onChange.accept(intValue()); }
+        }
+    }
+
     /** Centered help/warning text with dynamic scaling. */
     public static class TextEntry extends Entry {
-        private final String text;
+        private final Component text;
         private final int color;
-        public TextEntry(String text, int color) { this.text = text; this.color = color; }
+        public TextEntry(String text, int color) { this(Component.literal(text), color); }
+        public TextEntry(Component text, int color) { this.text = text; this.color = color; }
         @Override
         public void render(@Nonnull GuiGraphics graphics, int index, int top, int left, int width,
                            int height, int mouseX, int mouseY, boolean hovering, float partialTick) {

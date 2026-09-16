@@ -208,9 +208,25 @@ public class SwitchBlockEntity extends BlockEntity {
         boolean baseIsCustom = !baseTexturePath.equals(DEFAULT_BASE_TEXTURE);
         if (toggleIsCustom && !guiToggleItem.isEmpty()) {
             reanalyzeCategory(guiToggleItem, true);
+        } else if (!toggleIsCustom) {
+            clearCategoryData(true);
         }
         if (baseIsCustom && !guiBaseItem.isEmpty()) {
             reanalyzeCategory(guiBaseItem, false);
+        } else if (!baseIsCustom) {
+            clearCategoryData(false);
+        }
+    }
+    /** Clears stale tint/overlay data for a category whose texture is back to the default. */
+    private void clearCategoryData(boolean isToggle) {
+        if (isToggle) {
+            toggleTintDataMap.clear();
+            toggleOverlayDataMap.clear();
+            toggleSourceBlockState = null;
+        } else {
+            baseTintDataMap.clear();
+            baseOverlayDataMap.clear();
+            baseSourceBlockState = null;
         }
     }
     /** Re-analyzes tint/overlay data for a single category (toggle or base). */
@@ -715,7 +731,10 @@ public class SwitchBlockEntity extends BlockEntity {
                     int count = Math.min(layersTag.getInt("Count"), 16);
                     List<OverlayLayer> layers = new ArrayList<>();
                     for (int i = 0; i < count; i++) {
-                        layers.add(OverlayLayer.load(layersTag.getCompound("Layer" + i)));
+                        OverlayLayer layer = OverlayLayer.load(layersTag.getCompound("Layer" + i));
+                        if (layer != null) {
+                            layers.add(layer);
+                        }
                     }
                     map.put(direction, layers);
                 }

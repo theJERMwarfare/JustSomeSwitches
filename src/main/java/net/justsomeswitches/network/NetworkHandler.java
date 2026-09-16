@@ -33,6 +33,8 @@ public class NetworkHandler {
             BrushMissingBlockPayload.STREAM_CODEC, BrushMissingBlockPayload::handle);
         registrar.playToServer(BatchUpdateControlPayload.TYPE,
             BatchUpdateControlPayload.STREAM_CODEC, BatchUpdateControlPayload::handle);
+        registrar.playToServer(BrushModePayload.TYPE,
+            BrushModePayload.STREAM_CODEC, BrushModePayload::handle);
     }
     /** Sends texture variable update packet with security validation. */
     public static void sendTextureVariableUpdate(@Nonnull BlockPos blockPos,
@@ -95,6 +97,20 @@ public class NetworkHandler {
             blockPos, copyToggleBlock, copyToggleFace, copyToggleRotation,
             copyIndicators, copyBaseBlock, copyBaseFace, copyBaseRotation
         ));
+    }
+    /** Sends the chosen brush mode to the server. Client side. */
+    public static void sendBrushMode(@Nonnull net.justsomeswitches.item.BrushMode mode, boolean wantsMessage) {
+        PacketDistributor.sendToServer(new BrushModePayload(mode, wantsMessage));
+    }
+    /** Confirms a brush mode change. Uses a translatable component, unlike the older String helper. */
+    public static void sendBrushModeMessage(@Nonnull ServerPlayer player,
+                                          @Nonnull net.justsomeswitches.item.BrushMode mode) {
+        // Only the mode name is coloured, matching the HUD, so the two agree when both are shown.
+        player.displayClientMessage(
+            net.minecraft.network.chat.Component.translatable(
+                "message.justsomeswitches.brush_mode_set",
+                mode.getDisplayName().withStyle(mode.getColor())),
+            true);
     }
     /** Sends action bar message to player. */
     public static void sendActionBarMessage(@Nonnull ServerPlayer player,

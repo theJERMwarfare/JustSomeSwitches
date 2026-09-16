@@ -10,6 +10,7 @@ public final class BrushConstants {
     }
     
     public static final String COPIED_SETTINGS_KEY = "copied_settings";
+    public static final String BRUSH_MODE_KEY = "brush_mode";
     public static final String HAS_COPIED_DATA_KEY = "has_copied_data";
     public static final String TOGGLE_BLOCK_KEY = "toggle_block";
     public static final String TOGGLE_FACE_KEY = "toggle_face";

@@ -40,6 +40,12 @@ public class NBTHelper {
             CompoundTag tag = getTag();
             return (tag != null && tag.contains(key)) ? tag.getCompound(key) : null;
         }
+        /** Returns string value for key, or the fallback if not found. */
+        @Nonnull
+        public String getString(@Nonnull String key, @Nonnull String fallback) {
+            CompoundTag tag = getTag();
+            return (tag != null && tag.contains(key)) ? tag.getString(key) : fallback;
+        }
         /** Returns boolean value for key or false if not found. */
         public boolean getBoolean(@Nonnull String key) {
             CompoundTag tag = getTag();

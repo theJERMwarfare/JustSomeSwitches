@@ -13,8 +13,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.Tags;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Validates blocks for switch texture customization using hybrid tag + property system.
@@ -22,7 +22,7 @@ import java.util.Map;
  * Emissive blocks (Sea Lantern, Glowstone) allowed - texture applied at switch brightness only.
  */
 public class SwitchesBlockValidator {
-    private static final Map<Block, Boolean> VALIDATION_CACHE = new HashMap<>();
+    private static final Map<Block, Boolean> VALIDATION_CACHE = new ConcurrentHashMap<>();
     private static final BlockPos TEST_POS = BlockPos.ZERO;
     /** Validates ItemStack for texture customization. */
     public static boolean isValidTextureItem(@Nonnull ItemStack stack) {

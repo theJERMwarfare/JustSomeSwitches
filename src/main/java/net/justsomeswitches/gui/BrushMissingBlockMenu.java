@@ -1,5 +1,6 @@
 package net.justsomeswitches.gui;
 
+import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -13,6 +14,8 @@ import java.util.List;
 /** Menu for missing block GUI when player lacks blocks for paste operation. */
 public class BrushMissingBlockMenu extends AbstractContainerMenu {
     
+    /** Decode cap: the list only ever holds one entry per texture category. */
+    private static final int MAX_MISSING_BLOCKS = 16;
     private final BlockPos blockPos;
     private final List<String> missingBlocks;
     
@@ -28,10 +31,10 @@ public class BrushMissingBlockMenu extends AbstractContainerMenu {
         super(JustSomeSwitchesMenuTypes.BRUSH_MISSING_BLOCK.get(), containerId);
         this.blockPos = extraData.readBlockPos();
         
-        int count = extraData.readInt();
+        int count = Math.min(extraData.readInt(), MAX_MISSING_BLOCKS);
         this.missingBlocks = new java.util.ArrayList<>();
         for (int i = 0; i < count; i++) {
-            this.missingBlocks.add(extraData.readUtf());
+            this.missingBlocks.add(extraData.readUtf(SecurityUtils.getMaxStringLength()));
         }
     }
     

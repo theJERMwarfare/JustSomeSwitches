@@ -65,11 +65,6 @@ public record BrushCopySelectionPayload(
             return;
         }
         Level level = player.level();
-        SecurityUtils.logSecurityEvent(player, "BRUSH_COPY_SELECTION", payload.blockPos(),
-            String.format("Toggle: %b/%b/%b, Base: %b/%b/%b, Indicators: %b",
-                payload.copyToggleBlock(), payload.copyToggleFace(), payload.copyToggleRotation(),
-                payload.copyBaseBlock(), payload.copyBaseFace(), payload.copyBaseRotation(),
-                payload.copyIndicators()));
         BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
         if (!(blockEntity instanceof SwitchBlockEntity switchEntity)) {
             return;

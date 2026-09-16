@@ -4,6 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /** Represents a single texture layer for overlay rendering. */
 public class OverlayLayer {
@@ -32,9 +33,12 @@ public class OverlayLayer {
     }
     
     /** Loads overlay layer data from NBT. */
-    @Nonnull
+    @Nullable
     public static OverlayLayer load(@Nonnull CompoundTag tag) {
-        ResourceLocation sprite = ResourceLocation.parse(tag.getString("Sprite"));
+        ResourceLocation sprite = ResourceLocation.tryParse(tag.getString("Sprite"));
+        if (sprite == null) {
+            return null;
+        }
         int tintIndex = tag.getInt("TintIndex");
         int order = tag.getInt("Order");
         return new OverlayLayer(sprite, tintIndex, order);

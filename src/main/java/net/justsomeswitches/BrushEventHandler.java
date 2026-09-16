@@ -2,6 +2,7 @@ package net.justsomeswitches;
 
 import net.justsomeswitches.config.SwitchesServerConfig;
 import net.justsomeswitches.init.JustSomeSwitchesModBlocks;
+import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -30,6 +31,11 @@ public class BrushEventHandler {
         
         Level level = event.getLevel();
         BlockPos pos = event.getPos();
+        // destroyBlock() below bypasses ServerPlayerGameMode's own blockActionRestricted check,
+        // so spawn protection has to be enforced here.
+        if (SecurityUtils.isBlockProtected(player, level, pos)) {
+            return;
+        }
         BlockState blockState = level.getBlockState(pos);
         
         ResourceLocation blockRegistryName = BuiltInRegistries.BLOCK.getKey(blockState.getBlock());

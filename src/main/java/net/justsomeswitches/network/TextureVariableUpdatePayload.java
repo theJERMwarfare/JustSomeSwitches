@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import javax.annotation.Nonnull;
+import java.util.Locale;
 
 /**
  * Network payload for syncing texture variable changes from client to server
@@ -66,8 +67,6 @@ public record TextureVariableUpdatePayload(
                 "Invalid texture path: " + payload.texturePath());
             return;
         }
-        SecurityUtils.logSecurityEvent(player, "TEXTURE_VARIABLE_UPDATE", payload.blockPos(),
-            "Category: " + payload.category() + ", Variable: " + payload.variable());
         BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
         if (!(blockEntity instanceof SwitchBlockEntity switchEntity)) {
             return;
@@ -85,7 +84,7 @@ public record TextureVariableUpdatePayload(
             }
             case "power" -> {
                 try {
-                    SwitchBlockEntity.PowerMode powerMode = SwitchBlockEntity.PowerMode.valueOf(payload.variable().toUpperCase());
+                    SwitchBlockEntity.PowerMode powerMode = SwitchBlockEntity.PowerMode.valueOf(payload.variable().toUpperCase(Locale.ROOT));
                     switchEntity.setPowerMode(powerMode);
                     switchEntity.updateTextures();
                 } catch (IllegalArgumentException e) {
@@ -94,7 +93,7 @@ public record TextureVariableUpdatePayload(
             }
             case "base_rotation" -> {
                 try {
-                    TextureRotation rotation = TextureRotation.valueOf(payload.variable().toUpperCase());
+                    TextureRotation rotation = TextureRotation.valueOf(payload.variable().toUpperCase(Locale.ROOT));
                     switchEntity.setBaseTextureRotation(rotation);
                     switchEntity.updateTextures();
                 } catch (IllegalArgumentException e) {
@@ -103,7 +102,7 @@ public record TextureVariableUpdatePayload(
             }
             case "toggle_rotation" -> {
                 try {
-                    TextureRotation rotation = TextureRotation.valueOf(payload.variable().toUpperCase());
+                    TextureRotation rotation = TextureRotation.valueOf(payload.variable().toUpperCase(Locale.ROOT));
                     switchEntity.setToggleTextureRotation(rotation);
                     switchEntity.updateTextures();
                 } catch (IllegalArgumentException e) {

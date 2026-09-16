@@ -20,6 +20,7 @@ import org.joml.Matrix4f;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -252,6 +253,9 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
      */
     private static int getTextureId(@Nullable String texturePath) {
         if (texturePath == null) return 0;
+        if (TEXTURE_ID_MAP.size() > 10000) {
+            clearAllCaches();
+        }
         return TEXTURE_ID_MAP.computeIfAbsent(texturePath, 
             path -> NEXT_TEXTURE_ID.incrementAndGet());
     }
@@ -260,6 +264,9 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
      * Gets or creates BlockState ID for cache key compression.
      */
     private static int getBlockStateId(@Nonnull String blockStateString) {
+        if (BLOCKSTATE_ID_MAP.size() > 10000) {
+            clearAllCaches();
+        }
         return BLOCKSTATE_ID_MAP.computeIfAbsent(blockStateString,
             state -> NEXT_BLOCKSTATE_ID.incrementAndGet());
     }
@@ -653,6 +660,10 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             // Determine which overlay data to use based on quad part type
             String texName = getTextureName(quad.getSprite());
             boolean isToggle = isTogglePart(texName);
+            // Indicators adopt the toggle/base texture in None modes, so they need that category's data
+            if (isPoweredTexture(texName) || isUnpoweredTexture(texName)) {
+                isToggle = "NONE".equals(powerMode) || "NONE_TOGGLE".equals(powerMode);
+            }
             Map<Direction, List<OverlayLayer>> overlayData = isToggle ? toggleOverlayData : baseOverlayData;
             List<BakedQuad> processedQuads = processQuadWithOverlaySupport(
                 quad, toggleTexture, baseTexture, faceSelection, powerMode, state, extraData,
@@ -753,14 +764,19 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         int resolvedToggleTintIndex = toggleTintIndex;
         int resolvedBaseTintIndex = baseTintIndex;
         if (overlayData != null && !overlayData.isEmpty()) {
-            Direction selectedDir = mapFaceSelectionToDirection(faceSelection, isBasePart);
+            boolean isIndicatorPart = isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName);
+            boolean indicatorUsesBase = isIndicatorPart && "NONE_BASE".equals(powerMode);
+            Direction selectedDir = mapFaceSelectionToDirection(faceSelection, isBasePart || indicatorUsesBase);
             if (selectedDir != null) {
                 List<OverlayLayer> faceLayers = overlayData.get(selectedDir);
                 if (faceLayers != null && !faceLayers.isEmpty()) {
                     int faceTint = faceLayers.getFirst().getTintIndex();
-                    if (isBasePart) {
+                    if (isBasePart || indicatorUsesBase) {
                         resolvedBaseTintIndex = (faceTint >= 0) ? faceTint + BASE_TINT_OFFSET : faceTint;
                     } else if (isTogglePart) {
+                        resolvedToggleTintIndex = faceTint;
+                    } else if (isIndicatorPart
+                            && ("NONE".equals(powerMode) || "NONE_TOGGLE".equals(powerMode))) {
                         resolvedToggleTintIndex = faceTint;
                     }
                 }
@@ -782,8 +798,10 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
         if (faceSelection == null) return null;
         // faceSelection format: "baseVar,toggleVar"
         String[] parts = faceSelection.split(",");
+        // A lone "," splits to a zero-length array, so parts[0] would throw inside getQuads
+        if (parts.length == 0) return null;
         String variable = isBasePart ? parts[0] : (parts.length > 1 ? parts[1] : parts[0]);
-        return switch (variable.toLowerCase()) {
+        return switch (variable.toLowerCase(Locale.ROOT)) {
             case "top", "up" -> Direction.UP;
             case "bottom", "down" -> Direction.DOWN;
             case "north" -> Direction.NORTH;
@@ -863,6 +881,13 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
                 quadTintIndex = toggleTintIndex;
             } else if (isBaseTexturePart && baseTexture != null) {
                 quadTintIndex = baseTintIndex;
+            } else if (isPoweredTexture(originalTextureName) || isUnpoweredTexture(originalTextureName)) {
+                // Indicator adopts the toggle/base sprite in None modes, so it must adopt that tint too
+                if (("NONE".equals(powerMode) || "NONE_TOGGLE".equals(powerMode)) && toggleTexture != null) {
+                    quadTintIndex = toggleTintIndex;
+                } else if ("NONE_BASE".equals(powerMode) && baseTexture != null) {
+                    quadTintIndex = baseTintIndex;
+                }
             }
         }
         
@@ -1453,6 +1478,19 @@ public class SwitchDynamicModel implements IDynamicBakedModel {
             });
     }
     
+    /** Clears all caches and ID maps when ID map growth exceeds safety threshold. */
+    private static void clearAllCaches() {
+        LOGGER.info("ID map safety limit reached, clearing all caches. Textures: {}, BlockStates: {}",
+            TEXTURE_ID_MAP.size(), BLOCKSTATE_ID_MAP.size());
+        GLOBAL_CACHE.clear();
+        TEXTURE_ID_MAP.clear();
+        BLOCKSTATE_ID_MAP.clear();
+        NEXT_TEXTURE_ID.set(0);
+        NEXT_BLOCKSTATE_ID.set(0);
+        cacheHits.set(0);
+        cacheMisses.set(0);
+        cacheEvictions.set(0);
+    }
     /**
      * Estimates cache memory usage in bytes.
      * Provides approximate memory footprint for monitoring.

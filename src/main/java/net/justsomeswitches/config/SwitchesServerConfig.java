@@ -12,6 +12,8 @@ public class SwitchesServerConfig {
     public static final ModConfigSpec.BooleanValue ALLOW_BLOCK_ENTITIES;
     /** Controls whether the Switch Texture Brush can instantly break mod blocks (default: false = brush CAN break). */
     public static final ModConfigSpec.BooleanValue DISABLE_BRUSH_INSTANT_BREAK;
+    /** Controls whether switch customization respects spawn protection and the world border (default: true). */
+    public static final ModConfigSpec.BooleanValue RESPECT_BLOCK_PROTECTION;
 
     static {
         BUILDER.push("Block Validation");
@@ -42,6 +44,25 @@ public class SwitchesServerConfig {
                     "Default: false (brush instant break is allowed)"
                 )
                 .define("disableBrushInstantBreak", false);
+        BUILDER.pop();
+        BUILDER.push("Block Protection");
+        BUILDER.comment("Settings controlling where switches may be modified");
+        RESPECT_BLOCK_PROTECTION = BUILDER
+                .comment(
+                    "Respect vanilla block protection when modifying switches.",
+                    "",
+                    "When enabled, switches cannot be customized, pasted onto, or instantly broken",
+                    "inside spawn protection or outside the world border.",
+                    "",
+                    "This has no effect in singleplayer or on servers without spawn protection,",
+                    "where the check always passes.",
+                    "",
+                    "NOTE: land-claim mods are already respected on the normal path, because",
+                    "opening the texture GUI requires a right-click that those mods cancel.",
+                    "",
+                    "Default: true"
+                )
+                .define("respectBlockProtection", true);
         BUILDER.pop();
         SPEC = BUILDER.build();
     }

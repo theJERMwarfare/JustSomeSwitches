@@ -19,6 +19,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import javax.annotation.Nonnull;
+import java.util.Locale;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -48,7 +49,7 @@ public class DynamicBlockModelAnalyzer {
 
             this.availableVariables = new ArrayList<>();
             for (String variable : textureVariables.keySet()) {
-                if (!NON_FACE_TEXTURE_VARIABLES.contains(variable.toLowerCase()) &&
+                if (!NON_FACE_TEXTURE_VARIABLES.contains(variable.toLowerCase(Locale.ROOT)) &&
                         !variable.startsWith("#")) {
                     this.availableVariables.add(variable);
                 }
@@ -104,7 +105,7 @@ public class DynamicBlockModelAnalyzer {
             Map<String, String> filteredVariables = new LinkedHashMap<>();
             for (Map.Entry<String, String> entry : textureVariables.entrySet()) {
                 String variable = entry.getKey();
-                if (!NON_FACE_TEXTURE_VARIABLES.contains(variable.toLowerCase()) &&
+                if (!NON_FACE_TEXTURE_VARIABLES.contains(variable.toLowerCase(Locale.ROOT)) &&
                         !variable.startsWith("#")) {
                     filteredVariables.put(variable, entry.getValue());
                 }

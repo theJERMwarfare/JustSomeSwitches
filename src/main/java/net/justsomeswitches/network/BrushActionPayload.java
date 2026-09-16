@@ -57,8 +57,6 @@ public record BrushActionPayload(
         }
         Level level = player.level();
         BlockPos blockPos = payload.blockPos();
-        SecurityUtils.logSecurityEvent(player, "BRUSH_ACTION", blockPos,
-            "Action: " + payload.action() + ", Hand: " + payload.hand());
         ItemStack stack = player.getItemInHand(payload.hand());
         if (!(stack.getItem() instanceof SwitchTextureBrushItem brush)) {
             return;

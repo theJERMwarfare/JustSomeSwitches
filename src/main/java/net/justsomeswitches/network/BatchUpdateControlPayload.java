@@ -44,8 +44,6 @@ public record BatchUpdateControlPayload(
             return;
         }
         Level level = player.level();
-        SecurityUtils.logSecurityEvent(player, "BATCH_UPDATE_CONTROL", payload.blockPos(),
-            "Start batch: " + payload.startBatch());
         BlockEntity blockEntity = level.getBlockEntity(payload.blockPos());
         if (!(blockEntity instanceof SwitchBlockEntity switchEntity)) {
             return;

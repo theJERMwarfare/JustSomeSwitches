@@ -96,8 +96,14 @@ public class CopyPasteService {
     }
     /** Optimized inventory validation with single-pass checking. */
     @Nonnull
-    @SuppressWarnings("resource") // Level lifecycle managed by Minecraft
     public static List<String> validateRequiredBlocks(@Nonnull ItemStack stack, @Nonnull Player player) {
+        return validateRequiredBlocks(stack, player, List.of());
+    }
+    /** Overload that also counts items the caller is about to return to the player. */
+    @Nonnull
+    @SuppressWarnings("resource") // Level lifecycle managed by Minecraft
+    public static List<String> validateRequiredBlocks(@Nonnull ItemStack stack, @Nonnull Player player,
+                                                      @Nonnull List<ItemStack> alsoAvailable) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
@@ -129,6 +135,11 @@ public class CopyPasteService {
             ItemStack slot = player.getInventory().getItem(i);
             if (!slot.isEmpty()) {
                 available.merge(slot.getItem(), slot.getCount(), Integer::sum);
+            }
+        }
+        for (ItemStack extra : alsoAvailable) {
+            if (!extra.isEmpty()) {
+                available.merge(extra.getItem(), extra.getCount(), Integer::sum);
             }
         }
         List<String> missingBlocks = new ArrayList<>();
@@ -206,7 +217,7 @@ public class CopyPasteService {
             ItemStack requiredToggleItem = ItemStack.parseOptional(registries, settingsTag.getCompound(BrushConstants.TOGGLE_BLOCK_KEY));
             if (InventoryHelper.hasAllItems(player, requiredToggleItem)) {
                 InventoryHelper.removeItems(player, requiredToggleItem);
-                blockEntity.setToggleSlotItem(requiredToggleItem);
+                replaceSlotItem(blockEntity, player, requiredToggleItem, true);
                 applyTextureAndRotation(settingsTag, blockEntity,
                                       BrushConstants.TOGGLE_FACE_KEY, BrushConstants.TOGGLE_ROTATION_KEY, true);
             }
@@ -215,13 +226,33 @@ public class CopyPasteService {
             ItemStack requiredBaseItem = ItemStack.parseOptional(registries, settingsTag.getCompound(BrushConstants.BASE_BLOCK_KEY));
             if (InventoryHelper.hasAllItems(player, requiredBaseItem)) {
                 InventoryHelper.removeItems(player, requiredBaseItem);
-                blockEntity.setBaseSlotItem(requiredBaseItem);
+                replaceSlotItem(blockEntity, player, requiredBaseItem, false);
                 applyTextureAndRotation(settingsTag, blockEntity,
                                       BrushConstants.BASE_FACE_KEY, BrushConstants.BASE_ROTATION_KEY, false);
             }
         }
         blockEntity.updateTextures();
         return new PasteResult(true, BrushConstants.MSG_SETTINGS_PARTIAL_APPLIED);
+    }
+    /**
+     * Puts a new block in a texture slot, returning any displaced block to the player.
+     * The partial paste can run on a switch whose slots are still occupied, so the old block
+     * must be handed back rather than overwritten.
+     */
+    private static void replaceSlotItem(@Nonnull SwitchBlockEntity blockEntity, @Nonnull Player player,
+                                        @Nonnull ItemStack newItem, boolean isToggle) {
+        ItemStack previous = isToggle ? blockEntity.getGuiToggleItem() : blockEntity.getGuiBaseItem();
+        if (!previous.isEmpty()) {
+            ItemStack returned = previous.copy();
+            if (!player.addItem(returned)) {
+                player.drop(returned, false);
+            }
+        }
+        if (isToggle) {
+            blockEntity.setToggleSlotItem(newItem);
+        } else {
+            blockEntity.setBaseSlotItem(newItem);
+        }
     }
     /** Apply all settings in an optimized manner. */
     private static void applyAllSettings(@Nonnull CompoundTag settingsTag, @Nonnull SwitchBlockEntity blockEntity,

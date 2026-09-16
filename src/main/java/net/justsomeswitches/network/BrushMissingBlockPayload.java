@@ -47,8 +47,6 @@ public record BrushMissingBlockPayload(
         }
         Level level = player.level();
         BlockPos blockPos = payload.blockPos();
-        SecurityUtils.logSecurityEvent(player, "BRUSH_MISSING_BLOCK", blockPos,
-            "Apply: " + payload.apply());
         ItemStack brushStack = SwitchTextureBrushItem.findBrushInHands(player);
         if (brushStack == null || !(brushStack.getItem() instanceof SwitchTextureBrushItem brush)) {
             return; // No brush found
