@@ -1,6 +1,5 @@
 package net.justsomeswitches.gui;
 
-import net.justsomeswitches.util.SecurityUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -17,10 +16,10 @@ public class BrushMissingBlockMenu extends AbstractContainerMenu {
     /** Decode cap: the list only ever holds one entry per texture category. */
     private static final int MAX_MISSING_BLOCKS = 16;
     private final BlockPos blockPos;
-    private final List<String> missingBlocks;
+    private final List<net.justsomeswitches.util.MissingBlock> missingBlocks;
     
     /** Server-side constructor. */
-    public BrushMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos, List<String> missingBlocks) {
+    public BrushMissingBlockMenu(int containerId, @SuppressWarnings("unused") Inventory playerInventory, BlockPos blockPos, List<net.justsomeswitches.util.MissingBlock> missingBlocks) {
         super(JustSomeSwitchesMenuTypes.BRUSH_MISSING_BLOCK.get(), containerId);
         this.blockPos = blockPos;
         this.missingBlocks = missingBlocks;
@@ -34,7 +33,11 @@ public class BrushMissingBlockMenu extends AbstractContainerMenu {
         int count = Math.min(extraData.readInt(), MAX_MISSING_BLOCKS);
         this.missingBlocks = new java.util.ArrayList<>();
         for (int i = 0; i < count; i++) {
-            this.missingBlocks.add(extraData.readUtf(SecurityUtils.getMaxStringLength()));
+            // read() consumes both fields even when it rejects the id, so the buffer stays in step.
+            net.justsomeswitches.util.MissingBlock entry = net.justsomeswitches.util.MissingBlock.read(extraData);
+            if (entry != null) {
+                this.missingBlocks.add(entry);
+            }
         }
     }
     
@@ -42,7 +45,7 @@ public class BrushMissingBlockMenu extends AbstractContainerMenu {
         return blockPos;
     }
     
-    public List<String> getMissingBlocks() {
+    public List<net.justsomeswitches.util.MissingBlock> getMissingBlocks() {
         return missingBlocks;
     }
     

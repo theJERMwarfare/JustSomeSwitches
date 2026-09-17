@@ -89,7 +89,7 @@ public record BrushOverwritePayload(
         blockEntity.setToggleTextureRotation(net.justsomeswitches.util.TextureRotation.NORMAL);
         blockEntity.setBaseTextureRotation(net.justsomeswitches.util.TextureRotation.NORMAL);
         blockEntity.updateTextures();
-        NetworkHandler.sendActionBarMessage(player, "Previous Settings Removed Successfully", NetworkHandler.MessageType.SUCCESS);
+        NetworkHandler.sendActionBarMessage(player, net.justsomeswitches.util.BrushConstants.MSG_PREVIOUS_SETTINGS_REMOVED, NetworkHandler.MessageType.SUCCESS);
         CopyPasteService.PasteResult result = brush.applySettingsFromBrushServer(brushStack, blockEntity, player);
         if (result.success) {
             NetworkHandler.sendActionBarMessage(player, result.message, NetworkHandler.MessageType.SUCCESS);
@@ -98,6 +98,6 @@ public record BrushOverwritePayload(
         }
     }
     private static void handleOverwriteCancelled(ServerPlayer player) {
-        NetworkHandler.sendActionBarMessage(player, "New Texture Settings Not Pasted", NetworkHandler.MessageType.INFO);
+        NetworkHandler.sendActionBarMessage(player, net.justsomeswitches.util.BrushConstants.MSG_SETTINGS_NOT_PASTED, NetworkHandler.MessageType.INFO);
     }
 }

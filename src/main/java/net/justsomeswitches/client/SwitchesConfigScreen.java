@@ -47,7 +47,7 @@ public class SwitchesConfigScreen extends Screen {
     private boolean serverConfigAvailable;
 
     public SwitchesConfigScreen(Screen parent) {
-        super(Component.literal("Just Some Switches Configuration"));
+        super(Component.translatable("gui.justsomeswitches.config.title"));
         this.parent = parent;
     }
 
@@ -122,7 +122,7 @@ public class SwitchesConfigScreen extends Screen {
         int listHeight = this.height - 40 - listTop;
         optionsList = new ConfigOptionsList(this.minecraft, this.width, listHeight, listTop, 22);
         // --- Client Settings ---
-        optionsList.addEntry(new ConfigOptionsList.HeaderEntry("Client Settings"));
+        optionsList.addEntry(new ConfigOptionsList.HeaderEntry(Component.translatable("gui.justsomeswitches.config.section.client")));
         optionsList.addEntry(new ConfigOptionsList.ButtonEntry(new ExtendedButton(
             0, 0, 200, 20,
             getGhostPreviewButtonText(),
@@ -132,7 +132,7 @@ public class SwitchesConfigScreen extends Screen {
             }
         )));
         optionsList.addEntry(new ConfigOptionsList.TextEntry(
-            "Shows a transparent preview before placement", 0xAAAAAA));
+            Component.translatable("gui.justsomeswitches.config.ghost_preview_hint"), 0xAAAAAA));
         optionsList.addEntry(new ConfigOptionsList.ButtonEntry(new ExtendedButton(
             0, 0, 200, 20,
             getBrushModeHudButtonText(),
@@ -182,7 +182,7 @@ public class SwitchesConfigScreen extends Screen {
         optionsList.addEntry(new ConfigOptionsList.TextEntry(
             Component.translatable("gui.justsomeswitches.config.hud_offset_hint"), 0xAAAAAA));
         // --- Server Settings ---
-        optionsList.addEntry(new ConfigOptionsList.HeaderEntry("Server Settings"));
+        optionsList.addEntry(new ConfigOptionsList.HeaderEntry(Component.translatable("gui.justsomeswitches.config.section.server")));
         if (serverConfigAvailable) {
             optionsList.addEntry(new ConfigOptionsList.ButtonEntry(new ExtendedButton(
                 0, 0, 200, 20,
@@ -193,7 +193,7 @@ public class SwitchesConfigScreen extends Screen {
                 }
             )));
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
-                "WARNING: May crash with some modded blocks!", 0xFF5555));
+                Component.translatable("gui.justsomeswitches.config.allow_block_entities_hint"), 0xFF5555));
             optionsList.addEntry(new ConfigOptionsList.ButtonEntry(new ExtendedButton(
                 0, 0, 200, 20,
                 getBrushInstantBreakButtonText(),
@@ -203,7 +203,7 @@ public class SwitchesConfigScreen extends Screen {
                 }
             )));
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
-                "Turn OFF to prevent instant breaking on servers", 0xAAAAAA));
+                Component.translatable("gui.justsomeswitches.config.brush_instant_break_hint"), 0xAAAAAA));
             optionsList.addEntry(new ConfigOptionsList.ButtonEntry(new ExtendedButton(
                 0, 0, 200, 20,
                 getRespectBlockProtectionButtonText(),
@@ -213,15 +213,15 @@ public class SwitchesConfigScreen extends Screen {
                 }
             )));
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
-                "Blocks edits inside spawn protection or outside the border", 0xAAAAAA));
+                Component.translatable("gui.justsomeswitches.config.respect_block_protection_hint"), 0xAAAAAA));
         } else {
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
-                "Server settings are only available when in a world", 0xFFAA00));
+                Component.translatable("gui.justsomeswitches.config.server_unavailable"), 0xFFAA00));
             optionsList.addEntry(new ConfigOptionsList.TextEntry(
-                "Load into a world to configure server settings", 0xAAAAAA));
+                Component.translatable("gui.justsomeswitches.config.server_unavailable_hint"), 0xAAAAAA));
         }
         // --- Hitbox Settings ---
-        optionsList.addEntry(new ConfigOptionsList.HeaderEntry("Hitbox Settings"));
+        optionsList.addEntry(new ConfigOptionsList.HeaderEntry(Component.translatable("gui.justsomeswitches.config.section.hitbox")));
         optionsList.addEntry(new ConfigOptionsList.ButtonEntry(new ExtendedButton(
             0, 0, 200, 20,
             getTightHitboxesBasicButtonText(),
@@ -239,29 +239,38 @@ public class SwitchesConfigScreen extends Screen {
             }
         )));
         optionsList.addEntry(new ConfigOptionsList.TextEntry(
-            "Hitboxes closely match each switch model's shape", 0xAAAAAA));
+            Component.translatable("gui.justsomeswitches.config.tight_hitboxes_hint"), 0xAAAAAA));
         this.addWidget(optionsList);
         this.addRenderableWidget(optionsList);
         // Save & Cancel buttons
         this.addRenderableWidget(new ExtendedButton(
             centerX - 100, this.height - 35, 95, 20,
-            Component.literal("Save"),
+            Component.translatable("gui.justsomeswitches.config.save"),
             button -> this.saveAndClose()
         ));
         this.addRenderableWidget(new ExtendedButton(
             centerX + 5, this.height - 35, 95, 20,
-            Component.literal("Cancel"),
+            Component.translatable("gui.cancel"),
             button -> this.onClose()
         ));
     }
 
+    /** ON/OFF state shared by every toggle button, so the words translate once. */
+    private static Component onOff(boolean value) {
+        return Component.translatable(value ? "gui.justsomeswitches.config.on" : "gui.justsomeswitches.config.off");
+    }
+
+    /** Shown for a server option while no world is loaded. */
+    private static Component unavailable() {
+        return Component.translatable("gui.justsomeswitches.config.unavailable");
+    }
+
     private Component getGhostPreviewButtonText() {
-        return Component.literal("Show Ghost Preview: " + (ghostPreview ? "ON" : "OFF"));
+        return Component.translatable("gui.justsomeswitches.config.ghost_preview", onOff(ghostPreview));
     }
 
     private Component getBrushModeHudButtonText() {
-        return Component.translatable("gui.justsomeswitches.config.brush_mode_hud",
-            Component.translatable(brushModeHud ? "gui.justsomeswitches.config.on" : "gui.justsomeswitches.config.off"));
+        return Component.translatable("gui.justsomeswitches.config.brush_mode_hud", onOff(brushModeHud));
     }
 
     private Component getHudAnchorButtonText() {
@@ -278,31 +287,32 @@ public class SwitchesConfigScreen extends Screen {
 
     private Component getAllowBlockEntitiesButtonText() {
         if (allowBlockEntities == null) {
-            return Component.literal("Allow BlockEntities: UNAVAILABLE");
+            return Component.translatable("gui.justsomeswitches.config.allow_block_entities", unavailable());
         }
-        return Component.literal("Allow BlockEntities: " + (allowBlockEntities ? "ON" : "OFF"));
+        return Component.translatable("gui.justsomeswitches.config.allow_block_entities", onOff(allowBlockEntities));
     }
 
     private Component getBrushInstantBreakButtonText() {
         if (disableBrushBreak == null) {
-            return Component.literal("Brush Instant Break: UNAVAILABLE");
+            return Component.translatable("gui.justsomeswitches.config.brush_instant_break", unavailable());
         }
-        return Component.literal("Brush Instant Break: " + (disableBrushBreak ? "OFF" : "ON"));
+        // Inverted on purpose: the config key disables the feature, the label reports it enabled.
+        return Component.translatable("gui.justsomeswitches.config.brush_instant_break", onOff(!disableBrushBreak));
     }
 
     private Component getRespectBlockProtectionButtonText() {
         if (respectBlockProtection == null) {
-            return Component.literal("Respect Block Protection: UNAVAILABLE");
+            return Component.translatable("gui.justsomeswitches.config.respect_block_protection", unavailable());
         }
-        return Component.literal("Respect Block Protection: " + (respectBlockProtection ? "ON" : "OFF"));
+        return Component.translatable("gui.justsomeswitches.config.respect_block_protection", onOff(respectBlockProtection));
     }
 
     private Component getTightHitboxesBasicButtonText() {
-        return Component.literal("Tight Hitboxes (Basic): " + (tightHitboxesBasic ? "ON" : "OFF"));
+        return Component.translatable("gui.justsomeswitches.config.tight_hitboxes_basic", onOff(tightHitboxesBasic));
     }
 
     private Component getTightHitboxesSwitchesButtonText() {
-        return Component.literal("Tight Hitboxes (Switches): " + (tightHitboxesSwitches ? "ON" : "OFF"));
+        return Component.translatable("gui.justsomeswitches.config.tight_hitboxes_customizable", onOff(tightHitboxesSwitches));
     }
 
     @Override

@@ -1,6 +1,7 @@
 package net.justsomeswitches.gui.components;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.justsomeswitches.gui.BrushCopyMenu;
 
@@ -16,26 +17,33 @@ public class CheckboxRenderer {
     private static final ResourceLocation CHECKBOX_SELECTED = ResourceLocation.withDefaultNamespace("widget/checkbox_selected");
     private static final ResourceLocation CHECKBOX_SELECTED_HIGHLIGHTED = ResourceLocation.withDefaultNamespace("widget/checkbox_selected_highlighted");
     private final CheckboxPosition[] checkboxPositions = {
-        new CheckboxPosition(15, 25, 154, 23, "Toggle Block"),     // Toggle Block
-        new CheckboxPosition(15, 47, 154, 45, "Toggle Face"),      // Toggle Face
-        new CheckboxPosition(15, 69, 154, 68, "Toggle Rotation"),  // Toggle Rotation
-        new CheckboxPosition(15, 91, 161, 92, "Indicators"),       // Indicators
-        new CheckboxPosition(15, 113, 154, 111, "Base Block"),     // Base Block
-        new CheckboxPosition(15, 135, 154, 133, "Base Face"),      // Base Face
-        new CheckboxPosition(15, 157, 154, 156, "Base Rotation")   // Base Rotation
+        new CheckboxPosition(15, 25, 154, 23, "gui.justsomeswitches.copy.toggle_block"),
+        new CheckboxPosition(15, 47, 154, 45, "gui.justsomeswitches.copy.toggle_face"),
+        new CheckboxPosition(15, 69, 154, 68, "gui.justsomeswitches.copy.toggle_rotation"),
+        new CheckboxPosition(15, 91, 161, 92, "gui.justsomeswitches.copy.indicators"),
+        new CheckboxPosition(15, 113, 154, 111, "gui.justsomeswitches.copy.base_block"),
+        new CheckboxPosition(15, 135, 154, 133, "gui.justsomeswitches.copy.base_face"),
+        new CheckboxPosition(15, 157, 154, 156, "gui.justsomeswitches.copy.base_rotation")
     };
     /** Helper class for checkbox positioning. */
     public static class CheckboxPosition {
         public final int checkboxX, checkboxY;
         public final int previewX, previewY;
-        public final String label;
-        
-        public CheckboxPosition(int checkboxX, int checkboxY, int previewX, int previewY, String label) {
+        /** Translation key, resolved at draw time so a language change takes effect immediately. */
+        public final String labelKey;
+
+        public CheckboxPosition(int checkboxX, int checkboxY, int previewX, int previewY, String labelKey) {
             this.checkboxX = checkboxX;
             this.checkboxY = checkboxY;
             this.previewX = previewX;
             this.previewY = previewY;
-            this.label = label;
+            this.labelKey = labelKey;
+        }
+
+        /** The label to draw. */
+        @Nonnull
+        public Component label() {
+            return Component.translatable(labelKey);
         }
     }
     /** Gets all checkbox positions. */

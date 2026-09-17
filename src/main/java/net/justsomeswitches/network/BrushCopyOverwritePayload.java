@@ -60,10 +60,10 @@ public record BrushCopyOverwritePayload(
     private static void handleCopyOverwriteConfirmed(SwitchTextureBrushItem brush, ItemStack brushStack,
                                                    @SuppressWarnings("unused") SwitchBlockEntity blockEntity, ServerPlayer player, BlockPos blockPos) {
         brush.clearAllSettingsServer(brushStack);
-        NetworkHandler.sendActionBarMessage(player, "Previous Texture Settings Cleared", NetworkHandler.MessageType.SUCCESS);
+        NetworkHandler.sendActionBarMessage(player, net.justsomeswitches.util.BrushConstants.MSG_PREVIOUS_SETTINGS_CLEARED, NetworkHandler.MessageType.SUCCESS);
         NetworkHandler.openCopyTextureGUI(player, blockPos);
     }
     private static void handleCopyOverwriteCancelled(ServerPlayer player) {
-        NetworkHandler.sendActionBarMessage(player, "New Texture Settings Not Copied, Previous Texture Settings Retained", NetworkHandler.MessageType.INFO);
+        NetworkHandler.sendActionBarMessage(player, net.justsomeswitches.util.BrushConstants.MSG_SETTINGS_NOT_COPIED_RETAINED, NetworkHandler.MessageType.INFO);
     }
 }

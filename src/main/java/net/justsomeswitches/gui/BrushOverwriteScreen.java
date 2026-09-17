@@ -1,5 +1,6 @@
 package net.justsomeswitches.gui;
 
+import net.justsomeswitches.gui.components.TextFit;
 import net.justsomeswitches.network.NetworkHandler;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -18,6 +19,10 @@ public class BrushOverwriteScreen extends AbstractContainerScreen<BrushOverwrite
         ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/brush_message_gui.png");
     private static final int GUI_WIDTH = 200;
     private static final int GUI_HEIGHT = 94;
+    // Widths a label may occupy before it is shrunk, matching BrushMissingBlockScreen.
+    private static final int MAX_TITLE_WIDTH = 178;
+    private static final int MAX_TEXT_WIDTH = 182;
+    private static final float BODY_SCALE = 0.7f;
     
     public BrushOverwriteScreen(BrushOverwriteMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -32,11 +37,11 @@ public class BrushOverwriteScreen extends AbstractContainerScreen<BrushOverwrite
         this.leftPos = (this.width - this.imageWidth) / 2;
         this.topPos = (this.height - this.imageHeight) / 2;
         
-        addRenderableWidget(Button.builder(Component.literal("Paste New"), this::onOverwriteClicked)
+        addRenderableWidget(Button.builder(Component.translatable("gui.justsomeswitches.overwrite.paste_new"), this::onOverwriteClicked)
                 .bounds(leftPos + 20, topPos + 61, 70, 20)
                 .build());
         
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), this::onCancelClicked)
+        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), this::onCancelClicked)
                 .bounds(leftPos + 111, topPos + 61, 70, 20)
                 .build());
     }
@@ -48,26 +53,35 @@ public class BrushOverwriteScreen extends AbstractContainerScreen<BrushOverwrite
     
     @Override
     protected void renderLabels(@Nonnull GuiGraphics graphics, int mouseX, int mouseY) {
-        Component titleText = Component.literal("Switch Has Texture Settings");
+        // Each block keeps the arithmetic it had and only computes the scale it used to hardcode,
+        // so English lands on the original constant and renders exactly as before.
+        Component titleText = Component.translatable("gui.justsomeswitches.overwrite.title");
         int titleWidth = font.width(titleText);
-        graphics.drawString(font, titleText, (imageWidth - titleWidth) / 2, 12, 0x404040, false);
-        
+        float titleScale = TextFit.scale(1.0f, MAX_TITLE_WIDTH, titleWidth);
         graphics.pose().pushPose();
-        graphics.pose().scale(0.7f, 0.7f, 1.0f);
-        Component questionText = Component.literal("Paste new texture settings?");
-        int questionWidth = font.width(questionText);
-        int questionX = (int)((imageWidth - questionWidth * 0.7f) / 2 / 0.7f);
-        graphics.drawString(font, questionText, questionX + 1, (int)((32 + 1) / 0.7f), 0xFF555555, false);
-        graphics.drawString(font, questionText, questionX, (int)(32 / 0.7f), 0xFFFFFF, false);
+        graphics.pose().scale(titleScale, titleScale, 1.0f);
+        graphics.drawString(font, titleText, (int)((imageWidth - titleWidth * titleScale) / 2 / titleScale),
+                (int)(12 / titleScale), 0x404040, false);
         graphics.pose().popPose();
-        
+
+        Component questionText = Component.translatable("gui.justsomeswitches.overwrite.question");
+        int questionWidth = font.width(questionText);
+        float questionScale = TextFit.scale(BODY_SCALE, MAX_TEXT_WIDTH, questionWidth);
         graphics.pose().pushPose();
-        graphics.pose().scale(0.7f, 0.7f, 1.0f);
-        Component warningText = Component.literal("(Existing blocks will be returned)");
+        graphics.pose().scale(questionScale, questionScale, 1.0f);
+        int questionX = (int)((imageWidth - questionWidth * questionScale) / 2 / questionScale);
+        graphics.drawString(font, questionText, questionX + 1, (int)((32 + 1) / questionScale), 0xFF555555, false);
+        graphics.drawString(font, questionText, questionX, (int)(32 / questionScale), 0xFFFFFF, false);
+        graphics.pose().popPose();
+
+        Component warningText = Component.translatable("gui.justsomeswitches.overwrite.warning");
         int warningWidth = font.width(warningText);
-        int warningX = (int)((imageWidth - warningWidth * 0.7f) / 2 / 0.7f);
-        graphics.drawString(font, warningText, warningX + 1, (int)((48 + 1) / 0.7f), 0xFF555555, false);
-        graphics.drawString(font, warningText, warningX, (int)(48 / 0.7f), 0xFFFFCC00, false);
+        float warningScale = TextFit.scale(BODY_SCALE, MAX_TEXT_WIDTH, warningWidth);
+        graphics.pose().pushPose();
+        graphics.pose().scale(warningScale, warningScale, 1.0f);
+        int warningX = (int)((imageWidth - warningWidth * warningScale) / 2 / warningScale);
+        graphics.drawString(font, warningText, warningX + 1, (int)((48 + 1) / warningScale), 0xFF555555, false);
+        graphics.drawString(font, warningText, warningX, (int)(48 / warningScale), 0xFFFFCC00, false);
         graphics.pose().popPose();
     }
     

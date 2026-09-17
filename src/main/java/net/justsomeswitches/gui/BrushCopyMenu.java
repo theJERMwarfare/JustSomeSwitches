@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -108,47 +109,60 @@ public class BrushCopyMenu extends AbstractContainerMenu {
     }
     
     /** Returns display text for toggle block preview. */
-    public String getToggleBlockDisplay() {
-        if (blockEntity == null) return "Default";
+    public Component getToggleBlockDisplay() {
+        if (blockEntity == null) return defaultLabel();
         ItemStack item = blockEntity.getGuiToggleItem();
-        return item.isEmpty() ? "Default" : item.getDisplayName().getString();
+        // getHoverName, not getDisplayName: the latter wraps the name in square brackets.
+        return item.isEmpty() ? defaultLabel() : item.getHoverName();
     }
     
     /** Returns display text for base block preview. */
-    public String getBaseBlockDisplay() {
-        if (blockEntity == null) return "Default";
+    public Component getBaseBlockDisplay() {
+        if (blockEntity == null) return defaultLabel();
         ItemStack item = blockEntity.getGuiBaseItem();
-        return item.isEmpty() ? "Default" : item.getDisplayName().getString();
+        // getHoverName, not getDisplayName: the latter wraps the name in square brackets.
+        return item.isEmpty() ? defaultLabel() : item.getHoverName();
     }
     
-    /** Returns display text for toggle face preview. */
+    /**
+     * Toggle face variable. Deliberately a String and deliberately NOT translated: this is the block's
+     * own JSON texture variable name, which face selection matches exactly.
+     */
     public String getToggleFaceDisplay() {
         if (blockEntity == null) return "all";
         return blockEntity.getToggleTextureVariable();
     }
     
-    /** Returns display text for base face preview. */
+    /** Base face variable. Data, not UI text. See getToggleFaceDisplay. */
     public String getBaseFaceDisplay() {
         if (blockEntity == null) return "all";
         return blockEntity.getBaseTextureVariable();
     }
     
-    /** Returns display text for toggle rotation preview. */
+    /** Toggle rotation, as degrees. Language neutral, so it stays a String. */
     public String getToggleRotationDisplay() {
-        if (blockEntity == null) return "None";
+        if (blockEntity == null) return net.justsomeswitches.util.TextureRotation.NORMAL.getDisplayName();
         return blockEntity.getToggleTextureRotation().getDisplayName();
     }
     
-    /** Returns display text for base rotation preview. */
+    /** Base rotation, as degrees. Language neutral, so it stays a String. */
     public String getBaseRotationDisplay() {
-        if (blockEntity == null) return "None";
+        if (blockEntity == null) return net.justsomeswitches.util.TextureRotation.NORMAL.getDisplayName();
         return blockEntity.getBaseTextureRotation().getDisplayName();
     }
     
-    /** Returns display text for indicators preview. */
-    public String getIndicatorsDisplay() {
-        if (blockEntity == null) return "Default";
-        return blockEntity.getPowerMode().name().toLowerCase();
+    /**
+     * Indicator mode. Shares PowerMode's translatable name with the dropdown and the brush tooltip.
+     * The old code lowercased the enum name, so this screen showed "none_toggle".
+     */
+    public Component getIndicatorsDisplay() {
+        if (blockEntity == null) return defaultLabel();
+        return blockEntity.getPowerMode().getDisplayName();
+    }
+
+    /** Shared "no custom setting" label. */
+    private static Component defaultLabel() {
+        return Component.translatable("gui.justsomeswitches.copy.default");
     }
     
     /** Returns toggle block ItemStack for preview. */

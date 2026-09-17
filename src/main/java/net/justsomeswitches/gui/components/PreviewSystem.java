@@ -3,6 +3,7 @@ package net.justsomeswitches.gui.components;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.justsomeswitches.gui.BrushCopyMenu;
 
@@ -54,7 +55,7 @@ public class PreviewSystem {
     private void drawBlockItemPreview(@Nonnull GuiGraphics graphics, int x, int y, 
                                      @Nonnull ItemStack itemStack, @Nonnull Font font) {
         if (itemStack.isEmpty()) {
-            drawCenteredTextInBox(graphics, "Default", x, y, PREVIEW_SIZE, PREVIEW_SIZE, font);
+            drawCenteredTextInBox(graphics, defaultLabel(), x, y, PREVIEW_SIZE, PREVIEW_SIZE, font);
         } else {
             graphics.pose().pushPose();
             graphics.pose().translate(x + 10f, y + 10f, 0);
@@ -70,19 +71,16 @@ public class PreviewSystem {
         final int size = 18;
         try {
             String texturePath = isToggle ? menu.getToggleTexturePathForPreview() : menu.getBaseTexturePathForPreview();
-            if (texturePath != null && !texturePath.isEmpty() && !"Default".equals(texturePath)) {
+            // The menu returns null for a default texture, never the word "Default", so the old
+            // equals("Default") guard here could not fire and has been removed.
+            if (texturePath != null && !texturePath.isEmpty()) {
                 net.justsomeswitches.util.TextureRotation rotation = null;
                 if ((isToggle && menu.getCopyToggleRotation()) || (!isToggle && menu.getCopyBaseRotation())) {
                     rotation = isToggle ? menu.getToggleTextureRotation() : menu.getBaseTextureRotation();
                 }
                 drawTexturePreviewBox(graphics, x, y, size, texturePath, rotation);
             } else {
-                String faceVariable = getPreviewText(isToggle ? 1 : 5, menu);
-                String displayText = (!faceVariable.trim().isEmpty()) ? faceVariable : "Default";
-                if ("all".equals(displayText)) {
-                    displayText = "Default";
-                }
-                drawCenteredTextInBox(graphics, displayText, x, y, size, size, font);
+                drawCenteredTextInBox(graphics, getPreviewText(isToggle ? 1 : 5, menu), x, y, size, size, font);
             }
         } catch (Exception e) {
             graphics.fill(x, y, x + size, y + size, 0xFFFF0000);
@@ -124,8 +122,7 @@ public class PreviewSystem {
     /** Draws rotation preview (text-based). */
     private void drawRotationPreview(@Nonnull GuiGraphics graphics, int x, int y, int index, 
                                     @Nonnull BrushCopyMenu menu, @Nonnull Font font) {
-        String previewText = getPreviewText(index, menu);
-        drawCenteredTextInBox(graphics, previewText, x, y, 20, 20, font);
+        drawCenteredTextInBox(graphics, getPreviewText(index, menu), x, y, 20, 20, font);
     }
     /** Draws indicators preview (same as SwitchTextureScreen power previews). */
     private void drawIndicatorsPreview(@Nonnull GuiGraphics graphics, int x, int y, @Nonnull BrushCopyMenu menu) {
@@ -191,7 +188,7 @@ public class PreviewSystem {
         }
     }
     /** Draws text centered both horizontally and vertically in a specified box. */
-    private void drawCenteredTextInBox(@Nonnull GuiGraphics graphics, @Nonnull String text, 
+    private void drawCenteredTextInBox(@Nonnull GuiGraphics graphics, @Nonnull Component text, 
                                       int boxX, int boxY, int boxWidth, int boxHeight, @Nonnull Font font) {
         int textWidth = font.width(text);
         int textHeight = font.lineHeight;
@@ -204,7 +201,7 @@ public class PreviewSystem {
         int scaledTextHeight = (int)(textHeight * scale);
         int centeredX = (int)((boxX + (boxWidth - scaledTextWidth) / 2.0f) / scale);
         int centeredY = (int)((boxY + (boxHeight - scaledTextHeight) / 2.0f) / scale);
-        if (text.endsWith("°")) {
+        if (text.getString().endsWith("°")) {
             centeredY -= (int)(0.5f / scale);
         }
         graphics.drawString(font, text, centeredX, centeredY, 0xFFFFFF, true);
@@ -220,26 +217,39 @@ public class PreviewSystem {
     private String getSafeSpriteName(@Nonnull TextureAtlasSprite sprite) {
         return spriteHelper.getSafeSpriteName(sprite);
     }
+    /** Shared "no custom setting" label. */
+    @Nonnull
+    private static Component defaultLabel() {
+        return Component.translatable("gui.justsomeswitches.copy.default");
+    }
+
+    /**
+     * A face variable is the block's own JSON texture variable name, so it is DATA and is never
+     * translated. Blank or "all" both mean "no specific face chosen" and read as the default.
+     */
+    @Nonnull
+    private static Component faceOrDefault(@Nullable String variable) {
+        return (variable == null || variable.trim().isEmpty() || "all".equals(variable))
+                ? defaultLabel() : Component.literal(variable);
+    }
+
     /** Gets preview text for given index. */
     @Nonnull
-    private String getPreviewText(int index, @Nonnull BrushCopyMenu menu) {
+    private Component getPreviewText(int index, @Nonnull BrushCopyMenu menu) {
         try {
-            String result = switch (index) {
+            Component result = switch (index) {
                 case 0 -> menu.getToggleBlockDisplay();
-                case 1 -> menu.getToggleFaceDisplay();
-                case 2 -> menu.getToggleRotationDisplay();
+                case 1 -> faceOrDefault(menu.getToggleFaceDisplay());
+                case 2 -> Component.literal(menu.getToggleRotationDisplay());
                 case 3 -> menu.getIndicatorsDisplay();
                 case 4 -> menu.getBaseBlockDisplay();
-                case 5 -> menu.getBaseFaceDisplay();
-                case 6 -> menu.getBaseRotationDisplay();
-                default -> "Default";
+                case 5 -> faceOrDefault(menu.getBaseFaceDisplay());
+                case 6 -> Component.literal(menu.getBaseRotationDisplay());
+                default -> defaultLabel();
             };
-            if (result == null || result.trim().isEmpty()) {
-                result = "Default";
-            }
-            return result;
+            return result.getString().trim().isEmpty() ? defaultLabel() : result;
         } catch (Exception e) {
-            return "Default";
+            return defaultLabel();
         }
     }
 }

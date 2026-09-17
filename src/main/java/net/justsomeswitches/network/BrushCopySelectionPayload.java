@@ -78,7 +78,7 @@ public record BrushCopySelectionPayload(
             payload.copyToggleBlock(), payload.copyToggleFace(), payload.copyToggleRotation(),
             payload.copyIndicators(), payload.copyBaseBlock(), payload.copyBaseFace(),
             payload.copyBaseRotation());
-        NetworkHandler.sendActionBarMessage(player, "Texture Settings Copied Successfully", NetworkHandler.MessageType.SUCCESS);
+        NetworkHandler.sendActionBarMessage(player, net.justsomeswitches.util.BrushConstants.MSG_SETTINGS_COPIED, NetworkHandler.MessageType.SUCCESS);
         player.inventoryMenu.broadcastChanges();
     }
 }

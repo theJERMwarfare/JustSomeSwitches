@@ -112,21 +112,22 @@ public class NetworkHandler {
                 mode.getDisplayName().withStyle(mode.getColor())),
             true);
     }
-    /** Sends action bar message to player. */
+    /** Sends an action bar message. The String is a TRANSLATION KEY, not English text. */
     public static void sendActionBarMessage(@Nonnull ServerPlayer player,
-                                          @Nonnull String message, @Nonnull MessageType type) {
-        net.minecraft.network.chat.Component styledMessage = formatActionBarMessage(message, type);
-        player.displayClientMessage(styledMessage, true);
+                                          @Nonnull String messageKey, @Nonnull MessageType type) {
+        sendActionBarMessage(player, net.minecraft.network.chat.Component.translatable(messageKey), type);
+    }
+    /** Sends an action bar message built by the caller, for messages that take arguments. */
+    public static void sendActionBarMessage(@Nonnull ServerPlayer player,
+                                          @Nonnull net.minecraft.network.chat.Component message, @Nonnull MessageType type) {
+        player.displayClientMessage(formatActionBarMessage(message, type), true);
     }
     /** Formats action bar message with color based on type. */
-    private static net.minecraft.network.chat.Component formatActionBarMessage(@Nonnull String message, @Nonnull MessageType type) {
+    private static net.minecraft.network.chat.Component formatActionBarMessage(@Nonnull net.minecraft.network.chat.Component message, @Nonnull MessageType type) {
         return switch (type) {
-            case SUCCESS -> net.minecraft.network.chat.Component.literal(message)
-                    .withStyle(net.minecraft.ChatFormatting.GREEN);
-            case ERROR -> net.minecraft.network.chat.Component.literal(message)
-                    .withStyle(net.minecraft.ChatFormatting.RED);
-            case INFO -> net.minecraft.network.chat.Component.literal(message)
-                    .withStyle(net.minecraft.ChatFormatting.BLUE);
+            case SUCCESS -> message.copy().withStyle(net.minecraft.ChatFormatting.GREEN);
+            case ERROR -> message.copy().withStyle(net.minecraft.ChatFormatting.RED);
+            case INFO -> message.copy().withStyle(net.minecraft.ChatFormatting.BLUE);
         };
     }
     /** Message types for action bar messages. */
@@ -136,13 +137,15 @@ public class NetworkHandler {
         INFO      // Blue text
     }
     /** Opens the missing block GUI for the player. Shared by BrushActionPayload and BrushOverwritePayload. */
-    public static void openMissingBlockGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos, @Nonnull java.util.List<String> missingBlocks) {
+    public static void openMissingBlockGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos,
+                                          @Nonnull java.util.List<net.justsomeswitches.util.MissingBlock> missingBlocks) {
         net.minecraft.world.MenuProvider menuProvider = new net.minecraft.world.MenuProvider() {
             @Override
             @Nonnull
             public net.minecraft.network.chat.Component getDisplayName() {
-                String title = missingBlocks.size() == 1 ? "Block Not Found In Inventory" : "Blocks Not Found In Inventory";
-                return net.minecraft.network.chat.Component.literal(title);
+                return net.minecraft.network.chat.Component.translatable(missingBlocks.size() == 1
+                        ? net.justsomeswitches.util.BrushConstants.GUI_BLOCK_NOT_FOUND
+                        : net.justsomeswitches.util.BrushConstants.GUI_BLOCKS_NOT_FOUND);
             }
             @Override
             @Nonnull
@@ -155,8 +158,8 @@ public class NetworkHandler {
         player.openMenu(menuProvider, buf -> {
             buf.writeBlockPos(blockPos);
             buf.writeInt(missingBlocks.size());
-            for (String missingBlock : missingBlocks) {
-                buf.writeUtf(missingBlock);
+            for (net.justsomeswitches.util.MissingBlock missingBlock : missingBlocks) {
+                missingBlock.write(buf);
             }
         });
     }
@@ -166,7 +169,8 @@ public class NetworkHandler {
             @Override
             @Nonnull
             public net.minecraft.network.chat.Component getDisplayName() {
-                return net.minecraft.network.chat.Component.literal("Settings Already Stored");
+                return net.minecraft.network.chat.Component.translatable(
+                        net.justsomeswitches.util.BrushConstants.GUI_SETTINGS_ALREADY_STORED);
             }
             @Override
             @Nonnull
@@ -184,7 +188,8 @@ public class NetworkHandler {
             @Override
             @Nonnull
             public net.minecraft.network.chat.Component getDisplayName() {
-                return net.minecraft.network.chat.Component.literal("Copy Texture Settings");
+                return net.minecraft.network.chat.Component.translatable(
+                        net.justsomeswitches.util.BrushConstants.GUI_COPY_TEXTURE_TITLE);
             }
             @Override
             @Nonnull

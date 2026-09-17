@@ -4,6 +4,7 @@ import net.justsomeswitches.block.ISwitchBlock;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.gui.components.DropdownManager;
 import net.justsomeswitches.gui.components.FaceSelectionHandler;
+import net.justsomeswitches.gui.components.TextFit;
 import net.justsomeswitches.gui.components.TexturePreviewRenderer;
 import net.justsomeswitches.network.NetworkHandler;
 import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
@@ -65,6 +66,8 @@ public class CustomizableTextureScreen extends AbstractContainerScreen<Customiza
     private static final int POWERED_PREVIEW_Y = 73;
 
     // Power labels
+    private static final float POWER_LABEL_SCALE = 0.75f;
+    private static final int LABEL_MARGIN = 4;
     private static final int UNPOWERED_LABEL_X = 73;
     private static final int UNPOWERED_LABEL_Y = 64;
     private static final int POWERED_LABEL_X = 78;
@@ -399,24 +402,35 @@ public class CustomizableTextureScreen extends AbstractContainerScreen<Customiza
 
     /** Draws "Unpowered" and "Powered" labels at 75% scale. */
     private void drawPowerLabels(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop) {
-        // Draw "Unpowered" label with 75% scale
+        drawPowerLabel(graphics, guiLeft, guiTop, "gui.justsomeswitches.texture.unpowered",
+                UNPOWERED_LABEL_X, UNPOWERED_LABEL_Y);
+        drawPowerLabel(graphics, guiLeft, guiTop, "gui.justsomeswitches.texture.powered",
+                POWERED_LABEL_X, POWERED_LABEL_Y);
+    }
+
+    /** One power label, shrunk below 75% only when a translation would reach the GUI edge. */
+    private void drawPowerLabel(@Nonnull GuiGraphics graphics, int guiLeft, int guiTop,
+                                @Nonnull String key, int labelX, int labelY) {
+        Component label = Component.translatable(key);
+        float scale = TextFit.scale(POWER_LABEL_SCALE, GUI_WIDTH - labelX - LABEL_MARGIN, this.font.width(label));
         graphics.pose().pushPose();
-        graphics.pose().scale(0.75f, 0.75f, 1.0f);
-        graphics.drawString(this.font, "Unpowered", (int)((guiLeft + UNPOWERED_LABEL_X) / 0.75f), (int)((guiTop + UNPOWERED_LABEL_Y) / 0.75f), 0xFF404040, false);
-        graphics.pose().popPose();
-        
-        // Draw "Powered" label with 75% scale
-        graphics.pose().pushPose();
-        graphics.pose().scale(0.75f, 0.75f, 1.0f);
-        graphics.drawString(this.font, "Powered", (int)((guiLeft + POWERED_LABEL_X) / 0.75f), (int)((guiTop + POWERED_LABEL_Y) / 0.75f), 0xFF404040, false);
+        graphics.pose().scale(scale, scale, 1.0f);
+        graphics.drawString(this.font, label, (int)((guiLeft + labelX) / scale),
+                (int)((guiTop + labelY) / scale), 0xFF404040, false);
         graphics.pose().popPose();
     }
 
     /** Renders title and player inventory labels. */
     @Override
     protected void renderLabels(@Nonnull GuiGraphics graphics, int mouseX, int mouseY) {
-        // Draw title
-        graphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 0x404040, false);
+        // Draw title, shrinking it only if a translation would reach the GUI edge
+        int titleWidth = this.font.width(this.title);
+        float titleScale = TextFit.scale(1.0f, GUI_WIDTH - titleLabelX - LABEL_MARGIN * 2, titleWidth);
+        graphics.pose().pushPose();
+        graphics.pose().scale(titleScale, titleScale, 1.0f);
+        graphics.drawString(this.font, this.title, (int)(this.titleLabelX / titleScale),
+                (int)(this.titleLabelY / titleScale), 0x404040, false);
+        graphics.pose().popPose();
 
         // Draw player inventory label
         graphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 0x404040, false);

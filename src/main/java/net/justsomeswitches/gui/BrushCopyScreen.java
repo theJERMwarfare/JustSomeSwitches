@@ -2,6 +2,7 @@ package net.justsomeswitches.gui;
 
 import net.justsomeswitches.gui.components.CheckboxRenderer;
 import net.justsomeswitches.gui.components.PreviewSystem;
+import net.justsomeswitches.gui.components.TextFit;
 import net.justsomeswitches.gui.components.CopyActionHandler;
 import net.justsomeswitches.network.NetworkHandler;
 import net.minecraft.client.gui.GuiGraphics;
@@ -21,6 +22,9 @@ public class BrushCopyScreen extends AbstractContainerScreen<BrushCopyMenu> {
         ResourceLocation.fromNamespaceAndPath("justsomeswitches", "textures/gui/brush_copy_gui.png");
     private static final int GUI_WIDTH = 187;
     private static final int GUI_HEIGHT = 240;
+    private static final int TITLE_X = 8;
+    private static final int TITLE_Y = 6;
+    private static final int LABEL_MARGIN = 4;
     
     // Components for rendering and interaction
     private final CheckboxRenderer checkboxRenderer = new CheckboxRenderer();
@@ -42,7 +46,7 @@ public class BrushCopyScreen extends AbstractContainerScreen<BrushCopyMenu> {
 
     
     public BrushCopyScreen(@Nonnull BrushCopyMenu menu, @Nonnull Inventory playerInventory, @SuppressWarnings("unused") @Nonnull Component title) {
-        super(menu, playerInventory, Component.literal("Copy Texture Settings"));
+        super(menu, playerInventory, Component.translatable("gui.justsomeswitches.copy_texture.title"));
         
         this.imageWidth = GUI_WIDTH;
         this.imageHeight = GUI_HEIGHT;
@@ -63,22 +67,22 @@ public class BrushCopyScreen extends AbstractContainerScreen<BrushCopyMenu> {
         
         // Add buttons using exact coordinates from user specifications
         addRenderableWidget(Button.builder(
-            Component.literal("Select All"),
+            Component.translatable("gui.justsomeswitches.copy.select_all"),
             button -> copyActionHandler.handleSelectAll(menu)
         ).bounds(guiLeft + SELECT_ALL_X, guiTop + SELECT_ALL_Y, BUTTON_WIDTH, BUTTON_HEIGHT).build());
         
         addRenderableWidget(Button.builder(
-            Component.literal("Clear All"),
+            Component.translatable("gui.justsomeswitches.copy.clear_all"),
             button -> copyActionHandler.handleClearAll(menu)
         ).bounds(guiLeft + CLEAR_ALL_X, guiTop + CLEAR_ALL_Y, BUTTON_WIDTH, BUTTON_HEIGHT).build());
         
         addRenderableWidget(Button.builder(
-            Component.literal("Copy Selected"),
+            Component.translatable("gui.justsomeswitches.copy.copy_selected"),
             button -> copyActionHandler.handleCopySelected(menu, this::onClose)
         ).bounds(guiLeft + COPY_SELECTED_X, guiTop + COPY_SELECTED_Y, BUTTON_WIDTH, BUTTON_HEIGHT).build());
         
         addRenderableWidget(Button.builder(
-            Component.literal("Cancel"),
+            Component.translatable("gui.cancel"),
             button -> copyActionHandler.handleCancel(this::onClose)
         ).bounds(guiLeft + CANCEL_X, guiTop + CANCEL_Y, BUTTON_WIDTH, BUTTON_HEIGHT).build());
         
@@ -115,18 +119,29 @@ public class BrushCopyScreen extends AbstractContainerScreen<BrushCopyMenu> {
     @Override
     protected void renderLabels(@Nonnull GuiGraphics graphics, int mouseX, int mouseY) {
         // Draw title like default GUI headers
-        graphics.drawString(this.font, this.title, 8, 6, 0x404040, false);
-        
+        float titleScale = TextFit.scale(1.0f, GUI_WIDTH - TITLE_X * 2, this.font.width(this.title));
+        graphics.pose().pushPose();
+        graphics.pose().scale(titleScale, titleScale, 1.0f);
+        graphics.drawString(this.font, this.title, (int)(TITLE_X / titleScale), (int)(TITLE_Y / titleScale),
+                0x404040, false);
+        graphics.pose().popPose();
+
         // Draw checkbox labels with button text formatting and drop shadow
         CheckboxRenderer.CheckboxPosition[] checkboxPositions = checkboxRenderer.getCheckboxPositions();
         //noinspection ForLoopReplaceableByForEach - Index is required for positioning
         for (int i = 0; i < checkboxPositions.length; i++) {
             CheckboxRenderer.CheckboxPosition pos = checkboxPositions[i];
+            Component label = pos.label();
             int labelX = pos.checkboxX + CheckboxRenderer.getCheckboxSize() + 5; // 5px spacing after checkbox
             int labelY = (int)(pos.checkboxY + 4.5f); // Center text vertically with checkbox (moved up 1.5 pixels total)
-            
+            // Stop short of the preview box so a long translation cannot run underneath it.
+            float scale = TextFit.scale(1.0f, pos.previewX - labelX - LABEL_MARGIN, this.font.width(label));
+
             // Use same color as button text with drop shadow
-            graphics.drawString(this.font, pos.label, labelX, labelY, 0xFFFFFF, true);
+            graphics.pose().pushPose();
+            graphics.pose().scale(scale, scale, 1.0f);
+            graphics.drawString(this.font, label, (int)(labelX / scale), (int)(labelY / scale), 0xFFFFFF, true);
+            graphics.pose().popPose();
         }
     }
     

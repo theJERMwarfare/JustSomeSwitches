@@ -71,6 +71,6 @@ public record BrushMissingBlockPayload(
         }
     }
     private static void handleCancel(ServerPlayer player) {
-        NetworkHandler.sendActionBarMessage(player, "New Texture Settings Not Pasted", NetworkHandler.MessageType.INFO);
+        NetworkHandler.sendActionBarMessage(player, net.justsomeswitches.util.BrushConstants.MSG_SETTINGS_NOT_PASTED, NetworkHandler.MessageType.INFO);
     }
 }

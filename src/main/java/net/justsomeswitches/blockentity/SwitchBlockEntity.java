@@ -78,11 +78,33 @@ public class SwitchBlockEntity extends BlockEntity {
 
     /** Power mode for controlling powered/unpowered texture behavior. */
     public enum PowerMode {
-        DEFAULT,
-        ALT,
-        NONE,
-        NONE_TOGGLE,
-        NONE_BASE
+        DEFAULT("gui.justsomeswitches.power_mode.default"),
+        ALT("gui.justsomeswitches.power_mode.alt"),
+        NONE("gui.justsomeswitches.power_mode.none"),
+        NONE_TOGGLE("gui.justsomeswitches.power_mode.none_toggle"),
+        NONE_BASE("gui.justsomeswitches.power_mode.none_base");
+
+        private final String translationKey;
+
+        PowerMode(String translationKey) {
+            this.translationKey = translationKey;
+        }
+
+        /** Display name shared by the indicator dropdown, the brush tooltip and the copy screen. */
+        public net.minecraft.network.chat.MutableComponent getDisplayName() {
+            return net.minecraft.network.chat.Component.translatable(translationKey);
+        }
+
+        /** Resolves a stored name, falling back to DEFAULT for anything unrecognised. */
+        public static net.minecraft.network.chat.Component displayNameOf(String name) {
+            String upper = name == null ? "" : name.toUpperCase(java.util.Locale.ROOT);
+            for (PowerMode mode : values()) {
+                if (mode.name().equals(upper)) {
+                    return mode.getDisplayName();
+                }
+            }
+            return DEFAULT.getDisplayName();
+        }
     }
 
     private PowerMode powerMode = PowerMode.DEFAULT;

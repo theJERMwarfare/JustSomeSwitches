@@ -300,7 +300,7 @@ public class TexturePreviewRenderer {
      */
     private void renderFallbackText(@Nonnull GuiGraphics graphics, int centerX, int centerY) {
         if (font == null) return;
-        Component previewText = Component.literal("Switch");
+        Component previewText = Component.translatable("gui.justsomeswitches.preview.fallback");
         int textWidth = this.font.width(previewText);
         int textX = centerX - textWidth / 2;
         int textY = centerY - 4;

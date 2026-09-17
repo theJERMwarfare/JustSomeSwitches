@@ -11,7 +11,7 @@ public class SwitchesCommonConfig {
     /** Use tight-fitting hitboxes for Basic switch blocks (default: false). */
     public static final ModConfigSpec.BooleanValue TIGHT_HITBOXES_BASIC;
 
-    /** Use tight-fitting hitboxes for Switches blocks (default: true). */
+    /** Use tight-fitting hitboxes for Customizable switch blocks (default: true). */
     public static final ModConfigSpec.BooleanValue TIGHT_HITBOXES_SWITCHES;
 
     static {
@@ -29,10 +29,10 @@ public class SwitchesCommonConfig {
                 .define("tightHitboxesBasic", false);
         TIGHT_HITBOXES_SWITCHES = BUILDER
                 .comment(
-                    "Use tight-fitting hitboxes for Switches blocks.",
+                    "Use tight-fitting hitboxes for Customizable switch blocks.",
                     "",
-                    "When enabled, Switches block hitboxes closely follow the model shape.",
-                    "When disabled, Switches blocks use simple rectangular hitboxes.",
+                    "When enabled, Customizable switch hitboxes closely follow the model shape.",
+                    "When disabled, Customizable switches use simple rectangular hitboxes.",
                     "",
                     "Default: true"
                 )

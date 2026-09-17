@@ -23,6 +23,8 @@ public class DropdownManager {
     private static final int ROTATION_DROPDOWN_HEIGHT = 12;
     private static final int POWER_DROPDOWN_WIDTH = 46;
     private static final int POWER_DROPDOWN_HEIGHT = 12;
+    /** Scale the dropdowns draw at normally. A long power-mode label shrinks below this. */
+    private static final float BASE_TEXT_SCALE = 0.8f;
     private final CustomizableTextureMenu menu;
     private final Font font;
     private boolean showingLeftDropdown = false;
@@ -528,58 +530,29 @@ public class DropdownManager {
         // Restore z-order
         graphics.pose().popPose();
     }
-    /** Renders power mode text, using two-part rendering for None(Toggle)/None(Base). */
+    /**
+     * Renders the power mode label, scaled to fit the dropdown. One translated string rather than the
+     * old two-part "None" + "(Toggle)" split, whose scale was derived from English widths and which
+     * assumed the label divides into two pieces. Short modes still land on the original 0.8 scale.
+     */
     private void renderPowerModeText(@Nonnull GuiGraphics graphics, int x, int y,
                                      int rowHeight, @Nonnull String modeName,
                                      boolean hasArrow, int color) {
+        net.minecraft.network.chat.Component label = SwitchBlockEntity.PowerMode.displayNameOf(modeName);
         int fontHeight = this.font.lineHeight;
-        String suffix = switch (modeName) {
-            case "NONE_TOGGLE" -> "(Toggle)";
-            case "NONE_BASE" -> "(Base)";
-            default -> null;
-        };
-        if (suffix != null) {
-            // Two-part: "None" at 0.8f + suffix at computed scale to fit
-            float mainScale = 0.8f;
-            float mainWidthActual = this.font.width("None") * mainScale;
-            float arrowSpace = hasArrow ? 10 : 1;
-            float availableForSuffix = (POWER_DROPDOWN_WIDTH - arrowSpace) - 3 - mainWidthActual - 1;
-            float suffixScale = Math.min(0.6f, availableForSuffix / this.font.width(suffix));
-            suffixScale = Math.max(suffixScale, 0.35f);
-            float textTopY = y + (rowHeight - fontHeight) / 2.0f + 2;
-            float mainVisualHeight = fontHeight * mainScale;
-            float suffixVisualHeight = fontHeight * suffixScale;
-            // Render "None" at standard scale
-            graphics.pose().pushPose();
-            graphics.pose().scale(mainScale, mainScale, 1.0f);
-            int mainY = (int)(textTopY / mainScale);
-            graphics.drawString(this.font, "None", (int)((x + 3) / mainScale), mainY, color, false);
-            graphics.pose().popPose();
-            // Render suffix at computed scale, vertically centered with main text
-            float suffixX = x + 3 + mainWidthActual + 1;
-            float suffixTopY = textTopY + (mainVisualHeight - suffixVisualHeight) / 2;
-            graphics.pose().pushPose();
-            graphics.pose().scale(suffixScale, suffixScale, 1.0f);
-            graphics.drawString(this.font, suffix, (int)(suffixX / suffixScale),
-                    (int)(suffixTopY / suffixScale), color, false);
-            graphics.pose().popPose();
-        } else {
-            // Single-part rendering at standard scale
-            String displayText = formatPowerModeText(modeName);
-            float fontScale = 0.8f;
-            graphics.pose().pushPose();
-            graphics.pose().scale(fontScale, fontScale, 1.0f);
-            int centeredY = (int)((y + (rowHeight - fontHeight) / 2.0 + 2) / fontScale);
-            graphics.drawString(this.font, displayText, (int)((x + 3) / fontScale), centeredY, color, false);
-            graphics.pose().popPose();
-        }
-    }
-    /** Formats power mode enum name for display (simple modes only). */
-    private String formatPowerModeText(String modeText) {
-        if (modeText == null || modeText.isEmpty()) {
-            return "default";
-        }
-        String lowercase = modeText.toLowerCase();
-        return Character.toUpperCase(lowercase.charAt(0)) + lowercase.substring(1);
+        int labelWidth = this.font.width(label);
+        float arrowSpace = hasArrow ? 10 : 1;
+        float available = (POWER_DROPDOWN_WIDTH - arrowSpace) - 4;
+        float fontScale = labelWidth > 0 ? Math.min(BASE_TEXT_SCALE, available / labelWidth) : BASE_TEXT_SCALE;
+        fontScale = Math.max(fontScale, 0.35f);
+        // The sibling dropdowns fix the text's TOP edge, which only centres correctly at their one
+        // fixed scale. This label shrinks to fit, so anchor its CENTRE to where a 0.8-scaled label
+        // sits instead. Short modes stay pixel-identical; long ones shrink around the same centre.
+        float baseCentre = y + (rowHeight - fontHeight) / 2.0f + 2 + fontHeight * BASE_TEXT_SCALE / 2.0f;
+        int centeredY = (int)((baseCentre - fontHeight * fontScale / 2.0f) / fontScale);
+        graphics.pose().pushPose();
+        graphics.pose().scale(fontScale, fontScale, 1.0f);
+        graphics.drawString(this.font, label, (int)((x + 3) / fontScale), centeredY, color, false);
+        graphics.pose().popPose();
     }
 }

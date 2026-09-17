@@ -31,7 +31,6 @@ import net.minecraft.ChatFormatting;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Locale;
 
 /** Switch Texture Brush with copy/paste functionality and dynamic active/inactive texture. */
 public class SwitchTextureBrushItem extends Item {
@@ -192,19 +191,20 @@ public class SwitchTextureBrushItem extends Item {
         void openGUI(@Nonnull ServerPlayer player, @Nonnull BlockPos blockPos);
     }
 
+    /** Shows an action bar message. The String is a TRANSLATION KEY, not English text. */
     @SuppressWarnings("resource") // Level lifecycle managed by Minecraft, not by us
-    private void showActionBarMessage(@Nonnull Player player, @Nonnull String message, @Nonnull ActionBarMessageType type) {
+    private void showActionBarMessage(@Nonnull Player player, @Nonnull String messageKey, @Nonnull ActionBarMessageType type) {
         if (player.level().isClientSide) {
-            net.minecraft.network.chat.Component styledMessage = formatActionBarMessage(message, type);
+            net.minecraft.network.chat.Component styledMessage = formatActionBarMessage(messageKey, type);
             player.displayClientMessage(styledMessage, true);
         }
     }
     
-    private net.minecraft.network.chat.Component formatActionBarMessage(String message, ActionBarMessageType type) {
+    private net.minecraft.network.chat.Component formatActionBarMessage(String messageKey, ActionBarMessageType type) {
         return switch (type) {
-            case SUCCESS -> Component.literal(message).withStyle(net.minecraft.ChatFormatting.GREEN);
-            case ERROR -> Component.literal(message).withStyle(net.minecraft.ChatFormatting.RED);
-            case INFO -> Component.literal(message).withStyle(net.minecraft.ChatFormatting.BLUE);
+            case SUCCESS -> Component.translatable(messageKey).withStyle(net.minecraft.ChatFormatting.GREEN);
+            case ERROR -> Component.translatable(messageKey).withStyle(net.minecraft.ChatFormatting.RED);
+            case INFO -> Component.translatable(messageKey).withStyle(net.minecraft.ChatFormatting.BLUE);
         };
     }
     
@@ -235,7 +235,7 @@ public class SwitchTextureBrushItem extends Item {
             @Override
             @Nonnull
             public Component getDisplayName() {
-                return Component.literal(BrushConstants.GUI_COPY_TEXTURE_TITLE);
+                return Component.translatable(BrushConstants.GUI_COPY_TEXTURE_TITLE);
             }
 
             @Override
@@ -253,7 +253,7 @@ public class SwitchTextureBrushItem extends Item {
             @Override
             @Nonnull
             public Component getDisplayName() {
-                return Component.literal(BrushConstants.GUI_DIFFERENT_SETTINGS_FOUND);
+                return Component.translatable(BrushConstants.GUI_DIFFERENT_SETTINGS_FOUND);
             }
 
             @Override
@@ -302,11 +302,11 @@ public class SwitchTextureBrushItem extends Item {
     @SuppressWarnings("unused") // Called from network handlers
     public CopyPasteService.PasteResult checkInventoryForPasteServer(ItemStack stack, Player player,
                                                                      List<ItemStack> alsoAvailable) {
-        List<String> missingBlocks = CopyPasteService.validateRequiredBlocks(stack, player, alsoAvailable);
+        List<net.justsomeswitches.util.MissingBlock> missingBlocks = CopyPasteService.validateRequiredBlocks(stack, player, alsoAvailable);
         if (!missingBlocks.isEmpty()) {
             return new CopyPasteService.PasteResult(false, BrushConstants.MSG_MISSING_BLOCKS_GUI, missingBlocks);
         }
-        return new CopyPasteService.PasteResult(true, "All blocks available");
+        return new CopyPasteService.PasteResult(true, BrushConstants.MSG_ALL_BLOCKS_AVAILABLE);
     }
     
     @SuppressWarnings("unused") // Called from network handlers
@@ -343,6 +343,24 @@ public class SwitchTextureBrushItem extends Item {
     }
 
     /**
+     * Colour for the stored setting VALUES. Labels stay grey so the values stand out against them.
+     * Gold ties the block to its yellow header while staying clearly dimmer than it (50% relative
+     * brightness against the header's 93%), and it does not compete with the white item name above.
+     * One constant on purpose: changing this recolours every stored value.
+     */
+    private static final ChatFormatting SETTING_VALUE_COLOR = ChatFormatting.GOLD;
+
+    /** Styles a stored value so it stands out from its grey label. Takes a Component or a String. */
+    @Nonnull
+    private static Component styleValue(@Nonnull Object value) {
+        // Component.literal here carries DATA (a face name, a rotation angle), not translatable UI text.
+        MutableComponent component = value instanceof Component existing
+                ? existing.copy()
+                : Component.literal(String.valueOf(value));
+        return component.withStyle(SETTING_VALUE_COLOR);
+    }
+
+    /**
      * Face and rotation share a line so each category's settings stay together and the tooltip stays
      * short. Either can be stored without the other, since the copy screen selects them separately.
      */
@@ -352,11 +370,11 @@ public class SwitchTextureBrushItem extends Item {
         MutableComponent line = null;
         if (settingsTag.contains(faceKey)) {
             line = Component.translatable(faceTranslationKey,
-                   formatSettingValue(faceKey, settingsTag.getString(faceKey)));
+                   styleValue(formatSettingValue(faceKey, settingsTag.getString(faceKey))));
         }
         if (settingsTag.contains(rotationKey)) {
             MutableComponent rotation = Component.translatable(rotationTranslationKey,
-                   formatSettingValue(rotationKey, settingsTag.getString(rotationKey)));
+                   styleValue(formatSettingValue(rotationKey, settingsTag.getString(rotationKey))));
             line = line == null ? rotation : line.append(", ").append(rotation);
         }
         if (line != null) {
@@ -365,51 +383,51 @@ public class SwitchTextureBrushItem extends Item {
     }
 
     private void addStoredSettingsTooltip(@Nonnull ItemStack stack, @Nonnull List<Component> tooltip, @Nonnull Item.TooltipContext context) {
-        tooltip.add(Component.literal("⚙ Settings Stored").withStyle(ChatFormatting.YELLOW));
+        tooltip.add(Component.translatable("tooltip.justsomeswitches.brush.settings_stored").withStyle(ChatFormatting.YELLOW));
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag != null) {
             int beforeSettings = tooltip.size();
-            addSettingIfPresent(tooltip, settingsTag, BrushConstants.TOGGLE_BLOCK_KEY, "Toggle Block: ", true, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.TOGGLE_BLOCK_KEY, "tooltip.justsomeswitches.brush.setting.toggle_block", true, context);
             addFaceAndRotation(tooltip, settingsTag,
                 BrushConstants.TOGGLE_FACE_KEY, "tooltip.justsomeswitches.brush.setting.toggle_face",
                 BrushConstants.TOGGLE_ROTATION_KEY, "tooltip.justsomeswitches.brush.setting.toggle_rotation");
-            addSettingIfPresent(tooltip, settingsTag, BrushConstants.BASE_BLOCK_KEY, "Base Block: ", true, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.BASE_BLOCK_KEY, "tooltip.justsomeswitches.brush.setting.base_block", true, context);
             addFaceAndRotation(tooltip, settingsTag,
                 BrushConstants.BASE_FACE_KEY, "tooltip.justsomeswitches.brush.setting.base_face",
                 BrushConstants.BASE_ROTATION_KEY, "tooltip.justsomeswitches.brush.setting.base_rotation");
-            addSettingIfPresent(tooltip, settingsTag, BrushConstants.POWER_MODE_KEY, "Indicators: ", false, context);
+            addSettingIfPresent(tooltip, settingsTag, BrushConstants.POWER_MODE_KEY, "tooltip.justsomeswitches.brush.setting.indicators", false, context);
             
             // Count only the settings, not the whole tooltip, or this claims a truncation that never happened.
             if (tooltip.size() - beforeSettings > BrushConstants.TOOLTIP_MAX_LINES) {
-                tooltip.add(Component.literal("...").withStyle(ChatFormatting.GRAY));
+                tooltip.add(net.minecraft.network.chat.CommonComponents.ELLIPSIS.copy().withStyle(ChatFormatting.GRAY));
             }
         }
         
         tooltip.add(Component.empty());
-        tooltip.add(Component.literal("Note: Only applies to placed Customizable Switch blocks")
+        tooltip.add(Component.translatable("tooltip.justsomeswitches.brush.note")
                    .withStyle(ChatFormatting.ITALIC, ChatFormatting.DARK_GRAY));
     }
     
     private void addSettingIfPresent(@Nonnull List<Component> tooltip, @Nonnull CompoundTag settingsTag,
-                                   @Nonnull String key, @Nonnull String prefix, boolean isItem, @Nonnull Item.TooltipContext context) {
+                                   @Nonnull String key, @Nonnull String translationKey, boolean isItem, @Nonnull Item.TooltipContext context) {
         if (settingsTag.contains(key)) {
-            String value;
+            Object value;
             HolderLookup.Provider registries = context.registries();
             if (isItem && registries != null) {
                 // getHoverName, not getDisplayName: the latter wraps the name in square brackets.
-                value = ItemStack.parseOptional(registries, settingsTag.getCompound(key)).getHoverName().getString();
+                // Kept as a Component so the block name resolves in the viewer's language.
+                value = ItemStack.parseOptional(registries, settingsTag.getCompound(key)).getHoverName();
             } else {
-                String rawValue = settingsTag.getString(key);
-                value = formatSettingValue(key, rawValue);
+                value = formatSettingValue(key, settingsTag.getString(key));
             }
-            tooltip.add(Component.literal(prefix + value).withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.translatable(translationKey, styleValue(value)).withStyle(ChatFormatting.GRAY));
         }
     }
     
-    /** Formats setting values for better tooltip display. */
+    /** Formats a setting value for the tooltip. Returns a String or a Component. */
     @Nonnull
-    private String formatSettingValue(@Nonnull String key, @Nonnull String rawValue) {
+    private Object formatSettingValue(@Nonnull String key, @Nonnull String rawValue) {
         // Format rotation values to show degrees
         if (key.equals(BrushConstants.TOGGLE_ROTATION_KEY) || key.equals(BrushConstants.BASE_ROTATION_KEY)) {
             try {
@@ -421,23 +439,15 @@ public class SwitchTextureBrushItem extends Item {
             }
         }
         
-        // Format power mode values with proper capitalization
+        // Power modes come from the enum so the dropdown, tooltip and copy screen all agree.
+        // The old code capitalised the raw name, which rendered NONE_TOGGLE as "None_toggle".
         if (key.equals(BrushConstants.POWER_MODE_KEY)) {
-            return switch (rawValue.toUpperCase(Locale.ROOT)) {
-                case "DEFAULT" -> "Default";
-                case "ALT" -> "Alt";
-                case "NONE" -> "None";
-                default -> capitalizeFirst(rawValue.toLowerCase());
-            };
+            return SwitchBlockEntity.PowerMode.displayNameOf(rawValue);
         }
         
         return rawValue;
     }
     
-    @Nonnull
-    private String capitalizeFirst(@Nonnull String text) {
-        return text.isEmpty() ? text : text.substring(0, 1).toUpperCase() + text.substring(1);
-    }
     
     /**
      * Controls, described for the mode the brush is actually in. Component.keybind resolves to the

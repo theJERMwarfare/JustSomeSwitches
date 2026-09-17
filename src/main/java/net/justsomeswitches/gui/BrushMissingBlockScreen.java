@@ -21,7 +21,7 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
     private static final int GUI_WIDTH = 200;
     private static final int GUI_HEIGHT = 94;
     
-    private final List<String> missingBlocks;
+    private final List<net.justsomeswitches.util.MissingBlock> missingBlocks;
     
     public BrushMissingBlockScreen(BrushMissingBlockMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -38,10 +38,10 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
         this.topPos = (this.height - this.imageHeight) / 2;
         
         addRenderableWidget(new FittedButton(leftPos + 12, topPos + 61, 84, 20,
-                Component.literal("Paste Available"), this::onApplyClicked));
+                Component.translatable("gui.justsomeswitches.missing_block.paste_available"), this::onApplyClicked));
         
         addRenderableWidget(new FittedButton(leftPos + 104, topPos + 61, 84, 20,
-                Component.literal("Cancel"), this::onCancelClicked));
+                Component.translatable("gui.cancel"), this::onCancelClicked));
     }
     
     @Override
@@ -51,17 +51,19 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
     
     @Override
     protected void renderLabels(@Nonnull GuiGraphics graphics, int mouseX, int mouseY) {
-        String titleText = missingBlocks.size() == 1 ? "Missing Required Block In Inventory" : "Missing Required Blocks In Inventory";
-        Component title = Component.literal(titleText);
+        Component title = Component.translatable(missingBlocks.size() == 1
+                ? "gui.justsomeswitches.missing_block.title_one"
+                : "gui.justsomeswitches.missing_block.title_many");
         
         int maxHeaderWidth = 178;
-        int fullHeaderWidth = font.width("Missing Required Blocks In Inventory");
+        // Measure the PLURAL form, not the drawn one, so singular and plural share a scale in any language.
+        int fullHeaderWidth = font.width(Component.translatable("gui.justsomeswitches.missing_block.title_many"));
         float headerScale = Math.min(1.0f, (float)maxHeaderWidth / fullHeaderWidth);
         
         graphics.pose().pushPose();
         graphics.pose().scale(headerScale, headerScale, 1.0f);
         
-        int scaledHeaderWidth = (int)(font.width(titleText) * headerScale);
+        int scaledHeaderWidth = (int)(font.width(title) * headerScale);
         int headerScaledX = (int)((imageWidth - scaledHeaderWidth) / 2.0f / headerScale);
         int headerScaledY = (int)(12 / headerScale);
         
@@ -74,7 +76,7 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
         int maxTextWidth = 182;
         
         if (missingBlocks.size() == 1) {
-            String missingText = missingBlocks.getFirst();
+            Component missingText = missingBlocks.get(0).toDisplay();
             float baseScale = 0.7f;
             int fullTextWidth = font.width(missingText);
             float dynamicScale = Math.min(baseScale, (float)maxTextWidth / fullTextWidth);
@@ -95,7 +97,7 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
             int secondLineY = 38;
             
             for (int i = 0; i < 2; i++) {
-                String missingText = missingBlocks.get(i);
+                Component missingText = missingBlocks.get(i).toDisplay();
                 
                 float baseScale = 0.7f;
                 int fullTextWidth = font.width(missingText);
@@ -116,7 +118,7 @@ public class BrushMissingBlockScreen extends AbstractContainerScreen<BrushMissin
             }
         }
         
-        String questionText = "Paste available settings? Others stay unchanged.";
+        Component questionText = Component.translatable("gui.justsomeswitches.missing_block.question");
         float questionScale = Math.min(0.7f, (float)maxTextWidth / font.width(questionText));
         
         graphics.pose().pushPose();

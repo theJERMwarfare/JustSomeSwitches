@@ -3,6 +3,7 @@ package net.justsomeswitches.item.service;
 import net.justsomeswitches.block.ISwitchBlock;
 import net.justsomeswitches.blockentity.SwitchBlockEntity;
 import net.justsomeswitches.util.InventoryHelper;
+import net.justsomeswitches.util.MissingBlock;
 import net.justsomeswitches.util.NBTHelper;
 import net.justsomeswitches.util.TextureRotation;
 import net.justsomeswitches.util.TightSwitchShapes.SwitchModelType;
@@ -96,13 +97,13 @@ public class CopyPasteService {
     }
     /** Optimized inventory validation with single-pass checking. */
     @Nonnull
-    public static List<String> validateRequiredBlocks(@Nonnull ItemStack stack, @Nonnull Player player) {
+    public static List<MissingBlock> validateRequiredBlocks(@Nonnull ItemStack stack, @Nonnull Player player) {
         return validateRequiredBlocks(stack, player, List.of());
     }
     /** Overload that also counts items the caller is about to return to the player. */
     @Nonnull
     @SuppressWarnings("resource") // Level lifecycle managed by Minecraft
-    public static List<String> validateRequiredBlocks(@Nonnull ItemStack stack, @Nonnull Player player,
+    public static List<MissingBlock> validateRequiredBlocks(@Nonnull ItemStack stack, @Nonnull Player player,
                                                       @Nonnull List<ItemStack> alsoAvailable) {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
@@ -111,14 +112,14 @@ public class CopyPasteService {
         }
         HolderLookup.Provider registries = player.level().registryAccess();
         List<ItemStack> requiredItems = new ArrayList<>();
-        List<String> categories = new ArrayList<>();
+        List<MissingBlock.Category> categories = new ArrayList<>();
         if (settingsTag.contains(BrushConstants.TOGGLE_BLOCK_KEY)) {
             requiredItems.add(ItemStack.parseOptional(registries, settingsTag.getCompound(BrushConstants.TOGGLE_BLOCK_KEY)));
-            categories.add(BrushConstants.CATEGORY_TOGGLE);
+            categories.add(MissingBlock.Category.TOGGLE);
         }
         if (settingsTag.contains(BrushConstants.BASE_BLOCK_KEY)) {
             requiredItems.add(ItemStack.parseOptional(registries, settingsTag.getCompound(BrushConstants.BASE_BLOCK_KEY)));
-            categories.add(BrushConstants.CATEGORY_BASE);
+            categories.add(MissingBlock.Category.BASE);
         }
         if (requiredItems.isEmpty()) {
             return new ArrayList<>();
@@ -142,7 +143,7 @@ public class CopyPasteService {
                 available.merge(extra.getItem(), extra.getCount(), Integer::sum);
             }
         }
-        List<String> missingBlocks = new ArrayList<>();
+        List<MissingBlock> missingBlocks = new ArrayList<>();
         for (int i = 0; i < requiredItems.size(); i++) {
             ItemStack required = requiredItems.get(i);
             if (required.isEmpty()) {
@@ -152,15 +153,13 @@ public class CopyPasteService {
             if (have >= 1) {
                 available.put(required.getItem(), have - 1);
             } else {
-                String blockName = capitalizeFirst(required.getDisplayName().getString());
-                missingBlocks.add("Missing " + blockName + " for " + categories.get(i));
+                // Send the item ID, not a finished sentence: the client resolves the name itself.
+                missingBlocks.add(new MissingBlock(
+                        net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(required.getItem()),
+                        categories.get(i)));
             }
         }
         return missingBlocks;
-    }
-    @Nonnull
-    private static String capitalizeFirst(@Nonnull String text) {
-        return text.isEmpty() ? text : text.substring(0, 1).toUpperCase() + text.substring(1);
     }
     /** Clears all stored settings from the brush. */
     public static void clearAllSettings(@Nonnull ItemStack stack) {
@@ -172,13 +171,13 @@ public class CopyPasteService {
     public static class PasteResult {
         public final boolean success;
         public final String message;
-        public final List<String> missingBlocks;
+        public final List<MissingBlock> missingBlocks;
         public PasteResult(boolean success, String message) {
             this.success = success;
             this.message = message;
             this.missingBlocks = new ArrayList<>();
         }
-        public PasteResult(boolean success, String message, List<String> missingBlocks) {
+        public PasteResult(boolean success, String message, List<MissingBlock> missingBlocks) {
             this.success = success;
             this.message = message;
             this.missingBlocks = missingBlocks != null ? missingBlocks : new ArrayList<>();
@@ -191,9 +190,9 @@ public class CopyPasteService {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
-            return new PasteResult(false, "No settings to paste");
+            return new PasteResult(false, BrushConstants.MSG_NO_SETTINGS_TO_PASTE);
         }
-        List<String> missingBlocks = validateRequiredBlocks(stack, player);
+        List<MissingBlock> missingBlocks = validateRequiredBlocks(stack, player);
         if (!missingBlocks.isEmpty()) {
             return new PasteResult(false, BrushConstants.MSG_MISSING_BLOCKS_GUI, missingBlocks);
         }
@@ -209,7 +208,7 @@ public class CopyPasteService {
         NBTHelper.NBTCache cache = new NBTHelper.NBTCache(stack);
         CompoundTag settingsTag = cache.getCompound(BrushConstants.COPIED_SETTINGS_KEY);
         if (settingsTag == null) {
-            return new PasteResult(false, "No settings to paste");
+            return new PasteResult(false, BrushConstants.MSG_NO_SETTINGS_TO_PASTE);
         }
         HolderLookup.Provider registries = player.level().registryAccess();
         applyPowerMode(settingsTag, blockEntity);

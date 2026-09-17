@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
+import net.justsomeswitches.gui.components.TextFit;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.gui.widget.ExtendedButton;
 
@@ -41,17 +42,24 @@ public class ConfigOptionsList extends ContainerObjectSelectionList<ConfigOption
     /** Bold centered section header with underline. */
     public static class HeaderEntry extends Entry {
         private final Component text;
-        public HeaderEntry(String text) {
-            this.text = Component.literal(text).withStyle(style -> style.withBold(true));
+        public HeaderEntry(Component text) {
+            this.text = text.copy().withStyle(style -> style.withBold(true));
         }
         @Override
         public void render(@Nonnull GuiGraphics graphics, int index, int top, int left, int width,
                            int height, int mouseX, int mouseY, boolean hovering, float partialTick) {
             Minecraft mc = Minecraft.getInstance();
             int centerX = left + width / 2;
-            graphics.drawCenteredString(mc.font, text, centerX, top + 2, 0xFFFFFF);
             int headerWidth = mc.font.width(text);
-            graphics.fill(centerX - headerWidth / 2, top + 13, centerX + headerWidth / 2, top + 14, 0xFFFFFFFF);
+            // Header and underline share one scale so the rule always matches the text length.
+            float scale = TextFit.scale(1.0f, width, headerWidth);
+            graphics.pose().pushPose();
+            graphics.pose().scale(scale, scale, 1.0f);
+            int scaledCenterX = (int)(centerX / scale);
+            graphics.drawCenteredString(mc.font, text, scaledCenterX, (int)((top + 2) / scale), 0xFFFFFF);
+            graphics.fill(scaledCenterX - headerWidth / 2, (int)((top + 13) / scale),
+                    scaledCenterX + headerWidth / 2, (int)((top + 14) / scale), 0xFFFFFFFF);
+            graphics.pose().popPose();
         }
         @Override @Nonnull
         public List<? extends GuiEventListener> children() { return Collections.emptyList(); }
@@ -120,7 +128,6 @@ public class ConfigOptionsList extends ContainerObjectSelectionList<ConfigOption
     public static class TextEntry extends Entry {
         private final Component text;
         private final int color;
-        public TextEntry(String text, int color) { this(Component.literal(text), color); }
         public TextEntry(Component text, int color) { this.text = text; this.color = color; }
         @Override
         public void render(@Nonnull GuiGraphics graphics, int index, int top, int left, int width,

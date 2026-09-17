@@ -111,19 +111,23 @@ All options below can also be edited in game from Mods > Just Some Switches > Co
 - `disableBrushInstantBreak` - Disable brush instant breaking (default: `false`) - useful for multiplayer servers
 - `respectBlockProtection` - Respect spawn protection and the world border when editing switches (default: `true`)
 
-### Migration Notes (v1.32)
+### Migration Notes (v1.33)
 
 Players updating from a previous version:
-- The Switch Texture Brush's **Alt** key combinations have been replaced by the three modes described above. `Shift + Alt + C` and `Shift + Alt` no longer do anything. Use **Sneak + Scroll** to switch to Copy or Paste instead.
-- The brush now works in the **main hand only**, matching comparable tools in other mods.
-- Any texture settings already stored on a brush are preserved.
-
-### Migration Notes (v1.20)
-
-Players updating from a previous version:
-- Any existing **Switches Wrench** items in your inventory or chests will automatically convert to **Switch Texture Brush** items on world load. All copied texture settings are preserved during migration.
-- All existing placed switch blocks work exactly as before - only the display names in tooltips will show the new naming convention.
+- Any existing **Switches Wrench** items in your inventory or chests will automatically convert to **Switch Texture Brush** items on world load. All copied texture settings are preserved.
+- The brush's **Alt** key combinations have been replaced by the three modes described above. `Shift + Alt + C` and `Shift + Alt` no longer do anything. Use **Sneak + Scroll** to change mode instead.
+- The brush now works in the **main hand only**.
 - If you customized the `disableWrenchInstantBreak` server config option, you'll need to set the new `disableBrushInstantBreak` option to your preferred value.
+- All existing placed switch blocks work exactly as before - only their display names have changed.
+
+### Translations
+
+The mod ships with 20 languages besides English.
+
+- Translations are machine-assisted and have not been checked by native speakers, so corrections are very welcome.
+- German, Spanish, French, Italian, Dutch, Polish, Portuguese (Brazil and Portugal), Russian, Chinese Simplified and Japanese are translated throughout, with block and item names following Minecraft's own wording wherever the game already has a word for something.
+- Arabic, Czech, Danish, Greek, Finnish, Norwegian, Romanian, Swedish and Ukrainian cover the menus and messages only. Block and item names stay in English in those languages until someone contributes them.
+- To fix or add a language, edit the matching file in `src/main/resources/assets/justsomeswitches/lang/` and open a pull request. Any key you leave out falls back to English, so a partial file is perfectly fine.
 
 ---
 

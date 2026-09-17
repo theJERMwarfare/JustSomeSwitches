@@ -73,7 +73,7 @@ public record BrushActionPayload(
     @SuppressWarnings("unused") // Parameters kept for API consistency
     private static void handleCopyAction(SwitchTextureBrushItem brush, ItemStack stack,
                                        SwitchBlockEntity blockEntity, ServerPlayer player) {
-        NetworkHandler.sendActionBarMessage(player, "Use Copy GUI for copying settings", NetworkHandler.MessageType.INFO);
+        NetworkHandler.sendActionBarMessage(player, BrushConstants.MSG_USE_COPY_GUI, NetworkHandler.MessageType.INFO);
     }
     @SuppressWarnings("resource") // Level lifecycle managed by Minecraft
     private static void handlePasteAction(SwitchTextureBrushItem brush, ItemStack stack,
@@ -85,8 +85,10 @@ public record BrushActionPayload(
             Level level = player.level();
             net.minecraft.world.level.block.state.BlockState blockState = level.getBlockState(blockPos);
             net.minecraft.world.item.ItemStack blockItem = new net.minecraft.world.item.ItemStack(blockState.getBlock());
-            String blockName = blockItem.getDisplayName().getString();
-            NetworkHandler.sendActionBarMessage(player, blockName + " Already Has the Same Texture Settings", NetworkHandler.MessageType.INFO);
+            // Pass the name as a Component, not a String, so it resolves in the viewer's language.
+            NetworkHandler.sendActionBarMessage(player,
+                    net.minecraft.network.chat.Component.translatable(BrushConstants.MSG_SAME_SETTINGS, blockItem.getHoverName()),
+                    NetworkHandler.MessageType.INFO);
             return;
         }
         if (blockEntity.hasCustomTextures()) {
